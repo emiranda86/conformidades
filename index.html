@@ -277,7 +277,7 @@ function connectDrive(){
   document.getElementById('driveStatus').textContent='Abriendo ventana de Google...';
 
   // OAuth2 popup flow
-  const redirectUri = window.location.origin + window.location.pathname;
+  const redirectUri = "https://emiranda86.github.io/conformidades/";
   const scope = 'https://www.googleapis.com/auth/drive.file';
   const authUrl = 'https://accounts.google.com/o/oauth2/v2/auth?'+
     'client_id='+encodeURIComponent(clientId)+

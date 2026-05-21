@@ -206,6 +206,7 @@ body{background:#f0f4f8;min-height:100vh;color:var(--t1)}
 // CONFIG — editar si cambias de dominio
 // ═══════════════════════════
 const REDIRECT_URI='https://emiranda86.github.io/conformidades/';
+const CLIENT_ID='239951652748-5gn3qcj1gr9f3prgcsnb3p0r1cr5o13s.apps.googleusercontent.com';
 const FOLDER='CONFORMIDADES - IP Santa Mónica Fishing';
 const F_USERS='ipsm_users_v2.json';
 const F_HIST='ipsm_historial_v2.json';
@@ -348,15 +349,9 @@ function startApp(){
 // GOOGLE DRIVE — popup flow
 // ═══════════════════════════
 function connectDrive(){
-  const cid=localStorage.getItem('ipsm_cid')||'';
-  if(!cid){
-    const id=prompt('Ingresa el Google Client ID:\n(Ajustes → Google Auth Platform → Clientes)');
-    if(!id)return;
-    localStorage.setItem('ipsm_cid',id.trim());
-  }
   const scope='https://www.googleapis.com/auth/drive.file';
   const url='https://accounts.google.com/o/oauth2/v2/auth'
-    +'?client_id='+encodeURIComponent(localStorage.getItem('ipsm_cid'))
+    +'?client_id='+encodeURIComponent(CLIENT_ID)
     +'&redirect_uri='+encodeURIComponent(REDIRECT_URI)
     +'&response_type=token&scope='+encodeURIComponent(scope)+'&prompt=consent';
   $('dst').textContent='Abriendo Google...';

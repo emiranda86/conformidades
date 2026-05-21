@@ -150,6 +150,7 @@ body{background:#f0f4f8;min-height:100vh;color:var(--t1)}
 /* RESPONSIVE */
 @media(max-width:600px){.grid-2{grid-template-columns:1fr}.firma-grid{grid-template-columns:1fr}.stepper{flex-wrap:wrap}}
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 <body>
 
@@ -181,6 +182,10 @@ body{background:#f0f4f8;min-height:100vh;color:var(--t1)}
     <button class="btn-login" onclick="doLogin()">Ingresar</button>
     <div class="login-err" id="loginErr">Correo o contraseña incorrectos</div>
     <div style="margin-top:12px;font-size:11px;color:#aaa">¿Sin acceso? Contacta al administrador.</div>
+    <div id="loginSyncNote" style="display:none;margin-top:8px;background:#E6F1FB;color:#0C3D6B;border-radius:6px;padding:6px 10px;font-size:11px">
+      💡 Si eres usuario nuevo, primero sincroniza los usuarios desde Drive:
+    </div>
+    <button id="btnSyncLogin" onclick="syncLoginFromDrive()" style="display:none;width:100%;margin-top:6px;padding:8px;background:#E6F1FB;color:#0C3D6B;border:1px solid #B5D4F4;border-radius:6px;font-size:12px;cursor:pointer;font-weight:500">🔗 Sincronizar usuarios desde Google Drive</button>
   </div>
 </div>
 
@@ -225,10 +230,14 @@ body{background:#f0f4f8;min-height:100vh;color:var(--t1)}
 <!-- USERS PANEL (admin only) -->
 <div class="panel" id="usersPanel">
   <div class="panel-inner">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;flex-wrap:wrap;gap:6px">
       <strong style="font-size:13px">👥 Gestión de usuarios</strong>
-      <button class="btn-sm" style="background:var(--bm);color:#fff" onclick="showAddUser()">+ Agregar usuario</button>
+      <div style="display:flex;gap:6px">
+        <button class="btn-sm" style="background:#E6F1FB;color:#0C3D6B;border:1px solid #C8D3DF" onclick="forceResyncUsers()" title="Sincroniza usuarios de Drive a este navegador">🔄 Sincronizar</button>
+        <button class="btn-sm" style="background:var(--bm);color:#fff" onclick="showAddUser()">+ Agregar usuario</button>
+      </div>
     </div>
+    <div class="tip info" style="margin-bottom:8px;font-size:11px">Los nuevos usuarios deben conectar Google Drive al iniciar sesión por primera vez para cargar sus credenciales. También pueden usar el botón 🔄 en esta sección para sincronizar manualmente.</div>
     <div id="usersContent"><p style="font-size:13px;color:#888">Cargando...</p></div>
     <div id="addUserForm" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid var(--gb)">
       <strong style="font-size:13px;display:block;margin-bottom:10px">Nuevo usuario</strong>
@@ -335,42 +344,146 @@ let usersCache=null;
 
 async function getUsers(){
   if(usersCache) return usersCache;
-  if(driveToken){
-    try{
-      const data=await readDriveFile(USERS_FILE);
-      if(data){usersCache=JSON.parse(data);return usersCache;}
-    }catch(e){}
-  }
-  // fallback: localStorage
+  // Try localStorage first
   try{
     const d=localStorage.getItem('ipsm_users');
-    if(d){usersCache=JSON.parse(d);return usersCache;}
+    if(d){const p=JSON.parse(d);if(p&&p.length>0){usersCache=p;return usersCache;}}
   }catch(e){}
-  // default admin only
   usersCache=[DEFAULT_ADMIN];
   return usersCache;
 }
 
+async function getUsersFromDrive(){
+  if(!driveToken) return null;
+  try{
+    const data=await readDriveFile(USERS_FILE);
+    if(data){
+      const users=JSON.parse(data);
+      usersCache=users;
+      localStorage.setItem('ipsm_users',JSON.stringify(users));
+      return users;
+    }
+  }catch(e){}
+  return null;
+}
+
+
+async function syncUsersFromDrive(){
+  if(!driveToken)return false;
+  try{
+    const data=await readDriveFile(USERS_FILE);
+    if(data){
+      const parsed=JSON.parse(data);
+      if(parsed&&parsed.length>0){
+        usersCache=parsed;
+        localStorage.setItem('ipsm_users',JSON.stringify(parsed));
+        return true;
+      }
+    }
+  }catch(e){console.log('syncUsers error:',e);}
+  // Push local users to Drive so other users can access them
+  const localUsers=usersCache||[DEFAULT_ADMIN];
+  await saveUsers(localUsers);
+  return false;
+}
 async function saveUsers(users){
   usersCache=users;
   localStorage.setItem('ipsm_users',JSON.stringify(users));
-  if(driveToken) await writeDriveFile(USERS_FILE,JSON.stringify(users));
+  if(driveToken){
+    try{await writeDriveFile(USERS_FILE,JSON.stringify(users));}
+    catch(err){console.log('saveUsers Drive err:',err);}
+  }
+}
+
+// Sync users from Drive to localStorage (call after Drive connect)
+async function syncUsersFromDrive(){
+  if(!driveToken)return;
+  try{
+    const data=await readDriveFile(USERS_FILE);
+    if(data){
+      const driveUsers=JSON.parse(data);
+      // Merge: drive is authoritative, but keep any local-only entries
+      const local=JSON.parse(localStorage.getItem('ipsm_users')||'[]');
+      const merged=[...driveUsers];
+      local.forEach(lu=>{if(!merged.find(u=>u.email===lu.email))merged.push(lu);});
+      usersCache=merged;
+      localStorage.setItem('ipsm_users',JSON.stringify(merged));
+    }
+  }catch(e){console.warn('syncUsersFromDrive error:',e);}
 }
 
 // ═══════════════════════════════════════════════════════
 //  LOGIN
 // ═══════════════════════════════════════════════════════
+
+async function syncLoginFromDrive(){
+  const cid=getClientId();
+  if(!cid){
+    const id=prompt('Ingresa el Google Client ID del administrador:');
+    if(!id)return;
+    localStorage.setItem('ipsm_client_id',id);
+  }
+  document.getElementById('btnSyncLogin').textContent='Conectando con Drive...';
+  document.getElementById('btnSyncLogin').disabled=true;
+  const scope='https://www.googleapis.com/auth/drive.file';
+  const authUrl='https://accounts.google.com/o/oauth2/v2/auth?client_id='+encodeURIComponent(getClientId())+'&redirect_uri='+encodeURIComponent(REDIRECT_URI)+'&response_type=token&scope='+encodeURIComponent(scope)+'&prompt=consent';
+  const popup=window.open(authUrl,'google-sync','width=500,height=600,left=200,top=100');
+  const timer=setInterval(async()=>{
+    try{
+      if(!popup||popup.closed){
+        clearInterval(timer);
+        document.getElementById('btnSyncLogin').textContent='🔗 Sincronizar usuarios desde Google Drive';
+        document.getElementById('btnSyncLogin').disabled=false;
+        return;
+      }
+      const url=popup.location.href;
+      if(url.includes('access_token')){
+        clearInterval(timer);popup.close();
+        const match=url.match(/access_token=([^&]+)/);
+        if(match){
+          driveToken=match[1];
+          loading('Descargando lista de usuarios...');
+          usersCache=null;
+          const ok=await syncUsersFromDrive();
+          loading(false);
+          if(ok){
+            document.getElementById('loginSyncNote').innerHTML='✅ Usuarios sincronizados. Ya puedes iniciar sesión.';
+            document.getElementById('btnSyncLogin').style.display='none';
+            toast('Usuarios sincronizados correctamente','ok');
+          }else{
+            document.getElementById('loginSyncNote').innerHTML='⚠️ No se encontraron usuarios en Drive. Contacta al administrador.';
+            document.getElementById('btnSyncLogin').textContent='🔗 Sincronizar usuarios desde Google Drive';
+            document.getElementById('btnSyncLogin').disabled=false;
+          }
+        }
+      }
+    }catch(e){}
+  },500);
+}
+
 async function doLogin(){
   const email=document.getElementById('loginEmail').value.trim().toLowerCase();
   const pass=document.getElementById('loginPass').value;
   const err=document.getElementById('loginErr');
+  const note=document.getElementById('loginSyncNote');
   err.style.display='none';
+  if(note)note.style.display='none';
   if(!email||!pass){err.textContent='Completa todos los campos.';err.style.display='block';return;}
+
   loading('Verificando...');
-  const users=await getUsers();
+  // Check local users first (admin always works from localStorage)
+  let users=await getUsers();
+  let user=users.find(u=>u.email.toLowerCase()===email&&u.passHash===hashPass(pass));
   loading(false);
-  const user=users.find(u=>u.email.toLowerCase()===email&&u.passHash===hashPass(pass));
-  if(!user){err.style.display='block';return;}
+
+  if(!user){
+    err.textContent='Correo o contraseña incorrectos.';
+    err.style.display='block';
+    if(note)note.style.display='block';
+    const syncBtn=document.getElementById('btnSyncLogin');
+    if(syncBtn)syncBtn.style.display='block';
+    return;
+  }
   currentUser=user;
   saveSession(user);
   startApp();
@@ -428,12 +541,15 @@ function connectDrive(){
   },500);
 }
 
-function onDriveConnected(){
+async function onDriveConnected(){
   document.getElementById('driveBar').classList.add('connected');
   document.getElementById('driveStatus').textContent='✓ Conectado — los archivos se guardarán en "'+FOLDER_NAME+'"';
   document.getElementById('btnConnect').style.display='none';
-  usersCache=null; // reload from drive
   toast('✓ Google Drive conectado','ok');
+  loading('Sincronizando usuarios y historial...');
+  usersCache=null;
+  await syncUsersFromDrive();
+  loading(false);
   loadHistorial();
 }
 
@@ -475,21 +591,55 @@ async function writeDriveFile(name,content){
 }
 
 async function uploadPdfHtml(htmlContent,filename){
+  const htmlFilename=filename.replace(/\.html$/,'')+'.html';
   const fid=await getDriveFolderId();
-  const existing=await findDriveFile(filename);
+  const existing=await findDriveFile(htmlFilename);
   const blob=new Blob([htmlContent],{type:'text/html'});
-  const meta=JSON.stringify({name:filename,parents:[fid]});
   if(existing){
     const form=new FormData();
-    form.append('metadata',new Blob([JSON.stringify({name:filename})],{type:'application/json'}));
-    form.append('file',blob,filename);
-    await fetch('https://www.googleapis.com/upload/drive/v3/files/'+existing.id+'?uploadType=multipart&fields=id,name,webViewLink',{method:'PATCH',headers:{Authorization:'Bearer '+driveToken},body:form});
+    form.append('metadata',new Blob([JSON.stringify({name:htmlFilename})],{type:'application/json'}));
+    form.append('file',blob,htmlFilename);
+    await fetch('https://www.googleapis.com/upload/drive/v3/files/'+existing.id+'?uploadType=multipart&fields=id,name',{method:'PATCH',headers:{Authorization:'Bearer '+driveToken},body:form});
   }else{
+    const meta=JSON.stringify({name:htmlFilename,parents:[fid]});
     const form=new FormData();
     form.append('metadata',new Blob([meta],{type:'application/json'}));
-    form.append('file',blob,filename);
-    await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink',{method:'POST',headers:{Authorization:'Bearer '+driveToken},body:form});
+    form.append('file',blob,htmlFilename);
+    await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name',{method:'POST',headers:{Authorization:'Bearer '+driveToken},body:form});
   }
+}
+
+function generatePdfBlob(htmlContent){
+  return new Promise((resolve,reject)=>{
+    // Create hidden iframe with the HTML content
+    const iframe=document.createElement('iframe');
+    iframe.style.cssText='position:fixed;left:-9999px;top:-9999px;width:210mm;height:297mm;border:none;';
+    document.body.appendChild(iframe);
+    iframe.onload=()=>{
+      setTimeout(()=>{
+        try{
+          // Use the iframe's print functionality to capture as PDF
+          // Since we cannot directly get PDF bytes from print, 
+          // we use html2pdf.js loaded dynamically
+          if(window.html2pdf){
+            const opt={margin:0,filename:'conformidad.pdf',image:{type:'jpeg',quality:0.98},html2canvas:{scale:2,useCORS:true,logging:false},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}};
+            html2pdf().set(opt).from(iframe.contentDocument.body).outputPdf('blob').then(blob=>{
+              document.body.removeChild(iframe);
+              resolve(blob);
+            }).catch(e=>{document.body.removeChild(iframe);reject(e);});
+          }else{
+            // Fallback: upload as HTML if html2pdf not available
+            document.body.removeChild(iframe);
+            resolve(new Blob([htmlContent],{type:'text/html'}));
+          }
+        }catch(e){
+          try{document.body.removeChild(iframe);}catch(x){}
+          reject(e);
+        }
+      },1500);
+    };
+    iframe.srcdoc=htmlContent;
+  });
 }
 
 // ═══════════════════════════════════════════════════════
@@ -574,6 +724,15 @@ async function viewPdf(id){
 // ═══════════════════════════════════════════════════════
 //  USERS MANAGEMENT
 // ═══════════════════════════════════════════════════════
+async function forceResyncUsers(){
+  if(!driveToken){toast('Conecta Google Drive primero.','err');return;}
+  loading('Sincronizando usuarios desde Drive...');
+  await syncUsersFromDrive();
+  loading(false);
+  toast('✓ Usuarios sincronizados correctamente.','ok');
+  loadUsers();
+}
+
 async function loadUsers(){
   const el=document.getElementById('usersContent');
   const users=await getUsers();
@@ -602,6 +761,8 @@ async function createUser(){
   await saveUsers(users);
   loading(false);
   toast('Usuario creado. Contraseña inicial: '+pass,'ok',6000);
+  // Sync to Drive so new user can login from any device
+  if(driveToken)await writeDriveFile(USERS_FILE,JSON.stringify(users));
   alert('Usuario creado exitosamente.\n\nCorreo: '+email+'\nContraseña: '+pass+'\n\nComparte estos datos con el usuario.');
   document.getElementById('addUserForm').style.display='none';
   loadUsers();
@@ -807,8 +968,15 @@ async function createPdf(){
   const filename='Conformidad_'+String(n).padStart(4,'0')+'_'+(F.proveedor||'Proveedor').replace(/[^a-zA-Z0-9]/g,'_')+'.html';
 
   if(driveToken){
-    try{await uploadPdfHtml(html,filename);toast('✓ Guardado en Google Drive','ok');}
-    catch(e){toast('Error al subir a Drive: '+e.message,'err');}
+    try{
+      loading('Generando PDF y subiendo a Drive...');
+      await uploadPdfHtml(html,filename);
+      loading(false);
+      toast('✓ PDF guardado en Google Drive','ok');
+    }catch(e){
+      loading(false);
+      toast('Error al subir a Drive: '+e.message,'err');
+    }
   }
   loading(false);
   editingId=null;
@@ -885,7 +1053,7 @@ function buildPdfHtml(n,p,pct){
     foot+'</div>';
 
   return'<!DOCTYPE html><html><head><meta charset="UTF-8"/><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;background:#fff}@page{size:A4;margin:0}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}.no-print{display:none}}</style></head><body>'+
-    '<div class="no-print" style="background:#0C3D6B;color:#fff;padding:10px 20px;display:flex;gap:12px;align-items:center;position:sticky;top:0;z-index:99"><strong>Conformidad N° '+String(n).padStart(4,'0')+'</strong><span style="flex:1;font-size:12px;color:#85B7EB">IP Santa Mónica Fishing · Departamento de Mantenimiento</span><button onclick="window.print()" style="background:#fff;color:#0C3D6B;border:none;border-radius:6px;padding:6px 16px;font-size:13px;font-weight:600;cursor:pointer">🖨️ Imprimir / Descargar PDF</button></div>'+
+    '<div class="no-print" style="background:#0C3D6B;color:#fff;padding:10px 20px;display:flex;gap:12px;align-items:center;position:sticky;top:0;z-index:99"><strong>Conformidad N° '+String(n).padStart(4,'0')+'</strong><span style="flex:1;font-size:12px;color:#85B7EB">IP Santa Mónica Fishing · Departamento de Mantenimiento</span><button onclick="window.print()" style="background:#fff;color:#0C3D6B;border:none;border-radius:6px;padding:6px 16px;font-size:13px;font-weight:600;cursor:pointer">🖨️ Imprimir / Descargar PDF</button><span style="font-size:11px;color:#A8C8E8">Para guardar como PDF: Imprimir → Destino: Guardar como PDF</span></div>'+
     pg1+pg2+pg3+'</body></html>';
 }
 

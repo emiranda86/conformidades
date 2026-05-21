@@ -326,9 +326,14 @@ async function loadUsersPanel(){
   try{
     const snap=await db.collection('users').orderBy('nombre').get();
     if(snap.empty){el.innerHTML='<p style="font-size:12px;color:#888">Sin usuarios.</p>';return;}
-    el.innerHTML='<div style="overflow-x:auto"><table class="ut"><thead><tr><th>Nombre</th><th>Correo</th><th>Rol</th><th></th></tr></thead><tbody>'+
-      snap.docs.map(d=>{const u=d.data();return'<tr><td>'+esc(u.nombre)+'</td><td>'+esc(u.email)+'</td><td>'+(u.rol==='admin'?'<span class="abadge" style="padding:2px 6px">ADMIN</span>':'Usuario')+'</td><td>'+(u.email!==ADMIN_EMAIL?'<button class="bcl" onclick="deleteUser(''+d.id+'',''+esc(u.email)+'')">Eliminar</button>':'--')+'</td></tr>';}).join('')+
-      '</tbody></table></div>';
+    let rows='';
+    snap.docs.forEach(function(d){
+      const u=d.data();
+      const rolBadge=u.rol==='admin'?'<span class="abadge" style="padding:2px 6px">ADMIN</span>':'Usuario';
+      const delBtn=u.email!==ADMIN_EMAIL?'<button class="bcl" onclick="deleteUser(this)" data-uid="'+d.id+'" data-email="'+esc(u.email)+'">Eliminar</button>':'--';
+      rows+='<tr><td>'+esc(u.nombre)+'</td><td>'+esc(u.email)+'</td><td>'+rolBadge+'</td><td>'+delBtn+'</td></tr>';
+    });
+    el.innerHTML='<div style="overflow-x:auto"><table class="ut"><thead><tr><th>Nombre</th><th>Correo</th><th>Rol</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div>';
   }catch(e){el.innerHTML='<p style="color:red;font-size:12px">Error: '+e.message+'</p>';}
 }
 
@@ -366,7 +371,9 @@ Contrasena: '+pass);
   }
 }
 
-async function deleteUser(uid,email){
+async function deleteUser(btn){
+  const uid=btn.getAttribute('data-uid');
+  const email=btn.getAttribute('data-email');
   if(!confirm('Eliminar al usuario '+email+'?'))return;
   load('Eliminando...');
   try{await db.collection('users').doc(uid).delete();load(false);toast('Usuario eliminado.','ok');loadUsersPanel();}
@@ -381,21 +388,28 @@ async function loadHistorial(){
     const snap=await db.collection('conformidades').orderBy('n','desc').get();
     if(snap.empty){el.innerHTML='<p style="font-size:12px;color:#888">Sin conformidades aun.</p>';return;}
     const isAdmin=currentUser&&currentUser.rol==='admin';
-    el.innerHTML='<div style="overflow-x:auto"><table class="ht"><thead><tr><th>N</th><th>Fecha</th><th>Proveedor</th><th>Servicio</th><th>Puntaje</th><th>Estado</th><th>Usuario</th><th>Acciones</th></tr></thead><tbody>'+
-      snap.docs.map(doc=>{
-        const h=doc.data(),id=doc.id;
-        const mine=currentUser&&h.creadoPor===currentUser.email;
-        const canEdit=(isAdmin||mine)&&!h.cerrada;
-        return'<tr><td style="font-weight:600;color:var(--bm)">'+String(h.n).padStart(4,'0')+'</td>'+
-          '<td>'+esc(h.fecha)+'</td><td>'+esc(h.proveedor)+'</td><td>'+esc(h.servicio)+'</td>'+
-          '<td>'+esc(h.puntaje)+'</td><td>'+(h.cerrada?'<span class="bc">Cerrada</span>':'<span class="bo">Abierta</span>')+'</td>'+
-          '<td>'+esc(h.creadoPor||'-')+'</td>'+
-          '<td>'+(canEdit?'<button class="be" onclick="editConf(''+id+'')">Editar</button>':'')+(isAdmin&&!h.cerrada?'<button class="bcl" onclick="closeConf(''+id+'')">Cerrar</button>':'')+'<button class="be" onclick="viewPdf(''+id+'')">PDF</button></td></tr>';
-      }).join('')+'</tbody></table></div>';
+    let rows='';
+    snap.docs.forEach(function(doc){
+      const h=doc.data(),id=doc.id;
+      const mine=currentUser&&h.creadoPor===currentUser.email;
+      const canEdit=(isAdmin||mine)&&!h.cerrada;
+      const estado=h.cerrada?'<span class="bc">Cerrada</span>':'<span class="bo">Abierta</span>';
+      let btns='';
+      if(canEdit) btns+='<button class="be" onclick="editConf(this)" data-id="'+id+'">Editar</button>';
+      if(isAdmin&&!h.cerrada) btns+='<button class="bcl" onclick="closeConf(this)" data-id="'+id+'">Cerrar</button>';
+      btns+='<button class="be" onclick="viewPdf(this)" data-id="'+id+'">PDF</button>';
+      rows+='<tr>'
+        +'<td style="font-weight:600;color:var(--bm)">'+String(h.n).padStart(4,'0')+'</td>'
+        +'<td>'+esc(h.fecha)+'</td><td>'+esc(h.proveedor)+'</td><td>'+esc(h.servicio)+'</td>'
+        +'<td>'+esc(h.puntaje)+'</td><td>'+estado+'</td>'
+        +'<td>'+esc(h.creadoPor||'-')+'</td>'
+        +'<td>'+btns+'</td></tr>';
+    });
+    el.innerHTML='<div style="overflow-x:auto"><table class="ht"><thead><tr><th>N</th><th>Fecha</th><th>Proveedor</th><th>Servicio</th><th>Puntaje</th><th>Estado</th><th>Usuario</th><th>Acciones</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
   }catch(e){el.innerHTML='<p style="color:red;font-size:12px">Error: '+e.message+'</p>';}
 }
 
-async function editConf(id){
+async function editConf(btn){const id=btn?btn.getAttribute('data-id'):btn;
   load('Cargando...');
   try{
     const doc=await db.collection('conformidades').doc(id).get();
@@ -406,14 +420,14 @@ async function editConf(id){
   }catch(e){load(false);toast('Error: '+e.message,'err');}
 }
 
-async function closeConf(id){
+async function closeConf(btn){const id=btn?btn.getAttribute('data-id'):btn;
   if(!confirm('Cerrar esta conformidad definitivamente?'))return;
   load('Cerrando...');
   try{await db.collection('conformidades').doc(id).update({cerrada:true});load(false);toast('Cerrada.','ok');loadHistorial();}
   catch(e){load(false);toast('Error: '+e.message,'err');}
 }
 
-async function viewPdf(id){
+async function viewPdf(btn){const id=btn?btn.getAttribute('data-id'):btn;
   load('Preparando...');
   try{
     const doc=await db.collection('conformidades').doc(id).get();

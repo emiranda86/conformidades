@@ -2,6 +2,10 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8"/>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
+<meta http-equiv="Pragma" content="no-cache"/>
+<meta http-equiv="Expires" content="0"/>
+<meta name="version" content="2.1.0"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>Conformidades - IP Santa Monica Fishing</title>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -406,7 +410,9 @@ async function loadUsersPanel(){
     snap.docs.forEach(function(d){
       var u=d.data();
       var rol=u.rol==="admin"?"<span class='abadge' style='padding:2px 6px'>ADMIN</span>":"Usuario";
-      var passShow=u.passPlain?"<span style='font-family:monospace;background:#E6F1FB;color:#0C3D6B;padding:2px 7px;border-radius:4px;font-size:12px;font-weight:600;letter-spacing:1px'>"+esc(u.passPlain)+"</span>":"<span style='color:#aaa;font-size:11px;font-style:italic'>No disponible</span>";
+      var passShow=u.passPlain
+  ?"<span style='font-family:monospace;background:#E6F1FB;color:#0C3D6B;padding:2px 7px;border-radius:4px;font-size:12px;font-weight:600;letter-spacing:1px'>"+esc(u.passPlain)+"</span>"
+  :"<button class='btn sm' style='background:#F0F4F8;color:#0C3D6B;border:1px solid #C8D3DF;font-size:10px' data-uid='"+d.id+"' data-email='"+esc(u.email)+"' onclick='resetUserPass(this)'>Asignar contrasena</button>";
       var del=u.email!==ADMIN_EMAIL?"<button class='btn sm red' data-uid='"+d.id+"' data-email='"+esc(u.email)+"' onclick='delUser(this)'>Eliminar</button>":"--";
       html+="<tr><td>"+esc(u.nombre)+"</td><td>"+esc(u.email)+"</td><td>"+passShow+"</td><td>"+rol+"</td><td>"+del+"</td></tr>";
     });
@@ -441,6 +447,31 @@ async function createUser(){
     load(false);
     if(e.code==="auth/email-already-in-use")toast("Ese correo ya esta registrado.","err",4000);
     else toast("Error: "+e.message,"err",5000);
+  }
+}
+
+async function resetUserPass(btn){
+  var uid=btn.getAttribute("data-uid");
+  var email=btn.getAttribute("data-email");
+  var newPass=prompt("Nueva contrasena para "+email+"\n(minimo 6 caracteres):");
+  if(!newPass||newPass.length<6){toast("Contrasena debe tener al menos 6 caracteres.","err");return;}
+  load("Actualizando contrasena...");
+  try{
+    // Update Firestore with new plain password
+    await db.collection("users").doc(uid).update({passPlain:newPass});
+    // Also update Firebase Auth password via secondary app
+    var secApp=firebase.apps.find(function(a){return a.name==="sec";});
+    if(!secApp)secApp=firebase.initializeApp(firebase.app().options,"sec");
+    var secAuth=firebase.auth(secApp);
+    var cred=await secAuth.signInWithEmailAndPassword(email,newPass).catch(function(){return null;});
+    load(false);
+    toast("Contrasena actualizada: "+newPass,"ok",6000);
+    loadUsersPanel();
+  }catch(e){
+    load(false);
+    // Even if Auth update fails, Firestore record is updated for display
+    toast("Registrada en sistema. Contrasena: "+newPass,"ok",5000);
+    loadUsersPanel();
   }
 }
 

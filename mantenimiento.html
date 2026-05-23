@@ -741,7 +741,7 @@ async function initFirebaseDefaults() {
   // Solo corre si la colección de usuarios está vacía
   const usersSnap = await COL.users().get();
   if (usersSnap.empty) {
-    await COL.users().add({id: Date.now(), nombre: 'Administrador', email: 'admin@santamonicafishing.com', pass: 'admin123', rol: 'admin', activo: true, ts: new Date().toISOString()});
+    await COL.users().add({id: Date.now(), nombre: 'Administrador', email: 'emiranda@santamonicafishing.com', pass: 'admin123', rol: 'admin', activo: true, ts: new Date().toISOString()});
     const tecs = ['Carlos Ramírez','Luis Huanca','Pedro Torres','Juan Flores','Mario Quispe'];
     for(let i=0; i<tecs.length; i++) await COL.tecnicos().add({nombre: tecs[i], orden: i});
     const prods = ['Pota','Merluza','Perico','Bonito'];

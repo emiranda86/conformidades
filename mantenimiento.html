@@ -150,6 +150,7 @@ tr:hover td{background:var(--surface2);}
 .text-sm{font-size:12px;}.text-muted{color:var(--text2);}
 .font-mono{font-family:'DM Mono',monospace;}
 .status-pill{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;}
+.admin-tab-content{display:none;}.admin-tab-content.active{display:block;}
 .status-pendiente{background:#ff950022;color:var(--warn);}
 .status-activo{background:#00e87a22;color:var(--success);}
 .status-cerrado{background:#00c8ff22;color:var(--accent);}
@@ -231,13 +232,19 @@ tr:hover td{background:var(--surface2);}
       <div class="nav-item" style="opacity:.4;cursor:not-allowed;"><span class="nav-icon">📋</span> Formatos<span class="nav-badge">Pronto</span></div>
       <div class="nav-item" style="opacity:.4;cursor:not-allowed;"><span class="nav-icon">💧</span> Consumos<span class="nav-badge">Pronto</span></div>
       <div class="nav-section-label" id="nav-admin-section" style="display:none;">Administración</div>
-      <div class="nav-item" onclick="navigate('usuarios')" id="nav-usuarios" style="display:none;"><span class="nav-icon">⚙️</span> Administración</div>
+      <div class="nav-item" onclick="navigate('admin')" id="nav-usuarios" style="display:none;"><span class="nav-icon">⚙️</span> Administración</div>
     </div>
     <div class="sidebar-footer">
-      <div class="user-chip" onclick="doLogout()">
+      <div class="user-chip" onclick="navigate('usuarios')" id="admin-chip" style="display:none;margin-bottom:8px;" title="Ir a Administración">
         <div class="user-avatar" id="sidebar-avatar">--</div>
-        <div><div class="user-name" id="sidebar-name">—</div><div class="user-role" id="sidebar-role">—</div></div>
+        <div style="flex:1;"><div class="user-name" id="sidebar-name">—</div><div class="user-role" id="sidebar-role">—</div></div>
+        <span style="font-size:11px;color:var(--accent);">⚙️</span>
       </div>
+      <div class="user-chip" id="user-chip-normal" title="Usuario actual">
+        <div class="user-avatar" id="sidebar-avatar-2">--</div>
+        <div style="flex:1;"><div class="user-name" id="sidebar-name-2">—</div><div class="user-role" id="sidebar-role-2">—</div></div>
+      </div>
+      <button class="btn-sm btn-ghost" onclick="doLogout()" style="width:100%;margin-top:8px;font-size:12px;padding:7px;">🚪 Cerrar Sesión</button>
     </div>
   </div>
 
@@ -262,10 +269,10 @@ tr:hover td{background:var(--surface2);}
           <div class="module-card" style="opacity:.45;cursor:not-allowed;"><div class="module-icon">📓</div><div class="module-name">Bitácora</div><div class="module-desc">Actividades diarias por turno y técnico</div><div class="module-coming">Pronto</div></div>
           <div class="module-card" style="opacity:.45;cursor:not-allowed;"><div class="module-icon">📋</div><div class="module-name">Formatos</div><div class="module-desc">Checklists y formatos de equipos de planta</div><div class="module-coming">Pronto</div></div>
           <div class="module-card" style="opacity:.45;cursor:not-allowed;"><div class="module-icon">💧</div><div class="module-name">Consumos</div><div class="module-desc">Agua, energía, refrigerante y aceites</div><div class="module-coming">Pronto</div></div>
-          <div class="module-card" id="module-admin" onclick="navigate('usuarios')" style="display:none;">
+          <div class="module-card" id="module-admin" onclick="navigate('admin')" style="display:none;">
             <div class="module-icon">⚙️</div>
             <div class="module-name">Administración</div>
-            <div class="module-desc">Gestión de usuarios, niveles de acceso y permisos del sistema</div>
+            <div class="module-desc">Usuarios, niveles de acceso y configuración del sistema</div>
           </div>
         </div>
       </div>
@@ -398,18 +405,7 @@ tr:hover td{background:var(--surface2);}
           </div>
 
           </div><!-- end dash-page-3 -->
-          <div class="dash-page" id="dash-page-4">
-          <!-- PROD POR PRODUCTO -->
-          <div class="card">
-            <div class="card-title">📦 Producción por Producto</div>
-            <div class="table-wrap">
-              <table>
-                <thead><tr><th>Producto</th><th>Bachadas</th><th>Total Aros</th><th>Producción (kg)</th></tr></thead>
-                <tbody id="tbody-prod-prod"></tbody>
-              </table>
-            </div>
-          </div>
-          </div><!-- end dash-page-4 -->
+          <div class="dash-page" id="dash-page-4" style="display:none;"></div><!-- prod hidden, data kept -->
 
           <!-- PAGINATION -->
           <!-- PÁGINA 5: TIMELINE POR EQUIPO -->
@@ -434,6 +430,7 @@ tr:hover td{background:var(--surface2);}
                     <option value="bachada">Bachadas</option>
                     <option value="carga_descarga">Carga / Descarga</option>
                     <option value="descongelamiento">Descongelamiento</option>
+                    <option value="sin_produccion">Sin Producción</option>
                     <option value="programada">Mant. Programado</option>
                     <option value="no_programada">Falla / Avería</option>
                   </select>
@@ -468,7 +465,6 @@ tr:hover td{background:var(--surface2);}
             <button class="page-btn active-page" onclick="goToPage(1)" id="dp-1">📊 Producción</button>
             <button class="page-btn" onclick="goToPage(2)" id="dp-2">📈 Gráficos</button>
             <button class="page-btn" onclick="goToPage(3)" id="dp-3">🔧 Mantenimiento</button>
-            <button class="page-btn" onclick="goToPage(4)" id="dp-4">📦 Producto</button>
             <button class="page-btn" onclick="goToPage(5)" id="dp-5">⏱ Timeline Equipo</button>
           </div>
 
@@ -584,6 +580,109 @@ tr:hover td{background:var(--surface2);}
         </div>
       </div>
 
+      <!-- ADMIN PAGE -->
+      <div class="page" id="page-admin">
+        <div class="tabs" id="admin-tabs" style="margin-bottom:22px;">
+          <div class="tab active" onclick="showAdminTab('usuarios')">👥 Usuarios</div>
+          <div class="tab" onclick="showAdminTab('permisos')">🔐 Permisos</div>
+          <div class="tab" onclick="showAdminTab('sistema')">🔧 Sistema</div>
+        </div>
+
+        <div class="admin-tab-content active" id="atab-usuarios">
+          <div class="flex-between mb-4">
+            <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;">Usuarios Registrados</div>
+            <button class="btn-sm btn-accent" onclick="openUserModal()">+ Nuevo Usuario</button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Estado</th><th>Acciones</th></tr></thead>
+              <tbody id="tbody-users-admin"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="admin-tab-content" id="atab-permisos">
+          <div class="card mb-4">
+            <div class="card-title">🔐 Niveles de Acceso</div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;">
+              <div style="background:var(--surface2);border-radius:12px;padding:18px;border-top:3px solid var(--danger);">
+                <div style="font-weight:700;font-size:14px;margin-bottom:10px;color:var(--danger);">🔴 Administrador</div>
+                <ul style="font-size:12px;color:var(--text2);line-height:2;padding-left:16px;">
+                  <li>Crear / editar / eliminar bachadas y eventos</li>
+                  <li>Gestionar usuarios y cambiar roles</li>
+                  <li>Ver todos los dashboards y reportes</li>
+                  <li>Configurar técnicos, productos y equipos</li>
+                </ul>
+              </div>
+              <div style="background:var(--surface2);border-radius:12px;padding:18px;border-top:3px solid var(--warn);">
+                <div style="font-weight:700;font-size:14px;margin-bottom:10px;color:var(--warn);">🟡 Supervisor</div>
+                <ul style="font-size:12px;color:var(--text2);line-height:2;padding-left:16px;">
+                  <li>Crear y editar bachadas y eventos</li>
+                  <li>Ver dashboards y exportar reportes</li>
+                  <li>Configurar técnicos y productos</li>
+                  <li style="color:var(--text3);">✗ No gestiona usuarios</li>
+                </ul>
+              </div>
+              <div style="background:var(--surface2);border-radius:12px;padding:18px;border-top:3px solid var(--success);">
+                <div style="font-weight:700;font-size:14px;margin-bottom:10px;color:var(--success);">🟢 Operador</div>
+                <ul style="font-size:12px;color:var(--text2);line-height:2;padding-left:16px;">
+                  <li>Registrar bachadas y eventos nuevos</li>
+                  <li>Ver dashboards básicos</li>
+                  <li style="color:var(--text3);">✗ No edita ni elimina registros</li>
+                  <li style="color:var(--text3);">✗ Sin acceso a configuración</li>
+                </ul>
+              </div>
+              <div style="background:var(--surface2);border-radius:12px;padding:18px;border-top:3px solid var(--text3);">
+                <div style="font-weight:700;font-size:14px;margin-bottom:10px;color:var(--text2);">⚪ Solo Consulta</div>
+                <ul style="font-size:12px;color:var(--text2);line-height:2;padding-left:16px;">
+                  <li>Ver dashboards y reportes</li>
+                  <li style="color:var(--text3);">✗ No registra ni edita nada</li>
+                  <li style="color:var(--text3);">✗ Sin acceso a configuración</li>
+                  <li style="color:var(--text3);">✗ Sin gestión de usuarios</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">✏️ Cambiar Rol de Usuario</div>
+            <div class="form-grid">
+              <div class="field"><label>Usuario</label><select id="perm-user-sel" onchange="loadUserPerm()"><option value="">Seleccionar...</option></select></div>
+              <div class="field"><label>Nuevo Rol</label>
+                <select id="perm-rol-sel">
+                  <option value="admin">🔴 Administrador</option>
+                  <option value="supervisor">🟡 Supervisor</option>
+                  <option value="operador">🟢 Operador</option>
+                  <option value="consulta">⚪ Solo Consulta</option>
+                </select>
+              </div>
+            </div>
+            <div style="margin-top:14px;"><button class="btn-sm btn-accent" onclick="saveUserPerm()">Guardar Cambio</button></div>
+            <div id="perm-alert" style="margin-top:10px;"></div>
+          </div>
+        </div>
+
+        <div class="admin-tab-content" id="atab-sistema">
+          <div class="card mb-4">
+            <div class="card-title">ℹ️ Información del Sistema</div>
+            <div class="form-grid">
+              <div class="field"><label>Sistema</label><input type="text" value="Sistema Integrado de Mantenimiento" readonly></div>
+              <div class="field"><label>Empresa</label><input type="text" value="IP Santa Mónica Fishing" readonly></div>
+              <div class="field"><label>Módulo activo</label><input type="text" value="Congelamiento" readonly></div>
+              <div class="field"><label>Administrador</label><input type="text" value="emiranda@santamonicafishing.com" readonly></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">📊 Estadísticas Generales</div>
+            <div class="grid-4">
+              <div class="kpi kpi-blue"><div class="kpi-label">Usuarios</div><div class="kpi-value" id="stat-users">0</div><div class="kpi-sub">registrados</div></div>
+              <div class="kpi kpi-green"><div class="kpi-label">Bachadas</div><div class="kpi-value" id="stat-bach">0</div><div class="kpi-sub">total</div></div>
+              <div class="kpi kpi-warn"><div class="kpi-label">Eventos</div><div class="kpi-value" id="stat-ev">0</div><div class="kpi-sub">total</div></div>
+              <div class="kpi kpi-red"><div class="kpi-label">Fallas</div><div class="kpi-value" id="stat-fallas">0</div><div class="kpi-sub">no programadas</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 </div>
@@ -663,8 +762,9 @@ tr:hover td{background:var(--surface2);}
           <select id="e-tipo" onchange="onTipoEvento()">
             <option value="carga_descarga">Carga / Descarga</option>
             <option value="descongelamiento">Descongelamiento</option>
-            <option value="programada">Mantenimiento Programado</option>
-            <option value="no_programada">Falla / Avería (No Programada)</option>
+            <option value="sin_produccion">Sin Producción</option>
+            <option value="programada">Mant. Programado</option>
+            <option value="no_programada">Falla / Avería</option>
           </select>
         </div>
         <div class="field"><label>Fecha Inicio Evento</label><input type="date" id="e-fecha-ini"></div>
@@ -842,9 +942,11 @@ let currentUser=null,charts={},editingBachadaId=null,editingEventoId=null;
   if(currentUser){
     document.getElementById('auth-screen').style.display='none';
     document.getElementById('app').style.display='block';
-    document.getElementById('sidebar-name').textContent=currentUser.nombre;
+    document.getElementById('sidebar-name').textContent=currentUser.nombre;document.getElementById('sidebar-name-2').textContent=currentUser.nombre;
     document.getElementById('sidebar-role').textContent={admin:'Administrador',supervisor:'Supervisor',operador:'Operador',consulta:'Solo Consulta'}[currentUser.rol]||currentUser.rol;
+    document.getElementById('sidebar-role-2').textContent=document.getElementById('sidebar-role').textContent;
     document.getElementById('sidebar-avatar').textContent=currentUser.nombre.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+    document.getElementById('sidebar-avatar-2').textContent=document.getElementById('sidebar-avatar').textContent;
     if(currentUser.rol!=='admin')document.getElementById('nav-usuarios').style.display='none';
     startListeners();
     navigate('home');setDefaultDates();
@@ -852,6 +954,7 @@ let currentUser=null,charts={},editingBachadaId=null,editingEventoId=null;
       const ma=document.getElementById('module-admin');if(ma)ma.style.display='';
       const ns=document.getElementById('nav-admin-section');if(ns)ns.style.display='';
       const nu=document.getElementById('nav-usuarios');if(nu)nu.style.display='flex';
+      const ac=document.getElementById('admin-chip');if(ac)ac.style.display='flex';
     }
   }
 })();
@@ -897,10 +1000,11 @@ function navigate(page){
   document.getElementById('page-'+page).classList.add('active');
   const nav=document.getElementById('nav-'+page);
   if(nav)nav.classList.add('active');
-  const titles={home:'Panel Principal',congelamiento:'🧊 Proceso de Congelamiento',usuarios:'👥 Gestión de Usuarios'};
+  const titles={home:'Panel Principal',congelamiento:'🧊 Proceso de Congelamiento',usuarios:'👥 Gestión de Usuarios',admin:'⚙️ Administración del Sistema'};
   document.getElementById('topbar-title').textContent=titles[page]||page;
   if(page==='congelamiento'){renderBachadas();renderEventos();populateSelects();renderEquiposConfig();}
   if(page==='usuarios')renderUsers();
+  if(page==='admin'){renderAdminUsers();renderAdminStats();populatePermUsers();}
 }
 
 function showTab(prefix,name){
@@ -1205,7 +1309,7 @@ async function saveEvento(){
     return;
   }
 
-  const tiposLabel={carga_descarga:'Carga/Descarga',descongelamiento:'Descongelamiento',programada:'Mant. Programado',no_programada:'Falla / Avería'};
+  const tiposLabel={carga_descarga:'Carga/Descarga',descongelamiento:'Descongel.',sin_produccion:'Sin Producción',programada:'Mant. Prog.',no_programada:'Falla/Avería'};
   const durH=fin?calcTimeDiffHours(fechaIni,inicio,fechaFin||fechaIni,fin):null;
   const estado=fin?'cerrado':'abierto';
 
@@ -1248,7 +1352,7 @@ function renderEventos(){
     </tr>`).join('');
 }
 
-function getBadgeEvento(tipo){return{carga_descarga:'badge-gray',descongelamiento:'badge-blue',programada:'badge-warn',no_programada:'badge-red'}[tipo]||'badge-gray';}
+function getBadgeEvento(tipo){return{carga_descarga:'badge-gray',descongelamiento:'badge-blue',sin_produccion:'badge-teal',programada:'badge-warn',no_programada:'badge-red'}[tipo]||'badge-gray';}
 async function delEvento(id){if(!canAdmin()||!confirm('¿Eliminar?'))return;try{const item=DB.get('eventos',[]).find(e=>e.id===id||e._fid===id);const fid=item?._fid||String(id);await COL.eventos().doc(fid).delete();}catch(err){console.error(err);}}
 
 // ======== DASHBOARD ========
@@ -1531,6 +1635,7 @@ function renderUsers(){
       ${u.id!==1?`<button class="btn-sm btn-ghost" style="padding:4px 9px;font-size:11px;" onclick="delUser(${u.id})">🗑</button>`:''}
     </td>
   </tr>`).join('');
+  renderAdminUsers();
 }
 function openUserModal(){if(!canAdmin()){alert('Solo administradores.');return;}document.getElementById('modal-usuario').classList.add('open');}
 async function saveUser(){
@@ -1765,6 +1870,85 @@ function toHHMM(h) {
   const mm = Math.round((h - hh) * 60);
   return String(hh).padStart(2,'0') + ':' + String(mm).padStart(2,'0');
 }
+
+
+
+// ======== ADMIN PAGE ========
+function showAdminTab(name) {
+  document.querySelectorAll('.admin-tab-content').forEach(c => c.classList.remove('active'));
+  const el = document.getElementById('atab-' + name);
+  if(el) el.classList.add('active');
+  const tabs = document.getElementById('admin-tabs');
+  if(tabs) {
+    const order = ['usuarios','permisos','sistema'];
+    tabs.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', order[i]===name));
+  }
+  if(name === 'usuarios') renderAdminUsers();
+  if(name === 'permisos') populatePermUsers();
+  if(name === 'sistema') renderAdminStats();
+}
+
+function renderAdminUsers() {
+  const users = DB.get('users', []);
+  const tbody = document.getElementById('tbody-users-admin');
+  if(!tbody) return;
+  if(!users.length) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text3);padding:20px;">Sin usuarios registrados</td></tr>'; return; }
+  const rolLabel = {admin:'🔴 Admin',supervisor:'🟡 Supervisor',operador:'🟢 Operador',consulta:'⚪ Consulta'};
+  tbody.innerHTML = users.map(u => `<tr>
+    <td>${u.nombre}</td>
+    <td>${u.email}</td>
+    <td><span class="badge badge-blue">${rolLabel[u.rol]||u.rol}</span></td>
+    <td><span class="badge ${u.activo!==false?'badge-green':'badge-red'}">${u.activo!==false?'Activo':'Inactivo'}</span></td>
+    <td style="display:flex;gap:6px;">
+      <button class="btn-sm btn-ghost" style="padding:4px 9px;font-size:11px;" onclick="toggleUser(${u.id})">
+        ${u.activo!==false?'Desactivar':'Activar'}
+      </button>
+      ${u.id!==1?`<button class="btn-sm btn-ghost" style="padding:4px 9px;font-size:11px;" onclick="delUser(${u.id})">🗑</button>`:''}
+    </td>
+  </tr>`).join('');
+}
+
+function populatePermUsers() {
+  const users = DB.get('users', []);
+  const sel = document.getElementById('perm-user-sel');
+  if(!sel) return;
+  sel.innerHTML = '<option value="">Seleccionar usuario...</option>' + users.map(u => `<option value="${u._fid}">${u.nombre} (${u.email})</option>`).join('');
+}
+
+function loadUserPerm() {
+  const fid = document.getElementById('perm-user-sel').value;
+  if(!fid) return;
+  const u = DB.get('users',[]).find(x => x._fid === fid);
+  if(u) document.getElementById('perm-rol-sel').value = u.rol;
+}
+
+async function saveUserPerm() {
+  const fid = document.getElementById('perm-user-sel').value;
+  const rol = document.getElementById('perm-rol-sel').value;
+  if(!fid) { document.getElementById('perm-alert').innerHTML = '<div class="alert alert-error">Selecciona un usuario.</div>'; return; }
+  try {
+    await COL.users().doc(fid).update({ rol });
+    document.getElementById('perm-alert').innerHTML = '<div class="alert alert-success">✅ Rol actualizado correctamente.</div>';
+    setTimeout(() => { document.getElementById('perm-alert').innerHTML = ''; }, 3000);
+  } catch(err) {
+    document.getElementById('perm-alert').innerHTML = '<div class="alert alert-error">Error al guardar.</div>';
+  }
+}
+
+function renderAdminStats() {
+  const users = DB.get('users', []);
+  const bachs = DB.get('bachadas', []);
+  const evs = DB.get('eventos', []);
+  const fallas = evs.filter(e => e.tipo === 'no_programada');
+  const s = (id, v) => { const el = document.getElementById(id); if(el) el.textContent = v; };
+  s('stat-users', users.length);
+  s('stat-bach', bachs.length);
+  s('stat-ev', evs.length);
+  s('stat-fallas', fallas.length);
+}
+
+// Override renderUsers to also update admin users table
+const _origRenderUsers = typeof renderUsers !== 'undefined' ? renderUsers : null;
 
 </script>
 </body>

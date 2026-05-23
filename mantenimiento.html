@@ -230,8 +230,8 @@ tr:hover td{background:var(--surface2);}
       <div class="nav-item" style="opacity:.4;cursor:not-allowed;"><span class="nav-icon">📓</span> Bitácora<span class="nav-badge">Pronto</span></div>
       <div class="nav-item" style="opacity:.4;cursor:not-allowed;"><span class="nav-icon">📋</span> Formatos<span class="nav-badge">Pronto</span></div>
       <div class="nav-item" style="opacity:.4;cursor:not-allowed;"><span class="nav-icon">💧</span> Consumos<span class="nav-badge">Pronto</span></div>
-      <div class="nav-section-label">Administración</div>
-      <div class="nav-item" onclick="navigate('usuarios')" id="nav-usuarios"><span class="nav-icon">👥</span> Usuarios</div>
+      <div class="nav-section-label" id="nav-admin-section" style="display:none;">Administración</div>
+      <div class="nav-item" onclick="navigate('usuarios')" id="nav-usuarios" style="display:none;"><span class="nav-icon">⚙️</span> Administración</div>
     </div>
     <div class="sidebar-footer">
       <div class="user-chip" onclick="doLogout()">
@@ -262,6 +262,11 @@ tr:hover td{background:var(--surface2);}
           <div class="module-card" style="opacity:.45;cursor:not-allowed;"><div class="module-icon">📓</div><div class="module-name">Bitácora</div><div class="module-desc">Actividades diarias por turno y técnico</div><div class="module-coming">Pronto</div></div>
           <div class="module-card" style="opacity:.45;cursor:not-allowed;"><div class="module-icon">📋</div><div class="module-name">Formatos</div><div class="module-desc">Checklists y formatos de equipos de planta</div><div class="module-coming">Pronto</div></div>
           <div class="module-card" style="opacity:.45;cursor:not-allowed;"><div class="module-icon">💧</div><div class="module-name">Consumos</div><div class="module-desc">Agua, energía, refrigerante y aceites</div><div class="module-coming">Pronto</div></div>
+          <div class="module-card" id="module-admin" onclick="navigate('usuarios')" style="display:none;">
+            <div class="module-icon">⚙️</div>
+            <div class="module-name">Administración</div>
+            <div class="module-desc">Gestión de usuarios, niveles de acceso y permisos del sistema</div>
+          </div>
         </div>
       </div>
 
@@ -407,11 +412,64 @@ tr:hover td{background:var(--surface2);}
           </div><!-- end dash-page-4 -->
 
           <!-- PAGINATION -->
+          <!-- PÁGINA 5: TIMELINE POR EQUIPO -->
+          <div class="dash-page" id="dash-page-5">
+            <div class="card mb-6">
+              <div class="card-title">🔍 Filtros — Comportamiento por Equipo</div>
+              <div class="form-grid">
+                <div class="field"><label>Equipo</label>
+                  <select id="tl-equipo" onchange="renderTimeline()">
+                    <option value="C1">Congelador 1</option><option value="C2">Congelador 2</option>
+                    <option value="C3">Congelador 3</option><option value="C4">Congelador 4</option>
+                    <option value="C5">Congelador 5</option><option value="C6">Congelador 6</option>
+                    <option value="C7">Congelador 7</option><option value="C8">Congelador 8</option>
+                    <option value="C9">Congelador 9</option><option value="C10">Congelador 10</option>
+                    <option value="C11">Congelador 11</option><option value="TE">Túnel Estático</option>
+                  </select>
+                </div>
+                <div class="field"><label>Fecha</label><input type="date" id="tl-fecha" onchange="renderTimeline()"></div>
+                <div class="field"><label>Tipo de Evento</label>
+                  <select id="tl-tipo" onchange="renderTimeline()">
+                    <option value="">Todos</option>
+                    <option value="bachada">Bachadas</option>
+                    <option value="carga_descarga">Carga / Descarga</option>
+                    <option value="descongelamiento">Descongelamiento</option>
+                    <option value="programada">Mant. Programado</option>
+                    <option value="no_programada">Falla / Avería</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div class="card mb-4">
+              <div class="card-title" id="tl-title">📅 Línea de Tiempo — Congelador 1</div>
+              <div style="position:relative;overflow-x:auto;">
+                <canvas id="chart-timeline" height="120"></canvas>
+              </div>
+              <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:14px;font-size:12px;" id="tl-legend">
+                <span style="display:flex;align-items:center;gap:5px;"><span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:#00c8ff88;border:1px solid #00c8ff;"></span>Congelamiento</span>
+                <span style="display:flex;align-items:center;gap:5px;"><span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:#ff950088;border:1px solid #ff9500;"></span>Carga/Descarga</span>
+                <span style="display:flex;align-items:center;gap:5px;"><span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:#4a6a8a88;border:1px solid #4a6a8a;"></span>Descongelamiento</span>
+                <span style="display:flex;align-items:center;gap:5px;"><span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:#ff3b5c88;border:1px solid #ff3b5c;"></span>Falla</span>
+                <span style="display:flex;align-items:center;gap:5px;"><span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:#00e87a88;border:1px solid #00e87a;"></span>Mant. Programado</span>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-title">📋 Detalle de Eventos del Día</div>
+              <div class="table-wrap">
+                <table>
+                  <thead><tr><th>Tipo</th><th>Inicio</th><th>Fin</th><th>Duración</th><th>Desviación</th><th>Descripción</th></tr></thead>
+                  <tbody id="tbody-timeline"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
           <div class="dash-pagination no-print" id="dash-pagination">
             <button class="page-btn active-page" onclick="goToPage(1)" id="dp-1">📊 Producción</button>
             <button class="page-btn" onclick="goToPage(2)" id="dp-2">📈 Gráficos</button>
             <button class="page-btn" onclick="goToPage(3)" id="dp-3">🔧 Mantenimiento</button>
-            <button class="page-btn" onclick="goToPage(4)" id="dp-4">📦 Por Producto</button>
+            <button class="page-btn" onclick="goToPage(4)" id="dp-4">📦 Producto</button>
+            <button class="page-btn" onclick="goToPage(5)" id="dp-5">⏱ Timeline Equipo</button>
           </div>
 
         </div>
@@ -489,15 +547,40 @@ tr:hover td{background:var(--surface2);}
 
       <!-- USUARIOS -->
       <div class="page" id="page-usuarios">
-        <div class="flex-between mb-6">
-          <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;">Gestión de Usuarios</div>
+        <div class="flex-between mb-4">
+          <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;">⚙️ Administración del Sistema</div>
           <button class="btn-sm btn-accent no-print" onclick="openUserModal()">+ Nuevo Usuario</button>
         </div>
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Estado</th><th class="no-print">Acciones</th></tr></thead>
-            <tbody id="tbody-users"></tbody>
-          </table>
+        <!-- Niveles de acceso info -->
+        <div class="card mb-6">
+          <div class="card-title">📋 Niveles de Acceso</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;">
+            <div style="background:var(--surface2);border-radius:10px;padding:14px;border-left:3px solid var(--danger);">
+              <div style="font-weight:700;font-size:13px;margin-bottom:6px;color:var(--accent);">🔴 Administrador</div>
+              <div style="font-size:12px;color:var(--text2);line-height:1.6;">Acceso total: crear/editar/eliminar registros, gestionar usuarios, ver todos los reportes y configuración.</div>
+            </div>
+            <div style="background:var(--surface2);border-radius:10px;padding:14px;border-left:3px solid var(--warn);">
+              <div style="font-weight:700;font-size:13px;margin-bottom:6px;color:var(--warn);">🟡 Supervisor</div>
+              <div style="font-size:12px;color:var(--text2);line-height:1.6;">Puede registrar y editar bachadas y eventos. Ve todos los dashboards y reportes. No gestiona usuarios.</div>
+            </div>
+            <div style="background:var(--surface2);border-radius:10px;padding:14px;border-left:3px solid var(--success);">
+              <div style="font-weight:700;font-size:13px;margin-bottom:6px;color:var(--success);">🟢 Operador</div>
+              <div style="font-size:12px;color:var(--text2);line-height:1.6;">Solo puede registrar nuevas bachadas y eventos. No puede editar ni eliminar registros existentes.</div>
+            </div>
+            <div style="background:var(--surface2);border-radius:10px;padding:14px;border-left:3px solid var(--text3);">
+              <div style="font-weight:700;font-size:13px;margin-bottom:6px;color:var(--text2);">⚪ Solo Consulta</div>
+              <div style="font-size:12px;color:var(--text2);line-height:1.6;">Solo puede ver dashboards y reportes. No puede registrar ni modificar ningún dato.</div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">👥 Usuarios Registrados</div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Nombre</th><th>Correo</th><th>Rol / Acceso</th><th>Estado</th><th class="no-print">Acciones</th></tr></thead>
+              <tbody id="tbody-users"></tbody>
+            </table>
+          </div>
         </div>
       </div>
 
@@ -765,6 +848,11 @@ let currentUser=null,charts={},editingBachadaId=null,editingEventoId=null;
     if(currentUser.rol!=='admin')document.getElementById('nav-usuarios').style.display='none';
     startListeners();
     navigate('home');setDefaultDates();
+    if(currentUser.rol==='admin'){
+      const ma=document.getElementById('module-admin');if(ma)ma.style.display='';
+      const ns=document.getElementById('nav-admin-section');if(ns)ns.style.display='';
+      const nu=document.getElementById('nav-usuarios');if(nu)nu.style.display='flex';
+    }
   }
 })();
 
@@ -843,7 +931,7 @@ function showSubTab(prefix,name){
 // ======== HELPERS ========
 function today(){return new Date().toISOString().split('T')[0];}
 function nowTime(){const n=new Date();return String(n.getHours()).padStart(2,'0')+':'+String(n.getMinutes()).padStart(2,'0');}
-function canEdit(){return currentUser&&['admin','supervisor','operador'].includes(currentUser.rol);}
+function canEdit(){return currentUser!=null;}
 function canAdmin(){return currentUser&&currentUser.rol==='admin';}
 
 function calcTimeDiffHours(d1,t1,d2,t2){
@@ -866,6 +954,7 @@ function setDefaultDates(){
   const d30s=d30.toISOString().split('T')[0];
   ['dash-from','rep-from'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=d30s;});
   ['dash-to','rep-to'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=t;});
+  const tlf=document.getElementById('tl-fecha');if(tlf)tlf.value=t;
 }
 
 function showAlert(cid,msg,type){
@@ -1469,7 +1558,7 @@ document.getElementById('b-aros').addEventListener('input',calcPeso);
 
 // ======== DASHBOARD FULLSCREEN & PAGINATION ========
 let currentDashPage = 1;
-const totalDashPages = 4;
+const totalDashPages = 5;
 
 function goToPage(n) {
   currentDashPage = n;
@@ -1479,25 +1568,36 @@ function goToPage(n) {
     if (p) p.classList.toggle('active', i === n);
     if (b) b.classList.toggle('active-page', i === n);
   }
-  // Re-render charts if going to charts page (they need visible canvas)
   if (n === 2) { setTimeout(renderDashboard, 50); }
+  if (n === 5) { setTimeout(renderTimeline, 50); }
 }
 
 function toggleFullscreen() {
   const dash = document.getElementById('tab-cong-dashboard');
   const btn = document.getElementById('btn-fullscreen');
-  if (dash.classList.contains('fullscreen-mode')) {
-    dash.classList.remove('fullscreen-mode');
-    btn.textContent = '⛶ Pantalla Completa';
-    document.body.style.overflow = '';
-  } else {
+  if (!document.fullscreenElement) {
     dash.classList.add('fullscreen-mode');
-    btn.textContent = '✕ Salir Pantalla Completa';
-    document.body.style.overflow = 'hidden';
-    dash.scrollTop = 0;
+    btn.textContent = '✕ Salir (ESC)';
+    dash.requestFullscreen().catch(err => {
+      // fallback if fullscreen API blocked
+      document.body.style.overflow = 'hidden';
+    });
+    setTimeout(renderDashboard, 150);
+  } else {
+    document.exitFullscreen();
   }
-  setTimeout(renderDashboard, 100);
 }
+
+document.addEventListener('fullscreenchange', function() {
+  const dash = document.getElementById('tab-cong-dashboard');
+  const btn = document.getElementById('btn-fullscreen');
+  if (!document.fullscreenElement) {
+    dash.classList.remove('fullscreen-mode');
+    if(btn) btn.textContent = '⛶ Pantalla Completa';
+    document.body.style.overflow = '';
+    setTimeout(renderDashboard, 150);
+  }
+});
 
 function printDashboard() {
   // Temporarily show all pages for printing
@@ -1520,6 +1620,151 @@ document.addEventListener('keydown', function(e) {
     if (dash && dash.classList.contains('fullscreen-mode')) toggleFullscreen();
   }
 });
+
+
+
+// ======== TIMELINE POR EQUIPO ========
+function renderTimeline() {
+  const equipo = document.getElementById('tl-equipo')?.value || 'C1';
+  const fecha = document.getElementById('tl-fecha')?.value || today();
+  const tipoF = document.getElementById('tl-tipo')?.value || '';
+
+  const titleEl = document.getElementById('tl-title');
+  if(titleEl) titleEl.textContent = '📅 Línea de Tiempo — ' + (equipo==='TE'?'Túnel Estático':'Congelador '+equipo.replace('C','')) + ' · ' + fecha;
+
+  // Reference times (hours) for deviation detection
+  const REF = { tcong: 6, carga_descarga: 1, descongelamiento: 1.5, programada: 2, no_programada: 0 };
+
+  const bachs = DB.get('bachadas',[]).filter(b => b.equipo===equipo && b.fecha===fecha && b.estado==='cerrado');
+  const evs   = DB.get('eventos',[]).filter(e => e.equipo===equipo && e.fechaIni===fecha && e.estado==='cerrado');
+
+  // Build segments: each has { label, startH, endH, type, color, desv }
+  const segments = [];
+
+  // Bachadas
+  bachs.forEach(b => {
+    if(tipoF && tipoF!=='bachada') return;
+    const [sh,sm] = b.inicio.split(':').map(Number);
+    let startH = sh + sm/60;
+    let endH = startH + (b.tcong||0);
+    if(endH > 24) endH = 24;
+    const desv = b.tcong > REF.tcong ? (b.tcong - REF.tcong).toFixed(2) : null;
+    segments.push({ label:'Bach #'+b.bach, startH, endH, type:'bachada', color:'#00c8ff', borderColor:'#0088cc', desv, desc: b.producto, tcong: b.tcong });
+  });
+
+  // Eventos
+  evs.forEach(e => {
+    if(tipoF && tipoF!==e.tipo) return;
+    const [sh,sm] = e.inicio.split(':').map(Number);
+    let startH = sh + sm/60;
+    let endH = startH + (e.durH||0);
+    if(endH > 24) endH = 24;
+    const ref = REF[e.tipo]||0;
+    const desv = ref>0 && (e.durH||0)>ref ? ((e.durH||0)-ref).toFixed(2) : null;
+    const colorMap = { carga_descarga:'#ff9500', descongelamiento:'#4a6a8a', programada:'#00e87a', no_programada:'#ff3b5c' };
+    segments.push({ label: e.tipoLabel, startH, endH, type:e.tipo, color: colorMap[e.tipo]||'#888', borderColor: colorMap[e.tipo]||'#888', desv, desc: e.desc||e.accion||'', durH: e.durH });
+  });
+
+  segments.sort((a,b) => a.startH - b.startH);
+
+  // Chart.js horizontal bar (bar with indexAxis x = hours)
+  const canvas = document.getElementById('chart-timeline');
+  if(!canvas) return;
+  if(charts['timeline']) charts['timeline'].destroy();
+
+  // Build dataset as floating bars: [startH, endH] per segment
+  const labels = segments.map(s => s.label);
+  const data   = segments.map(s => [s.startH, s.endH]);
+  const bgColors = segments.map(s => s.desv ? s.color.replace(')', ',0.9)').replace('#','rgba(') : s.color+'88');
+  const borderColors = segments.map(s => s.desv ? '#ff3b5c' : s.borderColor);
+  const borderW = segments.map(s => s.desv ? 3 : 1);
+
+  // Fallback if no segments
+  if(segments.length === 0) {
+    const tbody = document.getElementById('tbody-timeline');
+    if(tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:20px;">Sin datos para el equipo y fecha seleccionados</td></tr>';
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    return;
+  }
+
+  charts['timeline'] = new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Eventos',
+        data,
+        backgroundColor: bgColors,
+        borderColor: borderColors,
+        borderWidth: borderW,
+        borderRadius: 4,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: function(ctx) {
+              const s = segments[ctx.dataIndex];
+              const dur = (s.endH - s.startH).toFixed(2);
+              let txt = [`Inicio: ${toHHMM(s.startH)}  Fin: ${toHHMM(s.endH)}  Duración: ${dur}h`];
+              if(s.desv) txt.push(`⚠️ Desviación: +${s.desv}h sobre el promedio`);
+              if(s.desc) txt.push(`Obs: ${s.desc}`);
+              return txt;
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          min: 0, max: 24,
+          grid: { color: '#1e3352' },
+          ticks: { color: '#8aaac8', font: { size: 10 }, callback: v => toHHMM(v) },
+          title: { display: true, text: 'Hora del día (0–24h)', color: '#8aaac8', font: { size: 11 } }
+        },
+        y: {
+          grid: { color: '#1e3352' },
+          ticks: { color: '#e8f4ff', font: { size: 11 } },
+          title: { display: true, text: 'Eventos / Bachadas', color: '#8aaac8', font: { size: 11 } }
+        }
+      }
+    }
+  });
+
+  // Detail table
+  const tbody = document.getElementById('tbody-timeline');
+  if(tbody) {
+    if(!segments.length) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:20px;">Sin datos</td></tr>';
+    } else {
+      tbody.innerHTML = segments.map(s => {
+        const dur = (s.endH - s.startH).toFixed(2);
+        const desvCell = s.desv
+          ? `<span class="badge badge-red">+${s.desv}h</span>`
+          : `<span class="badge badge-green">OK</span>`;
+        return `<tr>
+          <td><span class="badge" style="background:${s.color}22;color:${s.color};border:1px solid ${s.color}44;">${s.label}</span></td>
+          <td class="font-mono">${toHHMM(s.startH)}</td>
+          <td class="font-mono">${toHHMM(s.endH)}</td>
+          <td class="font-mono">${dur}h</td>
+          <td>${desvCell}</td>
+          <td style="max-width:200px;white-space:normal;font-size:11.5px;">${s.desc||'—'}</td>
+        </tr>`;
+      }).join('');
+    }
+  }
+}
+
+function toHHMM(h) {
+  const hh = Math.floor(h);
+  const mm = Math.round((h - hh) * 60);
+  return String(hh).padStart(2,'0') + ':' + String(mm).padStart(2,'0');
+}
 
 </script>
 </body>

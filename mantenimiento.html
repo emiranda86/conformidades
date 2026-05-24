@@ -252,6 +252,7 @@ tr:hover td{background:var(--surface2);}
     <div class="topbar">
       <div class="topbar-title" id="topbar-title">Panel Principal</div>
       <div id="topbar-actions" style="display:flex;gap:10px;align-items:center;">
+        <button class="btn-sm btn-accent no-print" id="btn-admin-topbar" onclick="navigate('admin')" style="display:none;">⚙️ Administración</button>
         <button class="btn-sm btn-ghost no-print" onclick="doLogout()" style="font-size:12px;">🚪 Cerrar Sesión</button>
       </div>
     </div>
@@ -947,13 +948,15 @@ function applyUserUI(user) {
   document.getElementById('auth-screen').style.display='none';
   document.getElementById('app').style.display='block';
   if(user.rol==='admin'){
-    const ids={
-      'module-admin':'','nav-admin-section':'','nav-usuarios':'flex','admin-chip':'flex'
-    };
-    Object.entries(ids).forEach(([id,val])=>{const e=document.getElementById(id);if(e)e.style.display=val;});
+    ['module-admin','nav-admin-section','admin-chip'].forEach(id=>{
+      const e=document.getElementById(id);if(e)e.style.display='flex';
+    });
+    const nu=document.getElementById('nav-usuarios');if(nu)nu.style.display='flex';
+    const bat=document.getElementById('btn-admin-topbar');if(bat)bat.style.display='';
   } else {
-    const nu=document.getElementById('nav-usuarios');if(nu)nu.style.display='none';
-    const ns=document.getElementById('nav-admin-section');if(ns)ns.style.display='none';
+    ['nav-usuarios','nav-admin-section','module-admin','admin-chip','btn-admin-topbar'].forEach(id=>{
+      const e=document.getElementById(id);if(e)e.style.display='none';
+    });
   }
 }
 

@@ -270,7 +270,7 @@ tr:hover td{background:var(--surface2);}
           <div class="module-card" style="opacity:.45;cursor:not-allowed;"><div class="module-icon">📓</div><div class="module-name">Bitácora</div><div class="module-desc">Actividades diarias por turno y técnico</div><div class="module-coming">Pronto</div></div>
           <div class="module-card" style="opacity:.45;cursor:not-allowed;"><div class="module-icon">📋</div><div class="module-name">Formatos</div><div class="module-desc">Checklists y formatos de equipos de planta</div><div class="module-coming">Pronto</div></div>
           <div class="module-card" style="opacity:.45;cursor:not-allowed;"><div class="module-icon">💧</div><div class="module-name">Consumos</div><div class="module-desc">Agua, energía, refrigerante y aceites</div><div class="module-coming">Pronto</div></div>
-          <div class="module-card" id="module-admin" onclick="abrirAdmin()" style="display:none;border-color:var(--accent);">
+          <div class="module-card" id="module-admin" onclick="abrirAdmin()" style="border-color:var(--accent);">
             <div class="module-icon">👥</div>
             <div class="module-name">Usuarios</div>
             <div class="module-desc">Crear usuarios, asignar roles y gestionar accesos al sistema</div>
@@ -945,22 +945,15 @@ function applyUserUI(user) {
   const rolMap = {admin:'Administrador',supervisor:'Supervisor',operador:'Operador',consulta:'Solo Consulta'};
   const initials = user.nombre.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
   const rolLabel = rolMap[user.rol] || user.rol;
-  ['sidebar-name','sidebar-name-2'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent=user.nombre;});
-  ['sidebar-role','sidebar-role-2'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent=rolLabel;});
-  ['sidebar-avatar','sidebar-avatar-2'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent=initials;});
+  const setTxt = (id,v) => {const e=document.getElementById(id);if(e)e.textContent=v;};
+  setTxt('sidebar-name', user.nombre);
+  setTxt('sidebar-name-2', user.nombre);
+  setTxt('sidebar-role', rolLabel);
+  setTxt('sidebar-role-2', rolLabel);
+  setTxt('sidebar-avatar', initials);
+  setTxt('sidebar-avatar-2', initials);
   document.getElementById('auth-screen').style.display='none';
   document.getElementById('app').style.display='block';
-  if(user.rol==='admin'){
-    ['module-admin','nav-admin-section','admin-chip'].forEach(id=>{
-      const e=document.getElementById(id);if(e)e.style.display='flex';
-    });
-    const nu=document.getElementById('nav-usuarios');if(nu)nu.style.display='flex';
-    const bat=document.getElementById('btn-admin-topbar');if(bat)bat.style.display='';
-  } else {
-    ['nav-usuarios','nav-admin-section','module-admin','admin-chip','btn-admin-topbar'].forEach(id=>{
-      const e=document.getElementById(id);if(e)e.style.display='none';
-    });
-  }
 }
 
 // Restore session on page load — runs after Firebase SDK is ready
@@ -1967,7 +1960,8 @@ const _origRenderUsers = typeof renderUsers !== 'undefined' ? renderUsers : null
 // ======== GESTIÓN DE USUARIOS (modal directo) ========
 function abrirAdmin() {
   if(!currentUser){ alert('Debes iniciar sesión.'); return; }
-  if(currentUser.rol !== 'admin'){ alert('Solo el administrador puede gestionar usuarios.'); return; }
+  const formSection = document.getElementById('au-form-section');
+  if(formSection) formSection.style.display = currentUser.rol==='admin' ? '' : 'none';
   cargarUsuariosAdmin();
   document.getElementById('modal-admin-users').classList.add('open');
 }
@@ -1994,6 +1988,10 @@ function cargarUsuariosAdmin() {
 }
 
 async function crearUsuario() {
+  if(!currentUser || currentUser.rol !== 'admin'){
+    document.getElementById('au-alert').innerHTML='<span style="color:var(--danger);">Solo el administrador puede crear usuarios.</span>';
+    return;
+  }
   const nombre = document.getElementById('au-nombre').value.trim();
   const email  = document.getElementById('au-email').value.trim();
   const pass   = document.getElementById('au-pass').value;
@@ -2050,8 +2048,8 @@ async function eliminarUserAdmin(fid, nombre) {
       <button class="btn-sm btn-ghost" onclick="closeModal('modal-admin-users')">✕ Cerrar</button>
     </div>
 
-    <!-- Formulario nuevo usuario -->
-    <div class="modal-section" style="margin-bottom:18px;">
+    <!-- Formulario nuevo usuario - solo admin -->
+    <div class="modal-section" id="au-form-section" style="margin-bottom:18px;">
       <div class="modal-section-title">➕ Nuevo Usuario</div>
       <div class="form-grid">
         <div class="field"><label>Nombre Completo</label><input type="text" id="au-nombre" placeholder="Ej: Carlos Ramírez"></div>

@@ -936,28 +936,40 @@ async function initFirebaseDefaults() {
 
 let currentUser=null,charts={},editingBachadaId=null,editingEventoId=null;
 
-// Restore session on page load
-(function(){
-  try{const s=sessionStorage.getItem('smf_session');if(s){currentUser=JSON.parse(s);}}catch(e){}
-  if(currentUser){
-    document.getElementById('auth-screen').style.display='none';
-    document.getElementById('app').style.display='block';
-    document.getElementById('sidebar-name').textContent=currentUser.nombre;document.getElementById('sidebar-name-2').textContent=currentUser.nombre;
-    document.getElementById('sidebar-role').textContent={admin:'Administrador',supervisor:'Supervisor',operador:'Operador',consulta:'Solo Consulta'}[currentUser.rol]||currentUser.rol;
-    document.getElementById('sidebar-role-2').textContent=document.getElementById('sidebar-role').textContent;
-    document.getElementById('sidebar-avatar').textContent=currentUser.nombre.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
-    document.getElementById('sidebar-avatar-2').textContent=document.getElementById('sidebar-avatar').textContent;
-    if(currentUser.rol!=='admin')document.getElementById('nav-usuarios').style.display='none';
-    startListeners();
-    navigate('home');setDefaultDates();
-    if(currentUser.rol==='admin'){
-      const ma=document.getElementById('module-admin');if(ma)ma.style.display='';
-      const ns=document.getElementById('nav-admin-section');if(ns)ns.style.display='';
-      const nu=document.getElementById('nav-usuarios');if(nu)nu.style.display='flex';
-      const ac=document.getElementById('admin-chip');if(ac)ac.style.display='flex';
-    }
+// ======== Apply user UI (shared) ========
+function applyUserUI(user) {
+  const rolMap = {admin:'Administrador',supervisor:'Supervisor',operador:'Operador',consulta:'Solo Consulta'};
+  const initials = user.nombre.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+  const rolLabel = rolMap[user.rol] || user.rol;
+  ['sidebar-name','sidebar-name-2'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent=user.nombre;});
+  ['sidebar-role','sidebar-role-2'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent=rolLabel;});
+  ['sidebar-avatar','sidebar-avatar-2'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent=initials;});
+  document.getElementById('auth-screen').style.display='none';
+  document.getElementById('app').style.display='block';
+  if(user.rol==='admin'){
+    const ids={
+      'module-admin':'','nav-admin-section':'','nav-usuarios':'flex','admin-chip':'flex'
+    };
+    Object.entries(ids).forEach(([id,val])=>{const e=document.getElementById(id);if(e)e.style.display=val;});
+  } else {
+    const nu=document.getElementById('nav-usuarios');if(nu)nu.style.display='none';
+    const ns=document.getElementById('nav-admin-section');if(ns)ns.style.display='none';
   }
-})();
+}
+
+// Restore session on page load — runs after Firebase SDK is ready
+window.addEventListener('load', function() {
+  try {
+    const s = sessionStorage.getItem('smf_session');
+    if(s) { currentUser = JSON.parse(s); }
+  } catch(e) {}
+  if(currentUser) {
+    applyUserUI(currentUser);
+    startListeners();
+    navigate('home');
+    setDefaultDates();
+  }
+});
 
 // ======== AUTH ========
 async function doLogin(){
@@ -974,12 +986,7 @@ async function doLogin(){
     const user={...snap.docs[0].data(),_fid:snap.docs[0].id};
     currentUser=user;
     try{sessionStorage.setItem('smf_session',JSON.stringify(user));}catch(e){}
-    document.getElementById('auth-screen').style.display='none';
-    document.getElementById('app').style.display='block';
-    document.getElementById('sidebar-name').textContent=user.nombre;
-    document.getElementById('sidebar-role').textContent={admin:'Administrador',supervisor:'Supervisor',operador:'Operador',consulta:'Solo Consulta'}[user.rol]||user.rol;
-    document.getElementById('sidebar-avatar').textContent=user.nombre.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
-    if(user.rol!=='admin')document.getElementById('nav-usuarios').style.display='none';
+    applyUserUI(user);
     startListeners();
     initFirebaseDefaults();
     navigate('home');

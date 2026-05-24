@@ -231,8 +231,8 @@ tr:hover td{background:var(--surface2);}
       <div class="nav-item" style="opacity:.4;cursor:not-allowed;"><span class="nav-icon">📓</span> Bitácora<span class="nav-badge">Pronto</span></div>
       <div class="nav-item" style="opacity:.4;cursor:not-allowed;"><span class="nav-icon">📋</span> Formatos<span class="nav-badge">Pronto</span></div>
       <div class="nav-item" style="opacity:.4;cursor:not-allowed;"><span class="nav-icon">💧</span> Consumos<span class="nav-badge">Pronto</span></div>
-      <div class="nav-section-label" id="nav-admin-section" style="display:none;">Administración</div>
-      <div class="nav-item" onclick="navigate('admin')" id="nav-usuarios" style="display:none;"><span class="nav-icon">⚙️</span> Administración</div>
+      <div class="nav-section-label">Administración</div>
+      <div class="nav-item" onclick="abrirAdmin()" id="nav-usuarios"><span class="nav-icon">👥</span> Usuarios</div>
     </div>
     <div class="sidebar-footer">
       <div class="user-chip" onclick="navigate('usuarios')" id="admin-chip" style="display:none;margin-bottom:8px;" title="Ir a Administración">
@@ -252,7 +252,7 @@ tr:hover td{background:var(--surface2);}
     <div class="topbar">
       <div class="topbar-title" id="topbar-title">Panel Principal</div>
       <div id="topbar-actions" style="display:flex;gap:10px;align-items:center;">
-        <button class="btn-sm btn-accent no-print" id="btn-admin-topbar" onclick="navigate('admin')" style="display:none;">⚙️ Administración</button>
+        <button class="btn-sm btn-accent no-print" id="btn-admin-topbar" onclick="abrirAdmin()">👥 Usuarios</button>
         <button class="btn-sm btn-ghost no-print" onclick="doLogout()" style="font-size:12px;">🚪 Cerrar Sesión</button>
       </div>
     </div>
@@ -270,10 +270,10 @@ tr:hover td{background:var(--surface2);}
           <div class="module-card" style="opacity:.45;cursor:not-allowed;"><div class="module-icon">📓</div><div class="module-name">Bitácora</div><div class="module-desc">Actividades diarias por turno y técnico</div><div class="module-coming">Pronto</div></div>
           <div class="module-card" style="opacity:.45;cursor:not-allowed;"><div class="module-icon">📋</div><div class="module-name">Formatos</div><div class="module-desc">Checklists y formatos de equipos de planta</div><div class="module-coming">Pronto</div></div>
           <div class="module-card" style="opacity:.45;cursor:not-allowed;"><div class="module-icon">💧</div><div class="module-name">Consumos</div><div class="module-desc">Agua, energía, refrigerante y aceites</div><div class="module-coming">Pronto</div></div>
-          <div class="module-card" id="module-admin" onclick="navigate('admin')" style="display:none;">
-            <div class="module-icon">⚙️</div>
-            <div class="module-name">Administración</div>
-            <div class="module-desc">Usuarios, niveles de acceso y configuración del sistema</div>
+          <div class="module-card" id="module-admin" onclick="abrirAdmin()" style="display:none;border-color:var(--accent);">
+            <div class="module-icon">👥</div>
+            <div class="module-name">Usuarios</div>
+            <div class="module-desc">Crear usuarios, asignar roles y gestionar accesos al sistema</div>
           </div>
         </div>
       </div>
@@ -892,6 +892,9 @@ function startListeners() {
     const data = snap.docs.map(d => ({...d.data(), _fid: d.id}));
     CACHE.set('users', data);
     if(document.getElementById('page-usuarios').classList.contains('active')) renderUsers();
+    // Update admin modal if open
+    const adminModal = document.getElementById('modal-admin-users');
+    if(adminModal && adminModal.classList.contains('open')) cargarUsuariosAdmin();
   }, err => console.warn('users:', err)));
 
   // Tecnicos
@@ -1960,6 +1963,125 @@ function renderAdminStats() {
 // Override renderUsers to also update admin users table
 const _origRenderUsers = typeof renderUsers !== 'undefined' ? renderUsers : null;
 
+
+// ======== GESTIÓN DE USUARIOS (modal directo) ========
+function abrirAdmin() {
+  if(!currentUser){ alert('Debes iniciar sesión.'); return; }
+  if(currentUser.rol !== 'admin'){ alert('Solo el administrador puede gestionar usuarios.'); return; }
+  cargarUsuariosAdmin();
+  document.getElementById('modal-admin-users').classList.add('open');
+}
+
+function cargarUsuariosAdmin() {
+  const users = DB.get('users', []);
+  const tbody = document.getElementById('au-tbody');
+  if(!tbody) return;
+  const rolLabel = {admin:'🔴 Admin',supervisor:'🟡 Supervisor',operador:'🟢 Operador',consulta:'⚪ Consulta'};
+  if(!users.length) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text3);padding:16px;">Sin usuarios registrados</td></tr>';
+    return;
+  }
+  tbody.innerHTML = users.map(u => `<tr>
+    <td>${u.nombre}</td>
+    <td style="font-size:12px;">${u.email}</td>
+    <td><span class="badge badge-blue">${rolLabel[u.rol]||u.rol}</span></td>
+    <td><span class="badge ${u.activo!==false?'badge-green':'badge-red'}">${u.activo!==false?'Activo':'Inactivo'}</span></td>
+    <td style="display:flex;gap:6px;">
+      <button class="btn-sm btn-ghost" style="padding:3px 8px;font-size:11px;" onclick="toggleUserAdmin('${u._fid}',${u.activo!==false})">${u.activo!==false?'Desactivar':'Activar'}</button>
+      ${u._fid?`<button class="btn-sm btn-ghost" style="padding:3px 8px;font-size:11px;" onclick="eliminarUserAdmin('${u._fid}','${u.nombre}')">🗑</button>`:''}
+    </td>
+  </tr>`).join('');
+}
+
+async function crearUsuario() {
+  const nombre = document.getElementById('au-nombre').value.trim();
+  const email  = document.getElementById('au-email').value.trim();
+  const pass   = document.getElementById('au-pass').value;
+  const rol    = document.getElementById('au-rol').value;
+  const alertEl = document.getElementById('au-alert');
+
+  if(!nombre||!email||!pass) { alertEl.innerHTML='<span style="color:var(--danger);">Completa todos los campos.</span>'; return; }
+  if(pass.length < 6)        { alertEl.innerHTML='<span style="color:var(--danger);">Contraseña mínimo 6 caracteres.</span>'; return; }
+
+  alertEl.innerHTML='<span style="color:var(--text2);">Guardando...</span>';
+  try {
+    // Check duplicate
+    const snap = await COL.users().where('email','==',email).get();
+    if(!snap.empty) { alertEl.innerHTML='<span style="color:var(--danger);">Ese correo ya existe.</span>'; return; }
+
+    await COL.users().add({
+      id: Date.now(), nombre, email, pass, rol, activo: true,
+      ts: new Date().toISOString()
+    });
+    alertEl.innerHTML='<span style="color:var(--success);">✅ Usuario creado correctamente.</span>';
+    // Clear fields
+    ['au-nombre','au-email','au-pass'].forEach(id => document.getElementById(id).value='');
+    setTimeout(()=>{ alertEl.innerHTML=''; }, 3000);
+  } catch(err) {
+    console.error(err);
+    alertEl.innerHTML='<span style="color:var(--danger);">Error al guardar. Verifica conexión.</span>';
+  }
+}
+
+async function toggleUserAdmin(fid, activo) {
+  if(!fid) return;
+  try {
+    await COL.users().doc(fid).update({ activo: !activo });
+  } catch(err) { console.error(err); }
+}
+
+async function eliminarUserAdmin(fid, nombre) {
+  if(!confirm('¿Eliminar usuario "'+nombre+'"? Esta acción no se puede deshacer.')) return;
+  try {
+    await COL.users().doc(fid).delete();
+  } catch(err) { console.error(err); }
+}
+
 </script>
+
+<!-- MODAL GESTION USUARIOS (siempre disponible) -->
+<div class="modal-overlay" id="modal-admin-users" style="z-index:2000;">
+  <div class="modal" style="max-width:800px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+      <div>
+        <div class="modal-title" style="margin-bottom:4px;">👥 Gestión de Usuarios</div>
+        <div style="font-size:12px;color:var(--text2);">Crear usuarios y asignar niveles de acceso</div>
+      </div>
+      <button class="btn-sm btn-ghost" onclick="closeModal('modal-admin-users')">✕ Cerrar</button>
+    </div>
+
+    <!-- Formulario nuevo usuario -->
+    <div class="modal-section" style="margin-bottom:18px;">
+      <div class="modal-section-title">➕ Nuevo Usuario</div>
+      <div class="form-grid">
+        <div class="field"><label>Nombre Completo</label><input type="text" id="au-nombre" placeholder="Ej: Carlos Ramírez"></div>
+        <div class="field"><label>Correo</label><input type="email" id="au-email" placeholder="correo@santamonicafishing.com"></div>
+        <div class="field"><label>Contraseña</label><input type="password" id="au-pass" placeholder="Mínimo 6 caracteres"></div>
+        <div class="field"><label>Rol / Acceso</label>
+          <select id="au-rol">
+            <option value="supervisor">🟡 Supervisor (registra y edita)</option>
+            <option value="operador">🟢 Operador (solo registra)</option>
+            <option value="consulta">⚪ Solo Consulta (solo ver)</option>
+            <option value="admin">🔴 Administrador (acceso total)</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin-top:14px;display:flex;gap:10px;align-items:center;">
+        <button class="btn-sm btn-accent" onclick="crearUsuario()">✅ Crear Usuario</button>
+        <div id="au-alert" style="font-size:13px;"></div>
+      </div>
+    </div>
+
+    <!-- Lista usuarios existentes -->
+    <div class="modal-section-title" style="font-size:11px;font-weight:700;color:var(--accent);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px;">👤 Usuarios Registrados</div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Estado</th><th>Acción</th></tr></thead>
+        <tbody id="au-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>

@@ -928,7 +928,7 @@ async function initFirebaseDefaults() {
   // Solo corre si la colección de usuarios está vacía
   const usersSnap = await COL.users().get();
   if (usersSnap.empty) {
-    await COL.users().add({id: Date.now(), nombre: 'Administrador', email: 'emiranda@santamonicafishing.com', pass: 'admin123', rol: 'admin', activo: true, ts: new Date().toISOString()});
+    await COL.users().add({id: 1, nombre: 'Administrador', email: 'emiranda@santamonicafishing.com', pass: 'admin123', rol: 'admin', activo: true, ts: new Date().toISOString()});
     const tecs = ['Carlos Ramírez','Luis Huanca','Pedro Torres','Juan Flores','Mario Quispe'];
     for(let i=0; i<tecs.length; i++) await COL.tecnicos().add({nombre: tecs[i], orden: i});
     const prods = ['Pota','Merluza','Perico','Bonito'];
@@ -964,6 +964,12 @@ window.addEventListener('load', function() {
   } catch(e) {}
   if(currentUser) {
     applyUserUI(currentUser);
+    if(currentUser.rol !== 'admin'){
+      const ids = ['btn-admin-topbar','module-admin','nav-usuarios'];
+      ids.forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
+      const ns=document.getElementById('nav-admin-section');
+      if(ns)ns.style.display='none';
+    }
     startListeners();
     navigate('home');
     setDefaultDates();
@@ -982,10 +988,24 @@ async function doLogin(){
       document.getElementById('login-error').style.display='block';
       btn.textContent='Iniciar Sesión';btn.disabled=false;return;
     }
-    const user={...snap.docs[0].data(),_fid:snap.docs[0].id};
+    const rawUser = snap.docs[0].data();
+    // Si rol es undefined (creado manualmente sin ese campo), asignar según email
+    if(!rawUser.rol) {
+      rawUser.rol = rawUser.email === 'emiranda@santamonicafishing.com' ? 'admin' : 'operador';
+      // Corregir en Firebase también
+      await COL.users().doc(snap.docs[0].id).update({rol: rawUser.rol});
+    }
+    const user={...rawUser, _fid:snap.docs[0].id};
     currentUser=user;
     try{sessionStorage.setItem('smf_session',JSON.stringify(user));}catch(e){}
     applyUserUI(user);
+    // Ocultar gestión de usuarios si no es admin
+    if(user.rol !== 'admin'){
+      const ids = ['btn-admin-topbar','module-admin','nav-usuarios'];
+      ids.forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
+      const ns=document.getElementById('nav-admin-section');
+      if(ns)ns.style.display='none';
+    }
     startListeners();
     initFirebaseDefaults();
     navigate('home');
@@ -1899,11 +1919,11 @@ function renderAdminUsers() {
   const tbody = document.getElementById('tbody-users-admin');
   if(!tbody) return;
   if(!users.length) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text3);padding:20px;">Sin usuarios registrados</td></tr>'; return; }
-  const rolLabel = {admin:'🔴 Admin',supervisor:'🟡 Supervisor',operador:'🟢 Operador',consulta:'⚪ Consulta'};
+  const rolLabel = {admin:'🔴 Admin',supervisor:'🟡 Supervisor',operador:'🟢 Operador',consulta:'⚪ Consulta',undefined:'⚪ Sin rol'};
   tbody.innerHTML = users.map(u => `<tr>
     <td>${u.nombre}</td>
     <td>${u.email}</td>
-    <td><span class="badge badge-blue">${rolLabel[u.rol]||u.rol}</span></td>
+    <td><span class="badge badge-blue">${rolLabel[u.rol]||u.rol||'admin'}</span></td>
     <td><span class="badge ${u.activo!==false?'badge-green':'badge-red'}">${u.activo!==false?'Activo':'Inactivo'}</span></td>
     <td style="display:flex;gap:6px;">
       <button class="btn-sm btn-ghost" style="padding:4px 9px;font-size:11px;" onclick="toggleUser(${u.id})">
@@ -1960,8 +1980,6 @@ const _origRenderUsers = typeof renderUsers !== 'undefined' ? renderUsers : null
 // ======== GESTIÓN DE USUARIOS (modal directo) ========
 function abrirAdmin() {
   if(!currentUser){ alert('Debes iniciar sesión.'); return; }
-  const formSection = document.getElementById('au-form-section');
-  if(formSection) formSection.style.display = currentUser.rol==='admin' ? '' : 'none';
   cargarUsuariosAdmin();
   document.getElementById('modal-admin-users').classList.add('open');
 }
@@ -1988,10 +2006,6 @@ function cargarUsuariosAdmin() {
 }
 
 async function crearUsuario() {
-  if(!currentUser || currentUser.rol !== 'admin'){
-    document.getElementById('au-alert').innerHTML='<span style="color:var(--danger);">Solo el administrador puede crear usuarios.</span>';
-    return;
-  }
   const nombre = document.getElementById('au-nombre').value.trim();
   const email  = document.getElementById('au-email').value.trim();
   const pass   = document.getElementById('au-pass').value;

@@ -1660,7 +1660,7 @@ function limpiarFiltrosBachadas(){
   filtrarBachadas();
 }
 
-function delBachada(id){if(!canAdmin()||!confirm('¿Eliminar?'))return;try{const item=DB.get('bachadas',[]).find(b=>b.id===id||b._fid===id);const fid=item?._fid||String(id);await COL.bachadas().doc(fid).delete();}catch(err){console.error(err);}}
+async function delBachada(id){if(!canAdmin()||!confirm('¿Eliminar?'))return;try{const item=DB.get('bachadas',[]).find(b=>b.id===id||b._fid===id);const fid=item?._fid||String(id);await COL.bachadas().doc(fid).delete();}catch(err){console.error(err);}}
 
 // ======== EVENTOS ========
 function openEventoModal(id){

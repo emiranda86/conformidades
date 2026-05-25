@@ -2307,9 +2307,9 @@ function cargarUsuariosAdmin() {
     return;
   }
   tbody.innerHTML = users.map((u,i) => {
-    const uid = u._fid || ('u'+i); // fallback seguro si _fid es undefined
-    const passSafe = (u.pass||'').replace(/\/g,'').replace(/'/g,'\'').replace(/"/g,'');
-    const nomSafe  = (u.nombre||'').replace(/'/g,'\'').replace(/"/g,'');
+    const uid = u._fid || ('u'+i);
+    const passSafe = encodeURIComponent(u.pass||'');
+    const nomSafe  = encodeURIComponent(u.nombre||'');
     const perms = u.modulos || [];
     const permBadges = perms.length === 0
       ? '<span style="font-size:11px;color:var(--text3);">Todos</span>'
@@ -2323,15 +2323,15 @@ function cargarUsuariosAdmin() {
       <td style="min-width:110px;">
         <div style="display:flex;align-items:center;gap:8px;">
           <span id="padm-${uid}" style="font-family:'DM Mono',monospace;font-size:13px;letter-spacing:2px;">••••••</span>
-          <span onclick="verPass('padm-${uid}','${passSafe}')" style="cursor:pointer;font-size:18px;color:var(--accent);line-height:1;" title="Ver/ocultar contraseña">👁</span>
+          <span onclick="verPass('padm-${uid}',decodeURIComponent('${passSafe}'))" style="cursor:pointer;font-size:18px;color:var(--accent);line-height:1;" title="Ver/ocultar contraseña">👁</span>
         </div>
       </td>
       <td><span class="badge badge-blue">${rolLabel[u.rol]||u.rol||'—'}</span></td>
       <td style="min-width:120px;">${permBadges}</td>
       <td><span class="badge ${u.activo!==false?'badge-green':'badge-red'}">${u.activo!==false?'Activo':'Inactivo'}</span></td>
       <td style="display:flex;gap:4px;flex-wrap:wrap;min-width:160px;">
-        <button class="btn-sm btn-ghost" style="padding:3px 8px;font-size:11px;" onclick="editarUsuario('${uid}','${nomSafe}','${u.email}','${passSafe}','${u.rol||'operador'}')">✏️</button>
-        <button class="btn-sm btn-ghost" style="padding:3px 8px;font-size:11px;background:#00c8ff22;color:var(--accent);" onclick="abrirPermisos('${uid}','${nomSafe}')">🔐</button>
+        <button class="btn-sm btn-ghost" style="padding:3px 8px;font-size:11px;" onclick="editarUsuario('${uid}',decodeURIComponent('${nomSafe}'),'${u.email}',decodeURIComponent('${passSafe}'),'${u.rol||'operador'}')">✏️</button>
+        <button class="btn-sm btn-ghost" style="padding:3px 8px;font-size:11px;background:#00c8ff22;color:var(--accent);" onclick="abrirPermisos('${uid}',decodeURIComponent('${nomSafe}'))">🔐</button>
         <button class="btn-sm btn-ghost" style="padding:3px 8px;font-size:11px;" onclick="toggleUserAdmin('${uid}',${u.activo!==false})">${u.activo!==false?'Desact.':'Activar'}</button>
         ${u._fid?`<button class="btn-sm btn-ghost" style="padding:3px 8px;font-size:11px;color:var(--danger);" onclick="eliminarUserAdmin('${uid}','${u.nombre||''}')">🗑</button>`:''}
       </td>

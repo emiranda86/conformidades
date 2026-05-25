@@ -1193,9 +1193,12 @@ window.addEventListener('load', function() {
 // ======== AUTH ========
 async function doLogin(){
   const email=document.getElementById('login-email').value.trim();
-  const pass=document.getElementById('login-password').value;
+  const passInput=document.getElementById('login-password');
+  const pass=passInput.value; // leer antes de cualquier cambio de tipo
   const btn=document.querySelector('.btn-primary');
   btn.textContent='Verificando...';btn.disabled=true;
+  // Asegurarse que el input vuelva a type=password para no interferir
+  passInput.type='password';
   try{
     const snap=await COL.users().where('email','==',email).where('pass','==',pass).get();
     if(snap.empty||snap.docs[0].data().activo===false){
@@ -1868,20 +1871,20 @@ function renderUsers(){
   const tbody=document.getElementById('tbody-users');
   if(!tbody)return;
   tbody.innerHTML=users.map(u=>`<tr>
-    <td>${u.nombre}</td>
-    <td style="font-size:12px;">${u.email}</td>
-    <td>
+    <td style="min-width:120px;">${u.nombre}</td>
+    <td style="font-size:12px;min-width:160px;">${u.email}</td>
+    <td style="min-width:110px;">
       <div style="display:flex;align-items:center;gap:6px;">
-        <span id="pass-tbl-${u._fid}" style="font-family:'DM Mono',monospace;font-size:12px;letter-spacing:2px;">••••••</span>
-        <span onclick="verPass('pass-tbl-${u._fid}','${u.pass}')" style="cursor:pointer;font-size:14px;color:var(--text2);" title="Ver contraseña">👁</span>
+        <span id="ptbl-${u._fid}" style="font-family:'DM Mono',monospace;font-size:12px;letter-spacing:1px;">••••••</span>
+        <span onclick="verPass('ptbl-${u._fid}','${(u.pass||'').replace(/'/g,'\'')}')" style="cursor:pointer;font-size:14px;color:var(--text2);" title="Ver contraseña">👁</span>
       </div>
     </td>
-    <td><span class="badge badge-blue">${{admin:'Administrador',supervisor:'Supervisor',operador:'Operador',consulta:'Solo Consulta'}[u.rol]||u.rol}</span></td>
+    <td><span class="badge badge-blue">${{admin:'🔴 Admin',supervisor:'🟡 Supervisor',operador:'🟢 Operador',consulta:'⚪ Consulta'}[u.rol]||u.rol||'—'}</span></td>
     <td><span class="badge ${u.activo!==false?'badge-green':'badge-red'}">${u.activo!==false?'Activo':'Inactivo'}</span></td>
-    <td class="no-print" style="display:flex;gap:4px;flex-wrap:wrap;">
-      <button class="btn-sm btn-ghost" style="padding:3px 8px;font-size:11px;" onclick="editarUsuario('${u._fid}','${u.nombre}','${u.email}','${u.pass}','${u.rol}')">✏️</button>
-      <button class="btn-sm btn-ghost" style="padding:3px 8px;font-size:11px;" onclick="toggleUser(${u.id})">${u.activo!==false?'Desact.':'Activar'}</button>
-      ${u.id!==1?`<button class="btn-sm btn-ghost" style="padding:3px 8px;font-size:11px;" onclick="delUser(${u.id})">🗑</button>`:''}
+    <td class="no-print" style="display:flex;gap:4px;flex-wrap:wrap;min-width:130px;">
+      <button class="btn-sm btn-ghost" style="padding:4px 10px;font-size:12px;" onclick="editarUsuario('${u._fid}','${(u.nombre||'').replace(/'/g,'\'').replace(/"/g,'')}','${u.email}','${(u.pass||'').replace(/'/g,'\'').replace(/"/g,'')}','${u.rol||'operador'}')">✏️ Editar</button>
+      <button class="btn-sm btn-ghost" style="padding:4px 10px;font-size:12px;" onclick="toggleUser(${u.id})">${u.activo!==false?'Desact.':'Activar'}</button>
+      ${u.id!==1?`<button class="btn-sm btn-ghost" style="padding:4px 10px;font-size:12px;color:var(--danger);" onclick="delUser(${u.id})">🗑</button>`:''}
     </td>
   </tr>`).join('');
   renderAdminUsers();
@@ -2143,16 +2146,21 @@ function renderAdminUsers() {
   if(!tbody) return;
   if(!users.length) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text3);padding:20px;">Sin usuarios registrados</td></tr>'; return; }
   const rolLabel = {admin:'🔴 Admin',supervisor:'🟡 Supervisor',operador:'🟢 Operador',consulta:'⚪ Consulta',undefined:'⚪ Sin rol'};
-  tbody.innerHTML = users.map(u => `<tr>
-    <td>${u.nombre}</td>
-    <td>${u.email}</td>
-    <td><span class="badge badge-blue">${rolLabel[u.rol]||u.rol||'admin'}</span></td>
+    tbody.innerHTML = users.map(u => `<tr>
+    <td style="min-width:120px;">${u.nombre}</td>
+    <td style="font-size:12px;min-width:150px;">${u.email}</td>
+    <td style="min-width:110px;">
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span id="padm-${u._fid}" style="font-family:'DM Mono',monospace;font-size:12px;letter-spacing:1px;">••••••</span>
+        <span onclick="verPass('padm-${u._fid}','${(u.pass||'').replace(/'/g,'\'')}')" style="cursor:pointer;font-size:14px;color:var(--text2);" title="Ver contraseña">👁</span>
+      </div>
+    </td>
+    <td><span class="badge badge-blue">${rolLabel[u.rol]||u.rol||'—'}</span></td>
     <td><span class="badge ${u.activo!==false?'badge-green':'badge-red'}">${u.activo!==false?'Activo':'Inactivo'}</span></td>
-    <td style="display:flex;gap:6px;">
-      <button class="btn-sm btn-ghost" style="padding:4px 9px;font-size:11px;" onclick="toggleUser(${u.id})">
-        ${u.activo!==false?'Desactivar':'Activar'}
-      </button>
-      ${u.id!==1?`<button class="btn-sm btn-ghost" style="padding:4px 9px;font-size:11px;" onclick="delUser(${u.id})">🗑</button>`:''}
+    <td style="display:flex;gap:4px;flex-wrap:wrap;min-width:140px;">
+      <button class="btn-sm btn-ghost" style="padding:4px 10px;font-size:12px;" onclick="editarUsuario('${u._fid}','${(u.nombre||'').replace(/'/g,'\'')}','${u.email}','${(u.pass||'').replace(/'/g,'\'')}','${u.rol||'operador'}')">✏️ Editar</button>
+      <button class="btn-sm btn-ghost" style="padding:4px 10px;font-size:12px;" onclick="toggleUserAdmin('${u._fid}',${u.activo!==false})">${u.activo!==false?'Desact.':'Activar'}</button>
+      ${u._fid?`<button class="btn-sm btn-ghost" style="padding:4px 10px;font-size:12px;color:var(--danger);" onclick="eliminarUserAdmin('${u._fid}','${u.nombre}')">🗑</button>`:''}
     </td>
   </tr>`).join('');
 }
@@ -2322,15 +2330,21 @@ function verPass(fid, pass) {
 
 // ======== EDITAR USUARIO ========
 function editarUsuario(fid, nombre, email, pass, rol) {
+  // Asegurarse que el modal esté abierto
+  const modal = document.getElementById('modal-admin-users');
+  if(modal && !modal.classList.contains('open')) {
+    modal.classList.add('open');
+  }
   document.getElementById('au-edit-fid').value = fid;
-  document.getElementById('au-edit-nombre').value = nombre;
+  document.getElementById('au-edit-nombre').value = decodeURIComponent(nombre.replace(/\\/g,"'"));
   document.getElementById('au-edit-email').value = email;
-  document.getElementById('au-edit-pass').value = pass;
+  document.getElementById('au-edit-pass').value = decodeURIComponent(pass.replace(/\\/g,"'"));
   document.getElementById('au-edit-rol').value = rol || 'operador';
   document.getElementById('au-edit-section').style.display = '';
   document.getElementById('au-edit-alert').innerHTML = '';
-  // Scroll al formulario de edición
-  document.getElementById('au-edit-section').scrollIntoView({behavior:'smooth', block:'start'});
+  setTimeout(()=>{
+    document.getElementById('au-edit-section').scrollIntoView({behavior:'smooth', block:'start'});
+  }, 100);
 }
 
 function cancelarEdicion() {

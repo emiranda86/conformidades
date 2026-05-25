@@ -1048,6 +1048,14 @@ tr:hover td{background:var(--surface2);}
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script>
+// ======== MÓDULOS DEL SISTEMA ========
+const MODULOS = [
+  { id: 'congelamiento', nombre: 'Congelamiento', icono: '🧊' },
+  { id: 'bitacora',      nombre: 'Bitácora',      icono: '📓' },
+  { id: 'formatos',      nombre: 'Formatos',       icono: '📋' },
+  { id: 'consumos',      nombre: 'Consumos',        icono: '💧' },
+];
+
 // ======== FIREBASE CONFIG ========
 // ⚠️ Reemplaza estos valores con los de tu proyecto Firebase
 const firebaseConfig = {
@@ -1105,8 +1113,16 @@ function startListeners() {
   _listeners.push(COL.users().onSnapshot(snap => {
     const data = snap.docs.map(d => ({...d.data(), _fid: d.id}));
     CACHE.set('users', data);
+    // Refrescar currentUser si cambió (para que los permisos se actualicen en tiempo real)
+    if(currentUser) {
+      const me = data.find(u => u._fid === currentUser._fid || u.email === currentUser.email);
+      if(me) {
+        currentUser = me;
+        try { sessionStorage.setItem('smf_session', JSON.stringify(me)); } catch(e) {}
+        applyModulePerms(me);
+      }
+    }
     if(document.getElementById('page-usuarios').classList.contains('active')) renderUsers();
-    // Update admin modal if open
     const adminModal = document.getElementById('modal-admin-users');
     if(adminModal && adminModal.classList.contains('open')) cargarUsuariosAdmin();
   }, err => console.warn('users:', err)));
@@ -1168,6 +1184,27 @@ function applyUserUI(user) {
   setTxt('sidebar-avatar-2', initials);
   document.getElementById('auth-screen').style.display='none';
   document.getElementById('app').style.display='block';
+  // Aplicar permisos de módulos en el sidebar
+  applyModulePerms(user);
+}
+
+function applyModulePerms(user){
+  if(user.rol === 'admin') return; // admin ve todo
+  const perms = user.modulos || [];
+  MODULOS.forEach(m => {
+    const navEl = document.getElementById('nav-' + m.id);
+    if(!navEl) return;
+    // Si hay permisos definidos y este módulo no está, ocultar
+    if(perms.length > 0 && !perms.includes(m.id)){
+      navEl.style.opacity = '0.35';
+      navEl.style.cursor = 'not-allowed';
+      navEl.style.pointerEvents = 'none';
+    } else {
+      navEl.style.opacity = '';
+      navEl.style.cursor = '';
+      navEl.style.pointerEvents = '';
+    }
+  });
 }
 
 // Restore session on page load — runs after Firebase SDK is ready
@@ -1250,6 +1287,17 @@ document.getElementById('login-password').addEventListener('keydown',e=>{if(e.ke
 
 // ======== NAVIGATE ========
 function navigate(page){
+  // Verificar permiso de módulo (admin siempre tiene acceso)
+  if(page !== 'home' && page !== 'admin' && page !== 'usuarios' && currentUser && currentUser.rol !== 'admin'){
+    const modulo = MODULOS.find(m => m.id === page);
+    if(modulo){
+      const perms = currentUser.modulos || [];
+      if(perms.length > 0 && !perms.includes(page)){
+        showToast('⛔ Sin acceso al módulo ' + modulo.icono + ' ' + modulo.nombre, 'danger');
+        return;
+      }
+    }
+  }
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   document.getElementById('page-'+page).classList.add('active');
@@ -1261,6 +1309,24 @@ function navigate(page){
   if(page==='usuarios')renderUsers();
   if(page==='admin'){renderAdminUsers();renderAdminStats();populatePermUsers();}
   closeSidebarMobile();
+}
+
+// Toast notification
+function showToast(msg, type='info'){
+  let t = document.getElementById('toast-msg');
+  if(!t){
+    t = document.createElement('div');
+    t.id = 'toast-msg';
+    t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:9999;padding:12px 24px;border-radius:10px;font-size:14px;font-weight:600;font-family:DM Sans,sans-serif;box-shadow:0 8px 24px #00000066;transition:opacity .3s;';
+    document.body.appendChild(t);
+  }
+  const colors = {danger:'#ff3b5c',success:'#00e87a',info:'#00c8ff',warn:'#ff9500'};
+  t.style.background = colors[type]||colors.info;
+  t.style.color = type==='danger'||type==='warn' ? '#fff' : '#060d1a';
+  t.style.opacity = '1';
+  t.textContent = msg;
+  clearTimeout(t._timer);
+  t._timer = setTimeout(()=>{ t.style.opacity='0'; }, 3000);
 }
 
 function showTab(prefix,name){
@@ -2233,26 +2299,37 @@ function cargarUsuariosAdmin() {
   if(!tbody) return;
   const rolLabel = {admin:'🔴 Admin',supervisor:'🟡 Supervisor',operador:'🟢 Operador',consulta:'⚪ Consulta'};
   if(!users.length) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:16px;">Sin usuarios registrados</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:16px;">Sin usuarios registrados</td></tr>';
     return;
   }
-  tbody.innerHTML = users.map(u => `<tr>
-    <td style="min-width:120px;">${u.nombre}</td>
-    <td style="font-size:12px;min-width:150px;">${u.email}</td>
-    <td style="min-width:110px;">
-      <div style="display:flex;align-items:center;gap:6px;">
-        <span id="padm-${u._fid}" style="font-family:'DM Mono',monospace;font-size:12px;letter-spacing:1px;">••••••</span>
-        <span onclick="verPass('padm-${u._fid}','${(u.pass||'').replace(/'/g,String.fromCharCode(39))}')" style="cursor:pointer;font-size:14px;color:var(--text2);">👁</span>
-      </div>
-    </td>
-    <td><span class="badge badge-blue">${rolLabel[u.rol]||u.rol||'—'}</span></td>
-    <td><span class="badge ${u.activo!==false?'badge-green':'badge-red'}">${u.activo!==false?'Activo':'Inactivo'}</span></td>
-    <td style="display:flex;gap:4px;flex-wrap:wrap;min-width:160px;">
-      <button class="btn-sm btn-ghost" style="padding:4px 9px;font-size:11px;" onclick="editarUsuario('${u._fid}','${(u.nombre||'').replace(/'/g,String.fromCharCode(39))}','${u.email}','${(u.pass||'').replace(/'/g,String.fromCharCode(39))}','${u.rol||'operador'}')">✏️ Editar</button>
-      <button class="btn-sm btn-ghost" style="padding:4px 9px;font-size:11px;" onclick="toggleUserAdmin('${u._fid}',${u.activo!==false})">${u.activo!==false?'Desact.':'Activar'}</button>
-      ${u._fid?`<button class="btn-sm btn-ghost" style="padding:4px 9px;font-size:11px;color:var(--danger);" onclick="eliminarUserAdmin('${u._fid}','${u.nombre}')">🗑</button>`:''}
-    </td>
-  </tr>`).join('');
+  tbody.innerHTML = users.map(u => {
+    const perms = u.modulos || [];
+    const permBadges = perms.length === 0
+      ? '<span style="font-size:11px;color:var(--text3);">Todos</span>'
+      : perms.map(p => {
+          const m = MODULOS.find(x => x.id === p);
+          return m ? `<span class="badge badge-blue" style="font-size:10px;padding:2px 6px;">${m.icono} ${m.nombre}</span>` : '';
+        }).join(' ');
+    return `<tr>
+      <td style="min-width:110px;">${u.nombre}</td>
+      <td style="font-size:12px;min-width:140px;">${u.email}</td>
+      <td style="min-width:100px;">
+        <div style="display:flex;align-items:center;gap:5px;">
+          <span id="padm-${u._fid}" style="font-family:'DM Mono',monospace;font-size:12px;letter-spacing:1px;">••••••</span>
+          <span onclick="verPass('padm-${u._fid}','${(u.pass||'').replace(/'/g,String.fromCharCode(39))}')" style="cursor:pointer;font-size:13px;color:var(--text2);">👁</span>
+        </div>
+      </td>
+      <td><span class="badge badge-blue">${rolLabel[u.rol]||u.rol||'—'}</span></td>
+      <td style="min-width:120px;">${permBadges}</td>
+      <td><span class="badge ${u.activo!==false?'badge-green':'badge-red'}">${u.activo!==false?'Activo':'Inactivo'}</span></td>
+      <td style="display:flex;gap:4px;flex-wrap:wrap;min-width:160px;">
+        <button class="btn-sm btn-ghost" style="padding:3px 8px;font-size:11px;" onclick="editarUsuario('${u._fid}','${(u.nombre||'').replace(/'/g,String.fromCharCode(39))}','${u.email}','${(u.pass||'').replace(/'/g,String.fromCharCode(39))}','${u.rol||'operador'}')">✏️</button>
+        <button class="btn-sm btn-ghost" style="padding:3px 8px;font-size:11px;background:#00c8ff22;color:var(--accent);" onclick="abrirPermisos('${u._fid}','${(u.nombre||'')}')">🔐</button>
+        <button class="btn-sm btn-ghost" style="padding:3px 8px;font-size:11px;" onclick="toggleUserAdmin('${u._fid}',${u.activo!==false})">${u.activo!==false?'Desact.':'Activar'}</button>
+        ${u._fid?`<button class="btn-sm btn-ghost" style="padding:3px 8px;font-size:11px;color:var(--danger);" onclick="eliminarUserAdmin('${u._fid}','${u.nombre}')">🗑</button>`:''}
+      </td>
+    </tr>`;
+  }).join('');
 }
 
 async function crearUsuario() {
@@ -2395,6 +2472,62 @@ async function guardarEdicion() {
   }
 }
 
+
+// ======== PERMISOS DE MÓDULOS ========
+function abrirPermisos(fid, nombre) {
+  document.getElementById('perm-fid').value = fid;
+  document.getElementById('perm-user-name').textContent = nombre;
+  document.getElementById('perm-save-alert').innerHTML = '';
+
+  // Cargar permisos actuales del usuario
+  const users = DB.get('users', []);
+  const u = users.find(x => x._fid === fid);
+  const permsActuales = u ? (u.modulos || []) : [];
+
+  // Renderizar checkboxes
+  const lista = document.getElementById('perm-modulos-list');
+  lista.innerHTML = MODULOS.map(m => `
+    <label style="display:flex;align-items:center;gap:14px;padding:12px 16px;background:var(--surface2);border-radius:10px;cursor:pointer;border:1px solid var(--border);transition:border-color .18s;"
+           onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+      <input type="checkbox" id="perm-cb-${m.id}" value="${m.id}"
+             ${permsActuales.length === 0 || permsActuales.includes(m.id) ? 'checked' : ''}
+             style="width:18px;height:18px;accent-color:var(--accent);cursor:pointer;">
+      <div>
+        <div style="font-size:15px;margin-bottom:2px;">${m.icono} <strong>${m.nombre}</strong></div>
+        <div style="font-size:11px;color:var(--text2);">Módulo del sistema</div>
+      </div>
+    </label>
+  `).join('');
+
+  document.getElementById('modal-permisos').classList.add('open');
+}
+
+async function guardarPermisos() {
+  const fid = document.getElementById('perm-fid').value;
+  const alertEl = document.getElementById('perm-save-alert');
+
+  // Recoger módulos marcados
+  const seleccionados = MODULOS
+    .filter(m => document.getElementById('perm-cb-' + m.id)?.checked)
+    .map(m => m.id);
+
+  // Si están todos marcados, guardar array vacío (= acceso total)
+  const toSave = seleccionados.length === MODULOS.length ? [] : seleccionados;
+
+  alertEl.innerHTML = '<span style="color:var(--text2);">Guardando...</span>';
+  try {
+    await COL.users().doc(fid).update({ modulos: toSave });
+    alertEl.innerHTML = '<span style="color:var(--success);">✅ Permisos guardados.</span>';
+    setTimeout(() => {
+      closeModal('modal-permisos');
+      alertEl.innerHTML = '';
+    }, 1500);
+  } catch(err) {
+    console.error(err);
+    alertEl.innerHTML = '<span style="color:var(--danger);">Error al guardar.</span>';
+  }
+}
+
 </script>
 
 <!-- MODAL GESTION USUARIOS (siempre disponible) -->
@@ -2468,9 +2601,36 @@ async function guardarEdicion() {
     <div class="modal-section-title" style="font-size:11px;font-weight:700;color:var(--accent);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px;">👤 Usuarios Registrados</div>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Nombre</th><th>Correo</th><th>Contraseña</th><th>Rol</th><th>Estado</th><th>Acción</th></tr></thead>
+        <thead><tr><th>Nombre</th><th>Correo</th><th>Contraseña</th><th>Rol</th><th>Módulos</th><th>Estado</th><th>Acción</th></tr></thead>
         <tbody id="au-tbody"></tbody>
       </table>
+    </div>
+  </div>
+</div>
+
+
+<!-- MODAL PERMISOS DE MÓDULOS -->
+<div class="modal-overlay" id="modal-permisos" style="z-index:2100;">
+  <div class="modal" style="max-width:460px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+      <div class="modal-title">🔐 Permisos de Módulos</div>
+      <button class="btn-sm btn-ghost" onclick="closeModal('modal-permisos')">✕</button>
+    </div>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:20px;">
+      Usuario: <strong id="perm-user-name" style="color:var(--accent);">—</strong>
+    </div>
+    <input type="hidden" id="perm-fid">
+
+    <div class="alert alert-info" style="margin-bottom:16px;font-size:12px;">
+      Si marcas <strong>todos</strong> o no marcas ninguno, el usuario tendrá acceso a todos los módulos disponibles. Marca solo los que deseas habilitar.
+    </div>
+
+    <div id="perm-modulos-list" style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px;"></div>
+
+    <div style="display:flex;gap:10px;align-items:center;">
+      <button class="btn-sm btn-accent" onclick="guardarPermisos()">💾 Guardar Permisos</button>
+      <button class="btn-sm btn-ghost" onclick="closeModal('modal-permisos')">Cancelar</button>
+      <div id="perm-save-alert" style="font-size:12px;"></div>
     </div>
   </div>
 </div>

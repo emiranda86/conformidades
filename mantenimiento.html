@@ -2306,7 +2306,10 @@ function cargarUsuariosAdmin() {
     tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:16px;">Sin usuarios registrados</td></tr>';
     return;
   }
-  tbody.innerHTML = users.map(u => {
+  tbody.innerHTML = users.map((u,i) => {
+    const uid = u._fid || ('u'+i); // fallback seguro si _fid es undefined
+    const passSafe = (u.pass||'').replace(/\/g,'').replace(/'/g,'\'').replace(/"/g,'');
+    const nomSafe  = (u.nombre||'').replace(/'/g,'\'').replace(/"/g,'');
     const perms = u.modulos || [];
     const permBadges = perms.length === 0
       ? '<span style="font-size:11px;color:var(--text3);">Todos</span>'
@@ -2315,22 +2318,22 @@ function cargarUsuariosAdmin() {
           return m ? `<span class="badge badge-blue" style="font-size:10px;padding:2px 6px;">${m.icono} ${m.nombre}</span>` : '';
         }).join(' ');
     return `<tr>
-      <td style="min-width:110px;">${u.nombre}</td>
-      <td style="font-size:12px;min-width:140px;">${u.email}</td>
-      <td style="min-width:100px;">
-        <div style="display:flex;align-items:center;gap:5px;">
-          <span id="padm-${u._fid}" style="font-family:'DM Mono',monospace;font-size:12px;letter-spacing:1px;">••••••</span>
-          <span onclick="verPass('padm-${u._fid}','${(u.pass||'').replace(/'/g,String.fromCharCode(39))}')" style="cursor:pointer;font-size:13px;color:var(--text2);">👁</span>
+      <td style="min-width:110px;">${u.nombre||'—'}</td>
+      <td style="font-size:12px;min-width:140px;">${u.email||'—'}</td>
+      <td style="min-width:110px;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span id="padm-${uid}" style="font-family:'DM Mono',monospace;font-size:13px;letter-spacing:2px;">••••••</span>
+          <span onclick="verPass('padm-${uid}','${passSafe}')" style="cursor:pointer;font-size:18px;color:var(--accent);line-height:1;" title="Ver/ocultar contraseña">👁</span>
         </div>
       </td>
       <td><span class="badge badge-blue">${rolLabel[u.rol]||u.rol||'—'}</span></td>
       <td style="min-width:120px;">${permBadges}</td>
       <td><span class="badge ${u.activo!==false?'badge-green':'badge-red'}">${u.activo!==false?'Activo':'Inactivo'}</span></td>
       <td style="display:flex;gap:4px;flex-wrap:wrap;min-width:160px;">
-        <button class="btn-sm btn-ghost" style="padding:3px 8px;font-size:11px;" onclick="editarUsuario('${u._fid}','${(u.nombre||'').replace(/'/g,String.fromCharCode(39))}','${u.email}','${(u.pass||'').replace(/'/g,String.fromCharCode(39))}','${u.rol||'operador'}')">✏️</button>
-        <button class="btn-sm btn-ghost" style="padding:3px 8px;font-size:11px;background:#00c8ff22;color:var(--accent);" onclick="abrirPermisos('${u._fid}','${(u.nombre||'')}')">🔐</button>
-        <button class="btn-sm btn-ghost" style="padding:3px 8px;font-size:11px;" onclick="toggleUserAdmin('${u._fid}',${u.activo!==false})">${u.activo!==false?'Desact.':'Activar'}</button>
-        ${u._fid?`<button class="btn-sm btn-ghost" style="padding:3px 8px;font-size:11px;color:var(--danger);" onclick="eliminarUserAdmin('${u._fid}','${u.nombre}')">🗑</button>`:''}
+        <button class="btn-sm btn-ghost" style="padding:3px 8px;font-size:11px;" onclick="editarUsuario('${uid}','${nomSafe}','${u.email}','${passSafe}','${u.rol||'operador'}')">✏️</button>
+        <button class="btn-sm btn-ghost" style="padding:3px 8px;font-size:11px;background:#00c8ff22;color:var(--accent);" onclick="abrirPermisos('${uid}','${nomSafe}')">🔐</button>
+        <button class="btn-sm btn-ghost" style="padding:3px 8px;font-size:11px;" onclick="toggleUserAdmin('${uid}',${u.activo!==false})">${u.activo!==false?'Desact.':'Activar'}</button>
+        ${u._fid?`<button class="btn-sm btn-ghost" style="padding:3px 8px;font-size:11px;color:var(--danger);" onclick="eliminarUserAdmin('${uid}','${u.nombre||''}')">🗑</button>`:''}
       </td>
     </tr>`;
   }).join('');

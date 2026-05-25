@@ -2290,6 +2290,10 @@ const _origRenderUsers = typeof renderUsers !== 'undefined' ? renderUsers : null
 function abrirAdmin() {
   if(!currentUser){ alert('Debes iniciar sesión.'); return; }
   cargarUsuariosAdmin();
+  // Renderizar módulos del formulario de creación
+  renderModulosCheckboxes('au-modulos-list', []);
+  // Generar contraseña automática inicial
+  generarPass();
   document.getElementById('modal-admin-users').classList.add('open');
 }
 
@@ -2332,30 +2336,72 @@ function cargarUsuariosAdmin() {
   }).join('');
 }
 
+// ---- Generar contraseña automática ----
+function generarPass() {
+  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789@#!';
+  let pass = '';
+  for(let i=0; i<8; i++) pass += chars[Math.floor(Math.random()*chars.length)];
+  const el = document.getElementById('au-pass');
+  if(el) el.value = pass;
+}
+
+function generarPassEdit() {
+  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789@#!';
+  let pass = '';
+  for(let i=0; i<8; i++) pass += chars[Math.floor(Math.random()*chars.length)];
+  const el = document.getElementById('au-edit-pass');
+  if(el) el.value = pass;
+}
+
+// ---- Renderizar checkboxes de módulos ----
+function renderModulosCheckboxes(containerId, permsActuales) {
+  const lista = document.getElementById(containerId);
+  if(!lista) return;
+  lista.innerHTML = MODULOS.map(m => `
+    <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface2);border-radius:9px;cursor:pointer;border:1px solid var(--border);transition:border-color .15s;"
+           onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+      <input type="checkbox" id="${containerId}-${m.id}" value="${m.id}"
+             ${permsActuales.length===0||permsActuales.includes(m.id)?'checked':''}
+             style="width:17px;height:17px;accent-color:var(--accent);cursor:pointer;flex-shrink:0;">
+      <span style="font-size:13px;">${m.icono} ${m.nombre}</span>
+    </label>
+  `).join('');
+}
+
+function getModulosSeleccionados(containerId) {
+  const sel = MODULOS.filter(m => {
+    const cb = document.getElementById(containerId+'-'+m.id);
+    return cb && cb.checked;
+  }).map(m => m.id);
+  return sel.length === MODULOS.length ? [] : sel; // vacío = todos
+}
+
 async function crearUsuario() {
   const nombre = document.getElementById('au-nombre').value.trim();
   const email  = document.getElementById('au-email').value.trim();
-  const pass   = document.getElementById('au-pass').value;
+  const pass   = document.getElementById('au-pass').value.trim();
   const rol    = document.getElementById('au-rol').value;
   const alertEl = document.getElementById('au-alert');
 
   if(!nombre||!email||!pass) { alertEl.innerHTML='<span style="color:var(--danger);">Completa todos los campos.</span>'; return; }
   if(pass.length < 6)        { alertEl.innerHTML='<span style="color:var(--danger);">Contraseña mínimo 6 caracteres.</span>'; return; }
 
+  const modulos = getModulosSeleccionados('au-modulos-list');
+
   alertEl.innerHTML='<span style="color:var(--text2);">Guardando...</span>';
   try {
-    // Check duplicate
     const snap = await COL.users().where('email','==',email).get();
     if(!snap.empty) { alertEl.innerHTML='<span style="color:var(--danger);">Ese correo ya existe.</span>'; return; }
 
     await COL.users().add({
-      id: Date.now(), nombre, email, pass, rol, activo: true,
+      id: Date.now(), nombre, email, pass, rol, modulos, activo: true,
       ts: new Date().toISOString()
     });
-    alertEl.innerHTML='<span style="color:var(--success);">✅ Usuario creado correctamente.</span>';
-    // Clear fields
+    alertEl.innerHTML='<span style="color:var(--success);">✅ Usuario creado: <strong>'+nombre+'</strong> — Contraseña: <strong style="font-family:monospace;">'+pass+'</strong></span>';
     ['au-nombre','au-email','au-pass'].forEach(id => document.getElementById(id).value='');
-    setTimeout(()=>{ alertEl.innerHTML=''; }, 3000);
+    generarPass(); // generar nueva contraseña lista para el siguiente
+    renderModulosCheckboxes('au-modulos-list', []);
+    setTimeout(()=>{ alertEl.innerHTML=''; }, 8000);
   } catch(err) {
     console.error(err);
     alertEl.innerHTML='<span style="color:var(--danger);">Error al guardar. Verifica conexión.</span>';
@@ -2426,18 +2472,21 @@ function verPass(fid, pass) {
 
 // ======== EDITAR USUARIO ========
 function editarUsuario(fid, nombre, email, pass, rol) {
-  // Asegurarse que el modal esté abierto
   const modal = document.getElementById('modal-admin-users');
-  if(modal && !modal.classList.contains('open')) {
-    modal.classList.add('open');
-  }
+  if(modal && !modal.classList.contains('open')) modal.classList.add('open');
   document.getElementById('au-edit-fid').value = fid;
-  document.getElementById('au-edit-nombre').value = decodeURIComponent(nombre.replace(/\\/g,"'"));
+  document.getElementById('au-edit-nombre').value = nombre;
+  document.getElementById('au-edit-nombre-label').textContent = nombre;
   document.getElementById('au-edit-email').value = email;
-  document.getElementById('au-edit-pass').value = decodeURIComponent(pass.replace(/\\/g,"'"));
+  document.getElementById('au-edit-pass').value = pass;
   document.getElementById('au-edit-rol').value = rol || 'operador';
   document.getElementById('au-edit-section').style.display = '';
   document.getElementById('au-edit-alert').innerHTML = '';
+  // Cargar módulos actuales del usuario
+  const users = DB.get('users', []);
+  const u = users.find(x => x._fid === fid);
+  const permsActuales = u ? (u.modulos || []) : [];
+  renderModulosCheckboxes('au-edit-modulos-list', permsActuales);
   setTimeout(()=>{
     document.getElementById('au-edit-section').scrollIntoView({behavior:'smooth', block:'start'});
   }, 100);
@@ -2451,21 +2500,19 @@ async function guardarEdicion() {
   const fid    = document.getElementById('au-edit-fid').value;
   const nombre = document.getElementById('au-edit-nombre').value.trim();
   const email  = document.getElementById('au-edit-email').value.trim();
-  const pass   = document.getElementById('au-edit-pass').value;
+  const pass   = document.getElementById('au-edit-pass').value.trim();
   const rol    = document.getElementById('au-edit-rol').value;
   const alertEl = document.getElementById('au-edit-alert');
+  const modulos = getModulosSeleccionados('au-edit-modulos-list');
 
   if(!nombre||!email||!pass) { alertEl.innerHTML='<span style="color:var(--danger);">Completa todos los campos.</span>'; return; }
   if(pass.length < 6)        { alertEl.innerHTML='<span style="color:var(--danger);">Contraseña mínimo 6 caracteres.</span>'; return; }
 
   alertEl.innerHTML = '<span style="color:var(--text2);">Guardando...</span>';
   try {
-    await COL.users().doc(fid).update({ nombre, email, pass, rol });
+    await COL.users().doc(fid).update({ nombre, email, pass, rol, modulos });
     alertEl.innerHTML = '<span style="color:var(--success);">✅ Usuario actualizado.</span>';
-    setTimeout(() => {
-      cancelarEdicion();
-      alertEl.innerHTML = '';
-    }, 2000);
+    setTimeout(() => { cancelarEdicion(); }, 2000);
   } catch(err) {
     console.error(err);
     alertEl.innerHTML = '<span style="color:var(--danger);">Error al guardar.</span>';
@@ -2541,56 +2588,67 @@ async function guardarPermisos() {
       <button class="btn-sm btn-ghost" onclick="closeModal('modal-admin-users')">✕ Cerrar</button>
     </div>
 
-    <!-- Formulario nuevo usuario - solo admin -->
-    <div class="modal-section" id="au-form-section" style="margin-bottom:18px;">
+    <!-- Formulario nuevo usuario - solo admi<div class="modal-section" id="au-form-section" style="margin-bottom:18px;">
       <div class="modal-section-title">➕ Nuevo Usuario</div>
       <div class="form-grid">
-        <div class="field"><label>Nombre Completo</label><input type="text" id="au-nombre" placeholder="Ej: Carlos Ramírez"></div>
-        <div class="field"><label>Correo</label><input type="email" id="au-email" placeholder="correo@santamonicafishing.com"></div>
-        <div class="field"><label>Contraseña</label>
+        <div class="field"><label>Nombre Completo</label>
+          <input type="text" id="au-nombre" placeholder="Ej: Carlos Ramírez">
+        </div>
+        <div class="field"><label>Correo</label>
+          <input type="email" id="au-email" placeholder="correo@santamonicafishing.com">
+        </div>
+        <div class="field"><label>Contraseña <span style="color:var(--text3);font-size:10px;">(auto, editable)</span></label>
           <div style="position:relative;">
-            <input type="password" id="au-pass" placeholder="Mínimo 6 caracteres" style="width:100%;padding-right:44px;">
-            <span onclick="togglePassVis('au-pass','eye-new')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:16px;color:#8aaac8;" id="eye-new">👁</span>
+            <input type="text" id="au-pass" style="width:100%;padding-right:76px;font-family:'DM Mono',monospace;font-size:13px;">
+            <span onclick="generarPass()" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:11px;font-weight:600;color:var(--accent);background:var(--surface2);padding:3px 7px;border-radius:6px;">🔀 Nueva</span>
           </div>
         </div>
         <div class="field"><label>Rol / Acceso</label>
           <select id="au-rol">
-            <option value="supervisor">🟡 Supervisor (registra y edita)</option>
             <option value="operador">🟢 Operador (solo registra)</option>
+            <option value="supervisor">🟡 Supervisor (registra y edita)</option>
             <option value="consulta">⚪ Solo Consulta (solo ver)</option>
             <option value="admin">🔴 Administrador (acceso total)</option>
           </select>
         </div>
       </div>
-      <div style="margin-top:14px;display:flex;gap:10px;align-items:center;">
+      <div style="margin-top:14px;">
+        <label style="font-size:11px;font-weight:600;color:var(--text2);letter-spacing:.08em;text-transform:uppercase;display:block;margin-bottom:8px;">Acceso a Módulos</label>
+        <div id="au-modulos-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px;"></div>
+        <div style="font-size:11px;color:var(--text3);margin-top:5px;">Sin selección o todos marcados = acceso a todos los módulos.</div>
+      </div>
+      <div style="margin-top:16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
         <button class="btn-sm btn-accent" onclick="crearUsuario()">✅ Crear Usuario</button>
         <div id="au-alert" style="font-size:13px;"></div>
       </div>
     </div>
-
     <!-- Sección editar usuario (oculta por defecto) -->
     <div id="au-edit-section" class="modal-section" style="display:none;margin-bottom:18px;border:1px solid var(--warn);">
-      <div class="modal-section-title" style="color:var(--warn);">✏️ Editar Usuario</div>
+      <div class="modal-section-title" style="color:var(--warn);">✏️ Editar Usuario: <span id="au-edit-nombre-label" style="color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;"></span></div>
       <input type="hidden" id="au-edit-fid">
       <div class="form-grid">
         <div class="field"><label>Nombre</label><input type="text" id="au-edit-nombre"></div>
         <div class="field"><label>Correo</label><input type="email" id="au-edit-email"></div>
         <div class="field"><label>Contraseña</label>
           <div style="position:relative;">
-            <input type="password" id="au-edit-pass" style="width:100%;padding-right:44px;">
-            <span onclick="togglePassVis('au-edit-pass','eye-edit')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:16px;color:#8aaac8;" id="eye-edit">👁</span>
+            <input type="text" id="au-edit-pass" style="width:100%;padding-right:80px;font-family:'DM Mono',monospace;">
+            <span onclick="generarPassEdit()" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:11px;font-weight:600;color:var(--accent);white-space:nowrap;background:var(--surface2);padding:3px 7px;border-radius:6px;">🔀 Nueva</span>
           </div>
         </div>
         <div class="field"><label>Rol</label>
           <select id="au-edit-rol">
-            <option value="supervisor">🟡 Supervisor</option>
             <option value="operador">🟢 Operador</option>
+            <option value="supervisor">🟡 Supervisor</option>
             <option value="consulta">⚪ Solo Consulta</option>
             <option value="admin">🔴 Administrador</option>
           </select>
         </div>
       </div>
-      <div style="margin-top:14px;display:flex;gap:10px;align-items:center;">
+      <div style="margin-top:14px;">
+        <label style="font-size:11px;font-weight:600;color:var(--text2);letter-spacing:.08em;text-transform:uppercase;display:block;margin-bottom:10px;">Acceso a Módulos</label>
+        <div id="au-edit-modulos-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;"></div>
+      </div>
+      <div style="margin-top:16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
         <button class="btn-sm btn-accent" onclick="guardarEdicion()">💾 Guardar Cambios</button>
         <button class="btn-sm btn-ghost" onclick="cancelarEdicion()">Cancelar</button>
         <div id="au-edit-alert" style="font-size:13px;"></div>

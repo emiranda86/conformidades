@@ -1627,7 +1627,7 @@ function renderBachadasData(bachs){
     </tr>`).join('');
 }
 
-async // ======== FILTRAR BACHADAS ========
+// ======== FILTRAR BACHADAS ========
 function filtrarBachadas(){
   let bachs = DB.get('bachadas', []);
   const equipo  = document.getElementById('filt-b-equipo')?.value || '';

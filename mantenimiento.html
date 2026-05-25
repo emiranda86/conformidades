@@ -1603,7 +1603,12 @@ async function saveBachada(){
       await COL.bachadas().add(docData);
     }
     closeModal('modal-bachada');
-    showAlert('alert-bachadas',estado==='cerrado'?'✅ Bachada cerrada correctamente.':'Inicio de bachada registrado. Edita cuando termine para completar.',estado==='cerrado'?'success':'warn');
+    if(estado==='cerrado'){
+      // Mostrar modal post-bachada para registrar evento siguiente
+      abrirPostBachada(eq, bach, producto, fin, fecha, turno, tecnico);
+    } else {
+      showAlert('alert-bachadas','Inicio de bachada registrado. Edita cuando termine para completar.','warn');
+    }
   } catch(err){console.error(err);document.getElementById('b-alert').innerHTML='<div class="alert alert-error">Error al guardar. Verifica conexión.</div>';}
 }
 
@@ -1633,11 +1638,17 @@ function renderBachadasData(bachs){
   }
   if(!bachs.length){tbody.innerHTML='<tr><td colspan="14" style="text-align:center;color:var(--text3);padding:28px;">No hay registros que coincidan con los filtros</td></tr>';return;}
 
-  // ORDENAR por fecha desc + hora inicio desc (no por ts de registro)
+  // ORDENAR: fecha DESC → turno (Día=0 antes Noche=1) → hora inicio ASC
   bachs = bachs.slice().sort((a,b) => {
-    const da = (a.fecha||'')+' '+(a.inicio||'00:00');
-    const db = (b.fecha||'')+' '+(b.inicio||'00:00');
-    return db.localeCompare(da); // más reciente primero
+    // 1. Fecha descendente
+    if((b.fecha||'') !== (a.fecha||'')) return (b.fecha||'').localeCompare(a.fecha||'');
+    // 2. Turno: Día primero, Noche después
+    const turnoOrd = {'Día':0, 'Noche':1};
+    const ta = turnoOrd[a.turno] ?? 0;
+    const tb = turnoOrd[b.turno] ?? 0;
+    if(ta !== tb) return ta - tb;
+    // 3. Hora de inicio ascendente dentro del mismo turno
+    return (a.inicio||'00:00').localeCompare(b.inicio||'00:00');
   });
   tbody.innerHTML=bachs.map(b=>`
     <tr class="clickable-row" id="fila-b-${b.id}" onclick="verDetalleBachada(${b.id},event)">
@@ -2228,28 +2239,51 @@ function renderTimeline() {
   // Build segments: each has { label, startH, endH, type, color, desv }
   const segments = [];
 
-  // Bachadas
-  bachs.forEach(b => {
+  // Bachadas — ordenadas por hora inicio
+  const bachsSorted = bachs.slice().sort((a,b)=>(a.inicio||'00:00').localeCompare(b.inicio||'00:00'));
+  bachsSorted.forEach(b => {
     if(tipoF && tipoF!=='bachada') return;
+    if(!b.inicio) return;
     const [sh,sm] = b.inicio.split(':').map(Number);
     let startH = sh + sm/60;
-    let endH = startH + (b.tcong||0);
+    let endH = b.fin ? (()=>{const[eh,em]=b.fin.split(':').map(Number);let e=eh+em/60;if(e<startH)e+=24;return e;})() : startH+(b.tcong||0);
     if(endH > 24) endH = 24;
-    const desv = b.tcong > REF.tcong ? (b.tcong - REF.tcong).toFixed(2) : null;
-    segments.push({ label:'Bach #'+b.bach, startH, endH, type:'bachada', color:'#00c8ff', borderColor:'#0088cc', desv, desc: b.producto, tcong: b.tcong });
+    const durReal = endH - startH;
+    const desv = durReal > REF.tcong ? (durReal - REF.tcong).toFixed(2) : null;
+    segments.push({ label:'Bach #'+b.bach, startH, endH, type:'bachada', color:'#00c8ff', borderColor:'#0088cc', desv, desc: b.producto+' ('+b.aros+' aros, '+((b.peso||0).toFixed(0))+'kg)', tcong: durReal });
   });
 
-  // Eventos
+  // Gaps automáticos entre bachadas = tiempo carga/descarga implícito
+  if(!tipoF || tipoF==='carga_descarga'){
+    for(let i=0; i<bachsSorted.length-1; i++){
+      const cur = bachsSorted[i];
+      const nxt = bachsSorted[i+1];
+      if(!cur.fin || !nxt.inicio) continue;
+      const [eh,em] = cur.fin.split(':').map(Number);
+      const [sh2,sm2] = nxt.inicio.split(':').map(Number);
+      let gapStart = eh+em/60;
+      let gapEnd   = sh2+sm2/60;
+      if(gapEnd < gapStart) gapEnd += 24; // cruce medianoche
+      const gapH = gapEnd - gapStart;
+      if(gapH > 0.05 && gapH < 6) { // gaps razonables entre 3min y 6h
+        const desv = gapH > REF.carga_descarga ? (gapH - REF.carga_descarga).toFixed(2) : null;
+        segments.push({ label:'C/D Auto', startH:gapStart, endH:gapEnd, type:'carga_descarga', color:'#ff9500', borderColor:'#cc7700', desv, desc:'Tiempo entre bach #'+cur.bach+' y bach #'+nxt.bach+' (calculado automáticamente)', durH:gapH, auto:true });
+      }
+    }
+  }
+
+  // Eventos manuales registrados
   evs.forEach(e => {
     if(tipoF && tipoF!==e.tipo) return;
+    if(!e.inicio) return;
     const [sh,sm] = e.inicio.split(':').map(Number);
     let startH = sh + sm/60;
-    let endH = startH + (e.durH||0);
+    let endH = e.fin ? (()=>{const[eh,em]=e.fin.split(':').map(Number);let en=eh+em/60;if(en<startH)en+=24;return en;})() : startH+(e.durH||0);
     if(endH > 24) endH = 24;
     const ref = REF[e.tipo]||0;
     const desv = ref>0 && (e.durH||0)>ref ? ((e.durH||0)-ref).toFixed(2) : null;
-    const colorMap = { carga_descarga:'#ff9500', descongelamiento:'#4a6a8a', programada:'#00e87a', no_programada:'#ff3b5c' };
-    segments.push({ label: e.tipoLabel, startH, endH, type:e.tipo, color: colorMap[e.tipo]||'#888', borderColor: colorMap[e.tipo]||'#888', desv, desc: e.desc||e.accion||'', durH: e.durH });
+    const colorMap = { carga_descarga:'#ff6600', descongelamiento:'#4a6a8a', sin_produccion:'#00ffb3', programada:'#00e87a', no_programada:'#ff3b5c' };
+    segments.push({ label: e.tipoLabel||(e.tipo), startH, endH, type:e.tipo, color: colorMap[e.tipo]||'#888', borderColor: colorMap[e.tipo]||'#888', desv, desc: e.desc||e.accion||'', durH: e.durH });
   });
 
   segments.sort((a,b) => a.startH - b.startH);
@@ -2874,6 +2908,89 @@ function onBachNumChange(){
   // Si mantiene o pone bach >= 5 sin cambiar, la alerta queda visible
 }
 
+
+// ======== POST-BACHADA EVENT ========
+let _pbData = {};
+
+function abrirPostBachada(equipo, bach, producto, horaFin, fecha, turno, tecnico) {
+  _pbData = {equipo, bach, producto, horaFin, fecha, turno};
+  const eqNombre = equipo==='TE'?'Túnel Estático':'Congelador '+equipo.replace('C','');
+  document.getElementById('pb-resumen').textContent = eqNombre+' — Bach #'+bach+' — '+producto;
+  document.getElementById('pb-inicio').value = horaFin || '';
+  document.getElementById('pb-desc').value = '';
+  document.getElementById('pb-falla').value = '';
+  document.getElementById('pb-falla-field').style.display = 'none';
+
+  // Poblar técnico
+  const tecs = DB.get('tecnicos', []);
+  const sel = document.getElementById('pb-tecnico');
+  sel.innerHTML = '<option value="">Seleccionar...</option>' + tecs.map(t=>`<option value="${t}"${t===tecnico?' selected':''}>${t}</option>`).join('');
+
+  // Detectar si es post-bach 4 (sugerir descongelamiento)
+  const bachs = DB.get('bachadas',[]).filter(b=>b.equipo===equipo&&b.estado==='cerrado');
+  const maxBach = bachs.length ? Math.max(...bachs.map(b=>b.bach)) : 0;
+  if(maxBach >= 4 && maxBach % 4 === 0){
+    document.getElementById('pb-tipo').value = 'descongelamiento';
+  } else {
+    document.getElementById('pb-tipo').value = 'carga_descarga';
+  }
+
+  document.getElementById('modal-post-bachada').classList.add('open');
+}
+
+function onPbTipoChange(){
+  const tipo = document.getElementById('pb-tipo').value;
+  document.getElementById('pb-falla-field').style.display = tipo==='no_programada' ? 'block' : 'none';
+}
+
+async function guardarPostBachada(){
+  const tipo = document.getElementById('pb-tipo').value;
+  const inicio = document.getElementById('pb-inicio').value;
+  const tecnico = document.getElementById('pb-tecnico').value;
+  const desc = document.getElementById('pb-desc').value;
+  const falla = document.getElementById('pb-falla').value;
+
+  if(!inicio || !tecnico){
+    showToast('Completa al menos la hora de inicio y el técnico.','warn');
+    return;
+  }
+
+  const tiposLabel = {carga_descarga:'Carga/Descarga',descongelamiento:'Descongel.',sin_produccion:'Sin Producción',programada:'Mant. Prog.',no_programada:'Falla/Avería'};
+
+  const reg = {
+    id: Date.now(),
+    equipo: _pbData.equipo,
+    tipo,
+    tipoLabel: tiposLabel[tipo],
+    fechaIni: _pbData.fecha,
+    turno: _pbData.turno,
+    inicio,
+    tecnico,
+    desc: desc || (tipo==='carga_descarga'?'Carga/descarga post Bach #'+_pbData.bach:''),
+    falla: falla || null,
+    componente: null,
+    causa: null,
+    repuestos: null,
+    fechaFin: null,
+    fin: null,
+    durH: null,
+    accion: null,
+    tecnicoRep: tecnico,
+    estado: 'abierto', // se cierra cuando se registra la siguiente carga
+    ts: new Date().toISOString()
+  };
+
+  try {
+    await COL.eventos().add(reg);
+    closeModal('modal-post-bachada');
+    showAlert('alert-bachadas','✅ Bachada cerrada y evento registrado correctamente.','success');
+    showToast('✅ Evento registrado. Ciérralo cuando el equipo quede operativo.','info');
+  } catch(err){
+    console.error(err);
+    showToast('Error al guardar el evento.','danger');
+  }
+}
+
 </script>
 
 <!-- MODAL GESTION USUARIOS (siempre disponible) -->
@@ -3124,5 +3241,59 @@ function onBachNumChange(){
     </div>
   </div>
 </div>
+
+<!-- MODAL POST-BACHADA: Registrar evento después de cerrar bachada -->
+<div class="modal-overlay" id="modal-post-bachada" style="z-index:1500;">
+  <div class="modal" style="max-width:560px;">
+    <div style="background:var(--surface2);border-radius:12px;padding:16px 18px;margin-bottom:20px;border-left:4px solid var(--accent);">
+      <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;margin-bottom:4px;">✅ Bachada cerrada correctamente</div>
+      <div style="font-size:13px;color:var(--text2);" id="pb-resumen">Congelador — Bach #1 — Producto</div>
+    </div>
+
+    <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:6px;">¿Qué ocurre ahora con este equipo?</div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:16px;">Registra el evento que sigue para llevar un control completo del tiempo del equipo.</div>
+
+    <!-- Tipo de evento -->
+    <div class="field" style="margin-bottom:14px;">
+      <label>Tipo de Evento</label>
+      <select id="pb-tipo" onchange="onPbTipoChange()" style="background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:10px 14px;border-radius:9px;font-family:'DM Sans',sans-serif;font-size:14px;outline:none;width:100%;">
+        <option value="carga_descarga">🔄 Carga / Descarga (siguiente bachada)</option>
+        <option value="descongelamiento">❄️ Descongelamiento</option>
+        <option value="sin_produccion">⏸ Sin Producción</option>
+        <option value="programada">🔧 Mantenimiento Programado</option>
+        <option value="no_programada">🚨 Falla / Avería</option>
+      </select>
+    </div>
+
+    <div class="form-grid" style="margin-bottom:14px;">
+      <div class="field">
+        <label>Hora Inicio Parada</label>
+        <input type="time" id="pb-inicio" style="background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:10px 14px;border-radius:9px;font-family:'DM Sans',sans-serif;font-size:14px;outline:none;">
+        <div style="font-size:11px;color:var(--text3);margin-top:3px;">Prellenado con la hora fin de la bachada</div>
+      </div>
+      <div class="field">
+        <label>Técnico</label>
+        <select id="pb-tecnico" style="background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:10px 14px;border-radius:9px;font-family:'DM Sans',sans-serif;font-size:14px;outline:none;"></select>
+      </div>
+    </div>
+
+    <div class="field" style="margin-bottom:14px;" id="pb-desc-field">
+      <label>Descripción / Observación <span style="color:var(--text3);font-size:10px;">(opcional)</span></label>
+      <textarea id="pb-desc" rows="2" placeholder="Ej: Descarga normal, producto en buen estado..." style="resize:vertical;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:10px 14px;border-radius:9px;font-family:'DM Sans',sans-serif;font-size:13px;outline:none;width:100%;"></textarea>
+    </div>
+
+    <div class="field" style="margin-bottom:14px;" id="pb-falla-field" style="display:none;">
+      <label>Descripción de la Falla</label>
+      <textarea id="pb-falla" rows="2" placeholder="¿Qué falló? Componente, síntoma..." style="resize:vertical;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:10px 14px;border-radius:9px;font-family:'DM Sans',sans-serif;font-size:13px;outline:none;width:100%;"></textarea>
+    </div>
+
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <button class="btn-sm btn-accent" onclick="guardarPostBachada()">📋 Registrar Evento</button>
+      <button class="btn-sm btn-ghost" onclick="closeModal('modal-post-bachada')" style="font-size:12px;">Registrar más tarde</button>
+    </div>
+    <div style="font-size:11px;color:var(--text3);margin-top:8px;">Si cierras sin registrar, puedes hacerlo manualmente en la pestaña Eventos / Paradas.</div>
+  </div>
+</div>
+
 </body>
 </html>

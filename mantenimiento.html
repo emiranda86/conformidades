@@ -523,10 +523,56 @@ tr.clickable-row:hover td { background: var(--surface2); }
 
         <!-- BACHADAS -->
         <div class="tab-content active" id="tab-cong-bachadas">
+          <!-- Barra superior: título + botón -->
           <div class="flex-between mb-4">
-            <div><span style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;">Registro de Bachadas</span><span style="font-size:12px;color:var(--text2);margin-left:12px;">Registra inicio y luego completa al finalizar</span></div>
+            <div>
+              <span style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;">Registro de Bachadas</span>
+              <span style="font-size:12px;color:var(--text2);margin-left:12px;">Registra inicio y luego completa al finalizar</span>
+            </div>
             <button class="btn-sm btn-accent no-print" onclick="openBachadaModal(null)">+ Nueva Bachada</button>
           </div>
+
+          <!-- Filtros de búsqueda -->
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:16px;padding:14px 16px;background:var(--surface);border:1px solid var(--border);border-radius:12px;" class="no-print">
+            <div style="flex:1;min-width:130px;">
+              <div style="font-size:10px;font-weight:600;color:var(--text2);letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px;">Congelador</div>
+              <select id="filt-b-equipo" onchange="filtrarBachadas()" style="width:100%;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:8px 12px;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;outline:none;">
+                <option value="">Todos</option>
+                <option value="C1">C1</option><option value="C2">C2</option><option value="C3">C3</option>
+                <option value="C4">C4</option><option value="C5">C5</option><option value="C6">C6</option>
+                <option value="C7">C7</option><option value="C8">C8</option><option value="C9">C9</option>
+                <option value="C10">C10</option><option value="C11">C11</option><option value="TE">Túnel Est.</option>
+              </select>
+            </div>
+            <div style="flex:1;min-width:130px;">
+              <div style="font-size:10px;font-weight:600;color:var(--text2);letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px;">Fecha</div>
+              <input type="date" id="filt-b-fecha" onchange="filtrarBachadas()" style="width:100%;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:8px 12px;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;outline:none;">
+            </div>
+            <div style="flex:1;min-width:130px;">
+              <div style="font-size:10px;font-weight:600;color:var(--text2);letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px;">Técnico</div>
+              <select id="filt-b-tecnico" onchange="filtrarBachadas()" style="width:100%;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:8px 12px;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;outline:none;">
+                <option value="">Todos</option>
+              </select>
+            </div>
+            <div style="flex:1;min-width:130px;">
+              <div style="font-size:10px;font-weight:600;color:var(--text2);letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px;">Estado</div>
+              <select id="filt-b-estado" onchange="filtrarBachadas()" style="width:100%;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:8px 12px;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;outline:none;">
+                <option value="">Todos</option>
+                <option value="cerrado">✅ Cerrado</option>
+                <option value="pendiente">⏳ En Proceso</option>
+              </select>
+            </div>
+            <div style="flex:1;min-width:130px;">
+              <div style="font-size:10px;font-weight:600;color:var(--text2);letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px;">Buscar texto</div>
+              <input type="text" id="filt-b-texto" oninput="filtrarBachadas()" placeholder="Producto, aros..." style="width:100%;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:8px 12px;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;outline:none;">
+            </div>
+            <div style="display:flex;gap:8px;align-items:flex-end;padding-bottom:1px;">
+              <button class="btn-sm btn-ghost" onclick="limpiarFiltrosBachadas()" title="Limpiar filtros" style="padding:8px 12px;">✕ Limpiar</button>
+            </div>
+          </div>
+
+          <!-- Contador de resultados -->
+          <div id="bachadas-count" style="font-size:12px;color:var(--text2);margin-bottom:10px;"></div>
           <div id="alert-bachadas"></div>
           <div class="table-wrap">
             <table>
@@ -1118,7 +1164,7 @@ function startListeners() {
   _listeners.push(COL.bachadas().orderBy('ts','desc').onSnapshot(snap => {
     const data = snap.docs.map(d => ({...d.data(), _fid: d.id}));
     CACHE.set('bachadas', data);
-    renderBachadas();
+    filtrarBachadas();
   }, err => console.warn('bachadas:', err)));
 
   // Eventos
@@ -1324,7 +1370,7 @@ function navigate(page){
   if(nav)nav.classList.add('active');
   const titles={home:'Panel Principal',congelamiento:'🧊 Proceso de Congelamiento',usuarios:'👥 Gestión de Usuarios',admin:'⚙️ Administración del Sistema'};
   document.getElementById('topbar-title').textContent=titles[page]||page;
-  if(page==='congelamiento'){renderBachadas();renderEventos();populateSelects();renderEquiposConfig();}
+  if(page==='congelamiento'){renderBachadas();renderEventos();populateSelects();renderEquiposConfig();populateFiltroTecnicos();}
   if(page==='usuarios')renderUsers();
   if(page==='admin'){renderAdminUsers();renderAdminStats();populatePermUsers();}
   closeSidebarMobile();
@@ -1535,10 +1581,30 @@ async function saveBachada(){
 }
 
 function renderBachadas(){
-  const bachs=DB.get('bachadas',[]);
+  filtrarBachadas();
+}
+
+function renderBachadasData(bachs){
   const tbody=document.getElementById('tbody-bachadas');
   if(!tbody)return;
-  if(!bachs.length){tbody.innerHTML='<tr><td colspan="14" style="text-align:center;color:var(--text3);padding:28px;">Sin bachadas registradas</td></tr>';return;}
+  // Populate técnico filter dynamically
+  const filtTec = document.getElementById('filt-b-tecnico');
+  if(filtTec){
+    const allTecs = [...new Set(DB.get('bachadas',[]).map(b=>b.tecnico).filter(Boolean))];
+    const curVal = filtTec.value;
+    filtTec.innerHTML = '<option value="">Todos</option>' + allTecs.map(t=>`<option value="${t}"${t===curVal?' selected':''} >${t}</option>`).join('');
+  }
+  // Counter
+  const counter = document.getElementById('bachadas-count');
+  const total = DB.get('bachadas',[]).length;
+  if(counter){
+    if(bachs.length < total){
+      counter.innerHTML = `Mostrando <strong style="color:var(--accent)">${bachs.length}</strong> de ${total} registros`;
+    } else {
+      counter.textContent = `${total} registro${total!==1?'s':''} en total`;
+    }
+  }
+  if(!bachs.length){tbody.innerHTML='<tr><td colspan="14" style="text-align:center;color:var(--text3);padding:28px;">No hay registros que coincidan con los filtros</td></tr>';return;}
   tbody.innerHTML=bachs.slice().reverse().map(b=>`
     <tr class="clickable-row" id="fila-b-${b.id}" onclick="verDetalleBachada(${b.id},event)">
       <td><span class="badge badge-blue">${b.equipo}</span></td>
@@ -1561,7 +1627,40 @@ function renderBachadas(){
     </tr>`).join('');
 }
 
-async function delBachada(id){if(!canAdmin()||!confirm('¿Eliminar?'))return;try{const item=DB.get('bachadas',[]).find(b=>b.id===id||b._fid===id);const fid=item?._fid||String(id);await COL.bachadas().doc(fid).delete();}catch(err){console.error(err);}}
+async // ======== FILTRAR BACHADAS ========
+function filtrarBachadas(){
+  let bachs = DB.get('bachadas', []);
+  const equipo  = document.getElementById('filt-b-equipo')?.value || '';
+  const fecha   = document.getElementById('filt-b-fecha')?.value || '';
+  const tecnico = document.getElementById('filt-b-tecnico')?.value || '';
+  const estado  = document.getElementById('filt-b-estado')?.value || '';
+  const texto   = (document.getElementById('filt-b-texto')?.value || '').toLowerCase().trim();
+
+  if(equipo)  bachs = bachs.filter(b => b.equipo === equipo);
+  if(fecha)   bachs = bachs.filter(b => b.fecha === fecha);
+  if(tecnico) bachs = bachs.filter(b => b.tecnico === tecnico);
+  if(estado)  bachs = bachs.filter(b => b.estado === estado);
+  if(texto)   bachs = bachs.filter(b =>
+    (b.producto||'').toLowerCase().includes(texto) ||
+    (b.aros+'').includes(texto) ||
+    (b.equipo||'').toLowerCase().includes(texto) ||
+    (b.tecnico||'').toLowerCase().includes(texto) ||
+    (b.obs||'').toLowerCase().includes(texto)
+  );
+  renderBachadasData(bachs);
+}
+
+function limpiarFiltrosBachadas(){
+  ['filt-b-equipo','filt-b-tecnico','filt-b-estado'].forEach(id=>{
+    const el = document.getElementById(id); if(el) el.value='';
+  });
+  ['filt-b-fecha','filt-b-texto'].forEach(id=>{
+    const el = document.getElementById(id); if(el) el.value='';
+  });
+  filtrarBachadas();
+}
+
+function delBachada(id){if(!canAdmin()||!confirm('¿Eliminar?'))return;try{const item=DB.get('bachadas',[]).find(b=>b.id===id||b._fid===id);const fid=item?._fid||String(id);await COL.bachadas().doc(fid).delete();}catch(err){console.error(err);}}
 
 // ======== EVENTOS ========
 function openEventoModal(id){
@@ -2719,6 +2818,15 @@ function editarDesdeDetalleEvento() {
   closeModal('modal-detalle-evento');
   limpiarSeleccion();
   if(_eventoDetalleId !== null) openEventoModal(_eventoDetalleId);
+}
+
+
+function populateFiltroTecnicos(){
+  const filtTec = document.getElementById('filt-b-tecnico');
+  if(!filtTec) return;
+  const tecs = DB.get('tecnicos', []);
+  const curVal = filtTec.value;
+  filtTec.innerHTML = '<option value="">Todos</option>' + tecs.map(t=>`<option value="${t}"${t===curVal?' selected':''}>${t}</option>`).join('');
 }
 
 </script>

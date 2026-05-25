@@ -2221,17 +2221,24 @@ function cargarUsuariosAdmin() {
   if(!tbody) return;
   const rolLabel = {admin:'🔴 Admin',supervisor:'🟡 Supervisor',operador:'🟢 Operador',consulta:'⚪ Consulta'};
   if(!users.length) {
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text3);padding:16px;">Sin usuarios registrados</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:16px;">Sin usuarios registrados</td></tr>';
     return;
   }
   tbody.innerHTML = users.map(u => `<tr>
-    <td>${u.nombre}</td>
-    <td style="font-size:12px;">${u.email}</td>
-    <td><span class="badge badge-blue">${rolLabel[u.rol]||u.rol}</span></td>
+    <td style="min-width:120px;">${u.nombre}</td>
+    <td style="font-size:12px;min-width:150px;">${u.email}</td>
+    <td style="min-width:110px;">
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span id="padm-${u._fid}" style="font-family:'DM Mono',monospace;font-size:12px;letter-spacing:1px;">••••••</span>
+        <span onclick="verPass('padm-${u._fid}','${(u.pass||'').replace(/'/g,String.fromCharCode(39))}')" style="cursor:pointer;font-size:14px;color:var(--text2);">👁</span>
+      </div>
+    </td>
+    <td><span class="badge badge-blue">${rolLabel[u.rol]||u.rol||'—'}</span></td>
     <td><span class="badge ${u.activo!==false?'badge-green':'badge-red'}">${u.activo!==false?'Activo':'Inactivo'}</span></td>
-    <td style="display:flex;gap:6px;">
-      <button class="btn-sm btn-ghost" style="padding:3px 8px;font-size:11px;" onclick="toggleUserAdmin('${u._fid}',${u.activo!==false})">${u.activo!==false?'Desactivar':'Activar'}</button>
-      ${u._fid?`<button class="btn-sm btn-ghost" style="padding:3px 8px;font-size:11px;" onclick="eliminarUserAdmin('${u._fid}','${u.nombre}')">🗑</button>`:''}
+    <td style="display:flex;gap:4px;flex-wrap:wrap;min-width:160px;">
+      <button class="btn-sm btn-ghost" style="padding:4px 9px;font-size:11px;" onclick="editarUsuario('${u._fid}','${(u.nombre||'').replace(/'/g,String.fromCharCode(39))}','${u.email}','${(u.pass||'').replace(/'/g,String.fromCharCode(39))}','${u.rol||'operador'}')">✏️ Editar</button>
+      <button class="btn-sm btn-ghost" style="padding:4px 9px;font-size:11px;" onclick="toggleUserAdmin('${u._fid}',${u.activo!==false})">${u.activo!==false?'Desact.':'Activar'}</button>
+      ${u._fid?`<button class="btn-sm btn-ghost" style="padding:4px 9px;font-size:11px;color:var(--danger);" onclick="eliminarUserAdmin('${u._fid}','${u.nombre}')">🗑</button>`:''}
     </td>
   </tr>`).join('');
 }

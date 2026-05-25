@@ -197,6 +197,212 @@ tr:hover td{background:var(--surface2);}
   td, th { color: black !important; border-color: #ccc !important; }
   canvas { max-width: 100% !important; }
 }
+
+/* ============================================================
+   RESPONSIVE MÓVIL — pantallas <= 768px
+   ============================================================ */
+@media (max-width: 768px) {
+
+  /* Sidebar oculto por defecto en móvil */
+  .sidebar {
+    transform: translateX(-100%);
+    transition: transform .25s ease;
+    width: 280px;
+    z-index: 500;
+  }
+  .sidebar.open { transform: translateX(0); }
+
+  /* Overlay para cerrar sidebar */
+  #sidebar-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: #00000088;
+    z-index: 499;
+  }
+  #sidebar-overlay.open { display: block; }
+
+  /* Main ocupa todo el ancho */
+  .main { margin-left: 0 !important; }
+
+  /* Topbar móvil */
+  .topbar {
+    padding: 0 14px;
+    height: 56px;
+    gap: 8px;
+  }
+  .topbar-title {
+    font-size: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 160px;
+  }
+  #topbar-actions { gap: 6px; }
+  #topbar-actions .btn-sm { padding: 6px 10px; font-size: 11px; }
+
+  /* Botón hamburguesa */
+  #btn-menu {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: 8px;
+    width: 36px;
+    height: 36px;
+    cursor: pointer;
+    font-size: 18px;
+    flex-shrink: 0;
+    color: var(--text);
+  }
+
+  /* Content padding reducido */
+  .content { padding: 14px; }
+
+  /* Grids se vuelven 1 columna */
+  .grid-2, .grid-3, .grid-4, .grid-5 {
+    grid-template-columns: 1fr !important;
+    gap: 12px;
+  }
+
+  /* KPIs: 2 columnas en móvil */
+  #dash-kpis,
+  .grid-4 {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  /* Form grid: 1 columna */
+  .form-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px;
+  }
+
+  /* Módulos home: 2 columnas */
+  .home-modules {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 12px;
+    margin-top: 14px;
+  }
+  .module-card {
+    padding: 18px 14px;
+  }
+  .module-icon { font-size: 26px; margin-bottom: 8px; }
+  .module-name { font-size: 13px; }
+  .module-desc { font-size: 11px; }
+
+  /* Tabs: scroll horizontal */
+  .tabs {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    gap: 0;
+    padding-bottom: 2px;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab {
+    padding: 10px 14px;
+    font-size: 12px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  /* Cards */
+  .card { padding: 16px 14px; }
+  .card-title { font-size: 11px; margin-bottom: 12px; }
+
+  /* KPI valores más pequeños */
+  .kpi { padding: 14px; }
+  .kpi-value { font-size: 22px; }
+  .kpi-label { font-size: 9px; }
+  .kpi-sub { font-size: 10px; }
+
+  /* Tabla: scroll horizontal */
+  .table-wrap { border-radius: 10px; }
+  table { font-size: 11.5px; }
+  th { padding: 9px 10px; font-size: 9.5px; }
+  td { padding: 9px 10px; }
+
+  /* Modal fullscreen en móvil */
+  .modal-overlay { padding: 0; align-items: flex-end; }
+  .modal {
+    border-radius: 18px 18px 0 0;
+    max-height: 92vh;
+    padding: 22px 18px;
+    max-width: 100%;
+  }
+  .modal-title { font-size: 16px; }
+
+  /* Botones más grandes para touch */
+  .btn-sm { padding: 9px 14px; font-size: 12px; }
+
+  /* Sidebar logo más pequeño */
+  .sidebar-logo-img { width: 130px; }
+  .sidebar-header { padding: 16px 16px 12px; }
+  .sidebar-dept { font-size: 9px; }
+  .sidebar-nav { padding: 10px 8px; }
+  .nav-item { padding: 12px 12px; font-size: 13px; }
+
+  /* Dashboard pagination */
+  .dash-pagination {
+    gap: 6px;
+    flex-wrap: wrap;
+    justify-content: center;
+    padding: 14px 0;
+  }
+  .page-btn { padding: 7px 12px; font-size: 11px; }
+
+  /* Charts altura reducida */
+  canvas { max-height: 220px; }
+
+  /* Freezer grid: 4 columnas en móvil */
+  .freezer-grid {
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 6px;
+  }
+  .freezer-tile { padding: 10px 6px; }
+  .freezer-num { font-size: 14px; }
+
+  /* Auth box */
+  .auth-box {
+    width: 95vw;
+    padding: 28px 20px;
+    border-radius: 16px;
+  }
+  .auth-logo-img { width: 180px; }
+
+  /* Ocultar col no-print en tabla en móvil */
+  .hide-mobile { display: none !important; }
+
+  /* Flex-between en móvil: stack */
+  .flex-between {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .flex-between .btn-sm { align-self: flex-start; }
+
+  /* Admin modal tabla */
+  #au-tbody td:nth-child(2) { max-width: 120px; overflow: hidden; text-overflow: ellipsis; }
+}
+
+/* ============================================================
+   TABLET — 769px a 1024px
+   ============================================================ */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .sidebar { width: 200px; }
+  .main { margin-left: 200px; }
+  .grid-4, .grid-5 { grid-template-columns: repeat(2, 1fr) !important; }
+  .grid-3 { grid-template-columns: repeat(2, 1fr) !important; }
+  .content { padding: 20px; }
+}
+
+/* Botón menú hamburguesa: oculto en desktop */
+@media (min-width: 769px) {
+  #btn-menu { display: none !important; }
+  #sidebar-overlay { display: none !important; }
+}
 </style>
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -247,9 +453,11 @@ tr:hover td{background:var(--surface2);}
       <button class="btn-sm btn-ghost" onclick="doLogout()" style="width:100%;margin-top:8px;font-size:12px;padding:7px;">🚪 Cerrar Sesión</button>
     </div>
   </div>
+  <div id="sidebar-overlay" onclick="toggleSidebar()"></div>
 
   <div class="main">
     <div class="topbar">
+      <div id="btn-menu" onclick="toggleSidebar()">☰</div>
       <div class="topbar-title" id="topbar-title">Panel Principal</div>
       <div id="topbar-actions" style="display:flex;gap:10px;align-items:center;">
         <button class="btn-sm btn-accent no-print" id="btn-admin-topbar" onclick="abrirAdmin()">👥 Usuarios</button>
@@ -1031,6 +1239,7 @@ function navigate(page){
   if(page==='congelamiento'){renderBachadas();renderEventos();populateSelects();renderEquiposConfig();}
   if(page==='usuarios')renderUsers();
   if(page==='admin'){renderAdminUsers();renderAdminStats();populatePermUsers();}
+  closeSidebarMobile();
 }
 
 function showTab(prefix,name){
@@ -2047,6 +2256,24 @@ async function eliminarUserAdmin(fid, nombre) {
   try {
     await COL.users().doc(fid).delete();
   } catch(err) { console.error(err); }
+}
+
+
+// ======== MOBILE SIDEBAR ========
+function toggleSidebar() {
+  const sidebar = document.querySelector('.sidebar');
+  const overlay = document.getElementById('sidebar-overlay');
+  sidebar.classList.toggle('open');
+  overlay.classList.toggle('open');
+}
+
+// Close sidebar when navigating on mobile
+function closeSidebarMobile() {
+  if(window.innerWidth <= 768) {
+    document.querySelector('.sidebar').classList.remove('open');
+    const ov = document.getElementById('sidebar-overlay');
+    if(ov) ov.classList.remove('open');
+  }
 }
 
 </script>

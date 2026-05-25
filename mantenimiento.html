@@ -1233,7 +1233,19 @@ async function doLogin(){
   }
   btn.textContent='Iniciar Sesión';btn.disabled=false;
 }
-function doLogout(){currentUser=null;try{sessionStorage.removeItem('smf_session');}catch(e){}document.getElementById('auth-screen').style.display='flex';document.getElementById('app').style.display='none';}
+function doLogout(){
+  currentUser=null;
+  try{sessionStorage.removeItem('smf_session');}catch(e){}
+  stopListeners();
+  // Limpiar campos de login
+  document.getElementById('login-email').value='';
+  document.getElementById('login-password').value='';
+  document.getElementById('login-password').type='password';
+  const eye=document.getElementById('eye-login');if(eye)eye.textContent='👁';
+  document.getElementById('login-error').style.display='none';
+  document.getElementById('auth-screen').style.display='flex';
+  document.getElementById('app').style.display='none';
+}
 document.getElementById('login-password').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
 
 // ======== NAVIGATE ========

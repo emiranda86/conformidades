@@ -403,6 +403,25 @@ tr:hover td{background:var(--surface2);}
   #btn-menu { display: none !important; }
   #sidebar-overlay { display: none !important; }
 }
+
+/* Fila resaltada al hacer clic */
+tr.fila-activa td { background: #00c8ff12 !important; border-top-color: #00c8ff44 !important; border-bottom: 1px solid #00c8ff44; }
+tr.clickable-row { cursor: pointer; transition: background .15s; }
+tr.clickable-row:hover td { background: var(--surface2); }
+
+/* Modal detalle */
+#modal-detalle .modal { max-width: 520px; }
+.detalle-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+.detalle-row { display: contents; }
+.detalle-label { font-size: 11px; font-weight: 600; color: var(--text2); letter-spacing: .07em; text-transform: uppercase; padding: 10px 14px; background: var(--surface2); border-bottom: 1px solid var(--border); }
+.detalle-value { font-size: 13.5px; color: var(--text); padding: 10px 14px; background: var(--surface); border-bottom: 1px solid var(--border); }
+.detalle-value.mono { font-family: 'DM Mono', monospace; }
+.detalle-full { grid-column: 1/-1; }
+.detalle-header { background: var(--surface2); border-radius: 10px; padding: 16px; margin-bottom: 16px; display: flex; align-items: center; gap: 14px; }
+.detalle-equipo-badge { width: 52px; height: 52px; border-radius: 12px; background: #00c8ff22; border: 1px solid #00c8ff44; display: flex; align-items: center; justify-content: center; font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 800; color: var(--accent); flex-shrink: 0; }
+.detalle-status { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+.status-cerrado-badge { background: #00e87a22; color: var(--success); }
+.status-pendiente-badge { background: #ff950022; color: var(--warn); }
 </style>
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -1521,7 +1540,7 @@ function renderBachadas(){
   if(!tbody)return;
   if(!bachs.length){tbody.innerHTML='<tr><td colspan="14" style="text-align:center;color:var(--text3);padding:28px;">Sin bachadas registradas</td></tr>';return;}
   tbody.innerHTML=bachs.slice().reverse().map(b=>`
-    <tr>
+    <tr class="clickable-row" id="fila-b-${b.id}" onclick="verDetalleBachada(${b.id},event)">
       <td><span class="badge badge-blue">${b.equipo}</span></td>
       <td class="font-mono">#${b.bach}</td>
       <td>${b.producto}</td>
@@ -1535,7 +1554,7 @@ function renderBachadas(){
       <td class="font-mono">${b.temp!=null?b.temp+'°C':'<span style="color:var(--text3)">—</span>'}</td>
       <td>${b.tecnico}</td>
       <td><span class="status-pill ${b.estado==='cerrado'?'status-activo':'status-pendiente'}">${b.estado==='cerrado'?'✅ Cerrado':'⏳ En Proceso'}</span></td>
-      <td class="no-print" style="display:flex;gap:6px;">
+      <td class="no-print" style="display:flex;gap:6px;" onclick="event.stopPropagation()">
         <button class="btn-sm btn-ghost" style="padding:4px 9px;font-size:11px;" onclick="openBachadaModal(${b.id})">✏️</button>
         <button class="btn-sm btn-ghost" style="padding:4px 9px;font-size:11px;" onclick="delBachada(${b.id})">🗑</button>
       </td>
@@ -1656,7 +1675,7 @@ function renderEventos(){
   if(!tbody)return;
   if(!evs.length){tbody.innerHTML='<tr><td colspan="11" style="text-align:center;color:var(--text3);padding:28px;">Sin eventos registrados</td></tr>';return;}
   tbody.innerHTML=evs.slice().reverse().map(e=>`
-    <tr>
+    <tr class="clickable-row" id="fila-e-${e.id}" onclick="verDetalleEvento(${e.id},event)">
       <td><span class="badge badge-blue">${e.equipo}</span></td>
       <td><span class="badge ${getBadgeEvento(e.tipo)}">${e.tipoLabel}</span></td>
       <td class="font-mono">${e.fechaIni} ${e.inicio}</td>
@@ -1667,7 +1686,7 @@ function renderEventos(){
       <td>${e.tecnico}</td>
       <td>${e.fechaIni}</td>
       <td><span class="status-pill ${e.estado==='cerrado'?'status-activo':'status-pendiente'}">${e.estado==='cerrado'?'✅ Cerrado':'🔴 Abierto'}</span></td>
-      <td class="no-print" style="display:flex;gap:6px;">
+      <td class="no-print" style="display:flex;gap:6px;" onclick="event.stopPropagation()">
         <button class="btn-sm btn-ghost" style="padding:4px 9px;font-size:11px;" onclick="openEventoModal(${e.id})">✏️</button>
         <button class="btn-sm btn-ghost" style="padding:4px 9px;font-size:11px;" onclick="delEvento(${e.id})">🗑</button>
       </td>
@@ -2578,6 +2597,130 @@ async function guardarPermisos() {
   }
 }
 
+
+// ======== DETALLE DE REGISTROS ========
+let _bachadaDetalleId = null;
+let _eventoDetalleId = null;
+
+function equipoNombre(eq) {
+  return eq === 'TE' ? 'Túnel Estático' : 'Congelador ' + eq.replace('C','');
+}
+
+function limpiarSeleccion() {
+  document.querySelectorAll('tr.fila-activa').forEach(r => r.classList.remove('fila-activa'));
+}
+
+function verDetalleBachada(id, event) {
+  // Resaltar fila
+  limpiarSeleccion();
+  const fila = document.getElementById('fila-b-' + id);
+  if(fila) fila.classList.add('fila-activa');
+
+  const b = DB.get('bachadas', []).find(x => x.id === id);
+  if(!b) return;
+  _bachadaDetalleId = id;
+
+  // Llenar datos
+  const eq = b.equipo;
+  document.getElementById('det-equipo-badge').textContent = eq;
+  document.getElementById('det-equipo-nombre').textContent = equipoNombre(eq);
+  document.getElementById('det-bach').textContent = '#' + b.bach;
+
+  const estadoBadge = document.getElementById('det-estado-badge');
+  estadoBadge.textContent = b.estado === 'cerrado' ? '✅ Cerrado' : '⏳ En Proceso';
+  estadoBadge.className = 'detalle-status ' + (b.estado === 'cerrado' ? 'status-cerrado-badge' : 'status-pendiente-badge');
+
+  document.getElementById('det-producto').textContent = b.producto || '—';
+  document.getElementById('det-fecha').textContent = b.fecha || '—';
+  document.getElementById('det-turno').innerHTML = `<span class="badge ${b.turno==='Día'?'badge-warn':'badge-gray'}">${b.turno}</span>`;
+  document.getElementById('det-aros').textContent = b.aros + ' aros';
+  document.getElementById('det-factor').textContent = (b.factor || (eq==='TE'?10:7.4)) + ' kg/aro';
+  document.getElementById('det-peso').textContent = (b.peso || 0).toFixed(1) + ' kg';
+  document.getElementById('det-inicio').textContent = b.inicio || '—';
+  document.getElementById('det-fin').textContent = b.fin || 'Pendiente';
+  document.getElementById('det-tcong').textContent = b.tcong !== null && b.tcong !== undefined ? hoursToStr(b.tcong) : 'En proceso...';
+  document.getElementById('det-temp').textContent = b.temp != null ? b.temp + ' °C' : '—';
+  document.getElementById('det-tecnico').textContent = b.tecnico || '—';
+
+  // Observaciones
+  const obsLabel = document.getElementById('det-obs-label');
+  const obsVal = document.getElementById('det-obs');
+  if(b.obs) {
+    obsLabel.style.display = '';
+    obsVal.style.display = '';
+    obsVal.textContent = b.obs;
+  } else {
+    obsLabel.style.display = 'none';
+    obsVal.style.display = 'none';
+  }
+
+  document.getElementById('modal-detalle').classList.add('open');
+}
+
+function editarDesdDetalle() {
+  closeModal('modal-detalle');
+  limpiarSeleccion();
+  if(_bachadaDetalleId !== null) openBachadaModal(_bachadaDetalleId);
+}
+
+function verDetalleEvento(id, event) {
+  limpiarSeleccion();
+  const fila = document.getElementById('fila-e-' + id);
+  if(fila) fila.classList.add('fila-activa');
+
+  const e = DB.get('eventos', []).find(x => x.id === id);
+  if(!e) return;
+  _eventoDetalleId = id;
+
+  const eq = e.equipo;
+  document.getElementById('det-ev-equipo-badge').textContent = eq;
+  document.getElementById('det-ev-equipo-nombre').textContent = equipoNombre(eq);
+
+  document.getElementById('det-ev-tipo-badge').textContent = e.tipoLabel || e.tipo;
+  document.getElementById('det-ev-tipo-badge').className = 'badge ' + getBadgeEvento(e.tipo);
+
+  const evEstado = document.getElementById('det-ev-estado-badge');
+  evEstado.textContent = e.estado === 'cerrado' ? '✅ Cerrado' : '🔴 Abierto';
+  evEstado.className = 'detalle-status ' + (e.estado === 'cerrado' ? 'status-cerrado-badge' : 'status-pendiente-badge');
+
+  document.getElementById('det-ev-fecha-ini').textContent = e.fechaIni || '—';
+  document.getElementById('det-ev-inicio').textContent = e.inicio || '—';
+  document.getElementById('det-ev-fecha-fin').textContent = e.fechaFin || 'Pendiente';
+  document.getElementById('det-ev-fin').textContent = e.fin || 'Pendiente';
+  document.getElementById('det-ev-duracion').textContent = e.durH !== null && e.durH !== undefined ? hoursToStr(e.durH) : 'Evento abierto...';
+  document.getElementById('det-ev-turno').textContent = e.turno || '—';
+  document.getElementById('det-ev-tecnico').textContent = e.tecnico || '—';
+  document.getElementById('det-ev-desc').textContent = e.desc || '—';
+
+  // Campos de falla
+  const showFalla = e.tipo === 'no_programada';
+  ['det-ev-comp-label','det-ev-comp'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) { el.style.display = showFalla && e.componente ? '' : 'none'; }
+  });
+  if(e.componente) document.getElementById('det-ev-comp').textContent = e.componente + (e.causa ? ' — ' + e.causa : '');
+
+  ['det-ev-accion-label','det-ev-accion'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) { el.style.display = e.accion ? '' : 'none'; }
+  });
+  if(e.accion) document.getElementById('det-ev-accion').textContent = e.accion;
+
+  ['det-ev-rep-label','det-ev-rep'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) { el.style.display = e.repuestos ? '' : 'none'; }
+  });
+  if(e.repuestos) document.getElementById('det-ev-rep').textContent = e.repuestos;
+
+  document.getElementById('modal-detalle-evento').classList.add('open');
+}
+
+function editarDesdeDetalleEvento() {
+  closeModal('modal-detalle-evento');
+  limpiarSeleccion();
+  if(_eventoDetalleId !== null) openEventoModal(_eventoDetalleId);
+}
+
 </script>
 
 <!-- MODAL GESTION USUARIOS (siempre disponible) -->
@@ -2697,5 +2840,136 @@ async function guardarPermisos() {
   </div>
 </div>
 
+
+<!-- MODAL DETALLE BACHADA -->
+<div class="modal-overlay" id="modal-detalle">
+  <div class="modal" style="max-width:520px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <div class="modal-title" style="margin-bottom:0;">Detalle de Bachada</div>
+      <button class="btn-sm btn-ghost" onclick="closeModal('modal-detalle');limpiarSeleccion()">✕ Cerrar</button>
+    </div>
+
+    <!-- Header con equipo y estado -->
+    <div class="detalle-header">
+      <div class="detalle-equipo-badge" id="det-equipo-badge">C1</div>
+      <div>
+        <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:700;" id="det-equipo-nombre">Congelador 1</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
+          <span id="det-estado-badge" class="detalle-status status-cerrado-badge">✅ Cerrado</span>
+          <span style="font-size:12px;color:var(--text2);">Bach <span id="det-bach" style="font-family:'DM Mono',monospace;font-weight:600;color:var(--accent);">#1</span></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Grid de datos -->
+    <div style="border-radius:10px;overflow:hidden;border:1px solid var(--border);">
+      <div class="detalle-grid">
+        <div class="detalle-label">Producto</div>
+        <div class="detalle-value" id="det-producto">—</div>
+
+        <div class="detalle-label">Fecha</div>
+        <div class="detalle-value mono" id="det-fecha">—</div>
+
+        <div class="detalle-label">Turno</div>
+        <div class="detalle-value" id="det-turno">—</div>
+
+        <div class="detalle-label">Cantidad de Aros</div>
+        <div class="detalle-value mono" id="det-aros">—</div>
+
+        <div class="detalle-label">Factor (kg/aro)</div>
+        <div class="detalle-value mono" id="det-factor">—</div>
+
+        <div class="detalle-label">Peso Total</div>
+        <div class="detalle-value mono" id="det-peso" style="font-size:16px;font-weight:600;color:var(--accent);">—</div>
+
+        <div class="detalle-label">Hora Inicio</div>
+        <div class="detalle-value mono" id="det-inicio">—</div>
+
+        <div class="detalle-label">Hora Fin</div>
+        <div class="detalle-value mono" id="det-fin">—</div>
+
+        <div class="detalle-label detalle-full" style="border-bottom:1px solid var(--border);">T.Congelamiento</div>
+        <div class="detalle-value detalle-full mono" id="det-tcong" style="font-size:18px;font-weight:600;color:var(--accent3);">—</div>
+
+        <div class="detalle-label">Temperatura Salida</div>
+        <div class="detalle-value mono" id="det-temp">—</div>
+
+        <div class="detalle-label">Técnico</div>
+        <div class="detalle-value" id="det-tecnico">—</div>
+
+        <div class="detalle-label detalle-full" id="det-obs-label" style="display:none;">Observaciones</div>
+        <div class="detalle-value detalle-full" id="det-obs" style="display:none;white-space:normal;"></div>
+      </div>
+    </div>
+
+    <div style="margin-top:16px;display:flex;gap:10px;">
+      <button class="btn-sm btn-accent" id="det-btn-editar" onclick="editarDesdDetalle()">✏️ Editar</button>
+      <button class="btn-sm btn-ghost" onclick="closeModal('modal-detalle');limpiarSeleccion()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL DETALLE EVENTO -->
+<div class="modal-overlay" id="modal-detalle-evento">
+  <div class="modal" style="max-width:520px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <div class="modal-title" style="margin-bottom:0;">Detalle de Evento / Parada</div>
+      <button class="btn-sm btn-ghost" onclick="closeModal('modal-detalle-evento');limpiarSeleccion()">✕ Cerrar</button>
+    </div>
+
+    <div class="detalle-header">
+      <div class="detalle-equipo-badge" id="det-ev-equipo-badge">C1</div>
+      <div>
+        <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:700;" id="det-ev-equipo-nombre">Congelador 1</div>
+        <div style="margin-top:4px;">
+          <span id="det-ev-tipo-badge" class="badge badge-blue">Tipo</span>
+          <span id="det-ev-estado-badge" class="detalle-status status-cerrado-badge" style="margin-left:6px;">✅ Cerrado</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="border-radius:10px;overflow:hidden;border:1px solid var(--border);">
+      <div class="detalle-grid">
+        <div class="detalle-label">Fecha Inicio</div>
+        <div class="detalle-value mono" id="det-ev-fecha-ini">—</div>
+
+        <div class="detalle-label">Hora Inicio</div>
+        <div class="detalle-value mono" id="det-ev-inicio">—</div>
+
+        <div class="detalle-label">Fecha Fin</div>
+        <div class="detalle-value mono" id="det-ev-fecha-fin">—</div>
+
+        <div class="detalle-label">Hora Fin</div>
+        <div class="detalle-value mono" id="det-ev-fin">—</div>
+
+        <div class="detalle-label detalle-full">Duración Total</div>
+        <div class="detalle-value detalle-full mono" id="det-ev-duracion" style="font-size:18px;font-weight:600;color:var(--warn);">—</div>
+
+        <div class="detalle-label">Turno</div>
+        <div class="detalle-value" id="det-ev-turno">—</div>
+
+        <div class="detalle-label">Técnico</div>
+        <div class="detalle-value" id="det-ev-tecnico">—</div>
+
+        <div class="detalle-label detalle-full" id="det-ev-desc-label">Descripción</div>
+        <div class="detalle-value detalle-full" id="det-ev-desc" style="white-space:normal;">—</div>
+
+        <div class="detalle-label detalle-full" id="det-ev-comp-label" style="display:none;">Componente / Falla</div>
+        <div class="detalle-value detalle-full" id="det-ev-comp" style="display:none;white-space:normal;"></div>
+
+        <div class="detalle-label detalle-full" id="det-ev-accion-label" style="display:none;">Acción Correctiva</div>
+        <div class="detalle-value detalle-full" id="det-ev-accion" style="display:none;white-space:normal;"></div>
+
+        <div class="detalle-label detalle-full" id="det-ev-rep-label" style="display:none;">Repuestos Utilizados</div>
+        <div class="detalle-value detalle-full" id="det-ev-rep" style="display:none;white-space:normal;"></div>
+      </div>
+    </div>
+
+    <div style="margin-top:16px;display:flex;gap:10px;">
+      <button class="btn-sm btn-accent" id="det-ev-btn-editar" onclick="editarDesdeDetalleEvento()">✏️ Editar</button>
+      <button class="btn-sm btn-ghost" onclick="closeModal('modal-detalle-evento');limpiarSeleccion()">Cerrar</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>

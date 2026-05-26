@@ -422,6 +422,12 @@ tr.clickable-row:hover td { background: var(--surface2); }
 .detalle-status { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
 .status-cerrado-badge { background: #00e87a22; color: var(--success); }
 .status-pendiente-badge { background: #ff950022; color: var(--warn); }
+
+/* PLAN MANTENIMIENTO */
+.plan-sub { display: none; }
+.plan-sub.active { display: block; }
+.pm-cfg-tab { display: none; }
+.pm-cfg-tab.active { display: block; }
 </style>
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -459,6 +465,7 @@ tr.clickable-row:hover td { background: var(--surface2); }
       <div class="nav-item active" onclick="navigate('home')" id="nav-home"><span class="nav-icon">🏠</span> Inicio</div>
       <div class="nav-section-label">Procesos</div>
       <div class="nav-item" onclick="navigate('congelamiento')" id="nav-congelamiento"><span class="nav-icon">🧊</span> Congelamiento</div>
+      <div class="nav-item" onclick="navigate('plan')" id="nav-plan"><span class="nav-icon">📅</span> Plan Mantenimiento</div>
       <div class="nav-item" style="opacity:.4;cursor:not-allowed;"><span class="nav-icon">📓</span> Bitácora<span class="nav-badge">Pronto</span></div>
       <div class="nav-item" style="opacity:.4;cursor:not-allowed;"><span class="nav-icon">📋</span> Formatos<span class="nav-badge">Pronto</span></div>
       <div class="nav-item" style="opacity:.4;cursor:not-allowed;"><span class="nav-icon">💧</span> Consumos<span class="nav-badge">Pronto</span></div>
@@ -499,6 +506,11 @@ tr.clickable-row:hover td { background: var(--surface2); }
             <div class="module-icon">🧊</div>
             <div class="module-name">Congelamiento</div>
             <div class="module-desc">Registro de bachadas, paradas, eventos y análisis de eficiencia y mantenimiento de congeladores y túnel estático</div>
+          </div>
+          <div class="module-card" onclick="navigate('plan')" style="border-color:var(--accent3);">
+            <div class="module-icon">📅</div>
+            <div class="module-name">Plan de Mantenimiento</div>
+            <div class="module-desc">Programa anual, KPIs gerenciales, Gantt y control de HH</div>
           </div>
           <div class="module-card" style="opacity:.45;cursor:not-allowed;"><div class="module-icon">📓</div><div class="module-name">Bitácora</div><div class="module-desc">Actividades diarias por turno y técnico</div><div class="module-coming">Pronto</div></div>
           <div class="module-card" style="opacity:.45;cursor:not-allowed;"><div class="module-icon">📋</div><div class="module-name">Formatos</div><div class="module-desc">Checklists y formatos de equipos de planta</div><div class="module-coming">Pronto</div></div>
@@ -967,6 +979,662 @@ tr.clickable-row:hover td { background: var(--surface2); }
   </div>
 </div>
 
+      <!-- ============================================================ -->
+      <!-- PLAN DE MANTENIMIENTO                                         -->
+      <!-- ============================================================ -->
+      <div class="page" id="page-plan">
+        <div style="display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:22px;overflow-x:auto;scrollbar-width:none;">
+          <div class="tab active" onclick="PM.showPage('registro')" id="ptab-registro">📋 Registro</div>
+          <div class="tab" onclick="PM.showPage('dashboard')" id="ptab-dashboard">📊 Dashboard</div>
+          <div class="tab" onclick="PM.showPage('gantt')" id="ptab-gantt">📆 Gantt</div>
+          <div class="tab" onclick="PM.showPage('config')" id="ptab-config">⚙️ Configuración</div>
+        </div>
+
+        <!-- REGISTRO -->
+        <div id="plan-reg" class="plan-sub active">
+          <div class="flex-between mb-4">
+            <div><span style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;">Programa de Mantenimiento</span></div>
+            <div style="display:flex;gap:8px;">
+              <button class="btn-sm btn-accent no-print" onclick="PM.openModal(null)">+ Nueva Actividad</button>
+              <button class="btn-sm btn-ghost no-print" onclick="window.print()">🖨</button>
+            </div>
+          </div>
+          <div class="card mb-4 no-print">
+            <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
+              <div class="field" style="min-width:100px;flex:1;"><label>Desde</label><input type="date" id="pmf-desde" onchange="PM.renderReg()"></div>
+              <div class="field" style="min-width:100px;flex:1;"><label>Hasta</label><input type="date" id="pmf-hasta" onchange="PM.renderReg()"></div>
+              <div class="field" style="min-width:110px;flex:1;"><label>Área</label><select id="pmf-area" onchange="PM.renderReg()"><option value="">Todas</option></select></div>
+              <div class="field" style="min-width:110px;flex:1;"><label>Tipo</label>
+                <select id="pmf-tipo" onchange="PM.renderReg()">
+                  <option value="">Todos</option><option value="Preventivo">Preventivo</option>
+                  <option value="Correctivo">Correctivo</option><option value="Predictivo">Predictivo</option>
+                  <option value="Mejora">Mejora</option><option value="Inspeccion">Inspección</option>
+                  <option value="Proveedor">Proveedor</option><option value="Legal">Legal/SSOMA</option>
+                </select>
+              </div>
+              <div class="field" style="min-width:110px;flex:1;"><label>Estado</label>
+                <select id="pmf-estado" onchange="PM.renderReg()">
+                  <option value="">Todos</option><option value="Programado">Programado</option>
+                  <option value="En Proceso">En Proceso</option><option value="Ejecutado">Ejecutado</option>
+                  <option value="Reprogramado">Reprogramado</option><option value="Cancelado">Cancelado</option>
+                </select>
+              </div>
+              <div class="field" style="min-width:100px;flex:1;"><label>Criticidad</label>
+                <select id="pmf-crit" onchange="PM.renderReg()">
+                  <option value="">Todas</option><option value="Critica">Crítica</option>
+                  <option value="Alta">Alta</option><option value="Media">Media</option><option value="Baja">Baja</option>
+                </select>
+              </div>
+              <div class="field"><label>Sem.</label><input type="number" id="pmf-sem" min="1" max="53" placeholder="S#" oninput="PM.renderReg()" style="width:60px;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:9px;border-radius:9px;font-size:13px;outline:none;"></div>
+              <div style="align-self:flex-end;"><button class="btn-sm btn-ghost" onclick="PM.clearFilters()">✕ Limpiar</button></div>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:14px;">
+            <div class="kpi kpi-blue"><div class="kpi-label">Total</div><div class="kpi-value" id="pm-s-total">0</div></div>
+            <div class="kpi kpi-teal"><div class="kpi-label">Programadas</div><div class="kpi-value" id="pm-s-prog">0</div></div>
+            <div class="kpi" style="background:var(--surface);border:1px solid var(--border);border-top:2px solid #a855f7;border-radius:14px;padding:20px 22px;"><div class="kpi-label">En Proceso</div><div class="kpi-value" id="pm-s-proc">0</div></div>
+            <div class="kpi kpi-green"><div class="kpi-label">Ejecutadas</div><div class="kpi-value" id="pm-s-ejec">0</div></div>
+            <div class="kpi kpi-warn"><div class="kpi-label">Reprogramadas</div><div class="kpi-value" id="pm-s-reprg">0</div></div>
+            <div class="kpi kpi-red"><div class="kpi-label">Canceladas</div><div class="kpi-value" id="pm-s-canc">0</div></div>
+          </div>
+          <div id="pm-count" style="font-size:12px;color:var(--text2);margin-bottom:10px;"></div>
+          <div id="pm-alert"></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr>
+                <th>Sem.</th><th>Fecha</th><th>F.Reprg</th>
+                <th>Área</th><th>Equipo</th><th>Descripción</th>
+                <th>Tipo</th><th>Origen</th><th>Crit.</th><th>Especialidad</th><th>Frec.</th>
+                <th>H.P</th><th>H.R</th><th>Téc.</th><th>HH.P</th><th>HH.R</th>
+                <th>Costo Total</th>
+                <th>Estado</th><th>Razón</th>
+                <th class="no-print">Acc.</th>
+              </tr></thead>
+              <tbody id="pm-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- DASHBOARD -->
+        <div id="plan-dash" class="plan-sub" style="display:none;">
+          <div class="card mb-4 no-print" style="background:var(--surface2);">
+            <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
+              <div class="field" style="min-width:100px;flex:1;"><label>Desde</label><input type="date" id="pmd-desde" onchange="PM.renderDash()"></div>
+              <div class="field" style="min-width:100px;flex:1;"><label>Hasta</label><input type="date" id="pmd-hasta" onchange="PM.renderDash()"></div>
+              <div class="field" style="min-width:110px;flex:1;"><label>Área</label><select id="pmd-area" onchange="PM.renderDash()"><option value="">Todas</option></select></div>
+              <div class="field" style="min-width:110px;flex:1;"><label>Criticidad</label>
+                <select id="pmd-crit" onchange="PM.renderDash()">
+                  <option value="">Todas</option><option value="Critica">Crítica</option>
+                  <option value="Alta">Alta</option><option value="Media">Media</option><option value="Baja">Baja</option>
+                </select>
+              </div>
+              <div style="align-self:flex-end;display:flex;gap:8px;">
+                <button class="btn-sm btn-accent" onclick="PM.renderDash()">🔄 Actualizar</button>
+                <button class="btn-sm btn-ghost no-print" onclick="window.print()">🖨 PDF</button>
+              </div>
+            </div>
+          </div>
+          <!-- ================== KPIs PRINCIPALES (6) ================== -->
+          <div style="font-size:11px;font-weight:700;color:var(--text2);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px;">📊 Indicadores Ejecutivos</div>
+          <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:12px;">
+            <div class="kpi kpi-green" style="position:relative;overflow:hidden;">
+              <div class="kpi-label">Cumplimiento</div>
+              <div class="kpi-value" id="pmd-cumpl">--%</div>
+              <div class="kpi-sub" id="pmd-tot-s">ejecutadas / total</div>
+              <div style="height:3px;background:var(--surface2);border-radius:2px;margin-top:8px;"><div id="pmd-cbar" style="height:3px;border-radius:2px;width:0;transition:width .5s;"></div></div>
+            </div>
+            <div class="kpi kpi-blue">
+              <div class="kpi-label">MTBF Promedio</div>
+              <div class="kpi-value" id="pmd-mtbf">--h</div>
+              <div class="kpi-sub">tiempo medio entre fallas</div>
+            </div>
+            <div class="kpi kpi-warn">
+              <div class="kpi-label">MTTR Promedio</div>
+              <div class="kpi-value" id="pmd-mttr">--h</div>
+              <div class="kpi-sub">tiempo medio de reparación</div>
+            </div>
+            <div class="kpi kpi-red">
+              <div class="kpi-label">Backlog</div>
+              <div class="kpi-value" id="pmd-backlog">0</div>
+              <div class="kpi-sub" id="pmd-backlog-s">actividades pendientes</div>
+            </div>
+            <div class="kpi" style="border-top:2px solid #a855f7;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px 22px;">
+              <div class="kpi-label">Disponibilidad</div>
+              <div class="kpi-value" id="pmd-disp">--%</div>
+              <div class="kpi-sub">uptime ponderado planta</div>
+            </div>
+            <div class="kpi kpi-teal">
+              <div class="kpi-label">Costo MTTO</div>
+              <div class="kpi-value" id="pmd-costo" style="font-size:22px;">S/ 0</div>
+              <div class="kpi-sub" id="pmd-costo-s">acumulado período</div>
+            </div>
+          </div>
+
+          <!-- ================== KPIs HORAS HOMBRE (4) ================== -->
+          <div style="font-size:11px;font-weight:700;color:var(--text2);letter-spacing:.1em;text-transform:uppercase;margin:14px 0 10px;">⏱ Horas Hombre y Distribución</div>
+          <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:12px;">
+            <div class="kpi kpi-blue">
+              <div class="kpi-label">HH Disponibles</div>
+              <div class="kpi-value" id="pmd-hdisp">0</div>
+              <div class="kpi-sub" id="pmd-hdisp-s">capacidad total período</div>
+            </div>
+            <div class="kpi kpi-teal">
+              <div class="kpi-label">HH Planificadas</div>
+              <div class="kpi-value" id="pmd-hplan">0</div>
+              <div class="kpi-sub" id="pmd-hplan-p">uso: --%</div>
+            </div>
+            <div class="kpi kpi-green">
+              <div class="kpi-label">HH Ejecutadas</div>
+              <div class="kpi-value" id="pmd-hejec">0</div>
+              <div class="kpi-sub">real acumulado</div>
+            </div>
+            <div class="kpi" id="pmd-holg-kpi" style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px 22px;">
+              <div class="kpi-label">Holgura HH</div>
+              <div class="kpi-value" id="pmd-hholg">0</div>
+              <div class="kpi-sub">capacidad sin utilizar</div>
+            </div>
+            <div class="kpi" style="border-top:2px solid #a855f7;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px 22px;">
+              <div class="kpi-label">Prev / Corr / Pred</div>
+              <div class="kpi-value" id="pmd-pcp" style="font-size:20px;">-/-/-</div>
+              <div class="kpi-sub">% distribución · meta 65/25/10</div>
+            </div>
+          </div>
+
+          <!-- ================== CHARTS FILA 1: Cumpl. semanal + Tipos + Criticidad ================== -->
+          <div style="display:grid;grid-template-columns:1.5fr 1fr 1fr;gap:12px;margin-bottom:12px;">
+            <div class="card">
+              <div class="card-title">📈 Cumplimiento Semanal — Apilado por Estado</div>
+              <div style="position:relative;height:180px;"><canvas id="pmd-ch-sem" role="img" aria-label="Cumplimiento por semana">Semanas.</canvas></div>
+            </div>
+            <div class="card">
+              <div class="card-title">🔧 Distribución por Tipo</div>
+              <div style="position:relative;height:180px;"><canvas id="pmd-ch-tipo" role="img" aria-label="Tipos">Tipos.</canvas></div>
+            </div>
+            <div class="card">
+              <div class="card-title">⚠️ Estado por Criticidad</div>
+              <div style="position:relative;height:180px;"><canvas id="pmd-ch-crit" role="img" aria-label="Criticidad">Crit.</canvas></div>
+            </div>
+          </div>
+
+          <!-- ================== CHARTS FILA 2: HH semanal + HH Plan vs Real por Área ================== -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+            <div class="card">
+              <div class="card-title">📊 HH Planificadas vs Ejecutadas — Semanal</div>
+              <div style="position:relative;height:200px;"><canvas id="pmd-ch-hhsem" role="img" aria-label="HH semanales">HH sem.</canvas></div>
+            </div>
+            <div class="card">
+              <div class="card-title">🏭 HH Planificadas vs Ejecutadas — Por Área</div>
+              <div style="position:relative;height:200px;"><canvas id="pmd-ch-hh" role="img" aria-label="HH por area">HH.</canvas></div>
+            </div>
+          </div>
+
+          <!-- ================== SEMÁFORO DE EQUIPOS ================== -->
+          <div class="card mb-4">
+            <div class="card-title">🚦 Semáforo de Equipos — Cumplimiento Individual</div>
+            <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:12px;font-size:11px;color:var(--text2);">
+              <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--success);margin-right:4px;vertical-align:middle;"></span>≥85% Bueno</span>
+              <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--warn);margin-right:4px;vertical-align:middle;"></span>70-84% Alerta</span>
+              <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--danger);margin-right:4px;vertical-align:middle;"></span>&lt;70% Crítico</span>
+            </div>
+            <div id="pmd-semaforo" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;"></div>
+          </div>
+
+          <!-- ================== CHARTS FILA 3: Cumpl. por Área + Razones + Tendencia ================== -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+            <div class="card">
+              <div class="card-title">📊 Cumplimiento % por Área</div>
+              <div style="position:relative;height:200px;"><canvas id="pmd-ch-area" role="img" aria-label="Cumplimiento area">Área.</canvas></div>
+            </div>
+            <div class="card">
+              <div class="card-title">📉 Razones de Incumplimiento</div>
+              <div style="position:relative;height:200px;"><canvas id="pmd-ch-razon" role="img" aria-label="Razones">Razones.</canvas></div>
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr;gap:12px;margin-bottom:12px;">
+            <div class="card">
+              <div class="card-title">🎯 Tendencia Prev / Corr / Pred — por Semana</div>
+              <div style="position:relative;height:220px;"><canvas id="pmd-ch-tend" role="img" aria-label="Tendencia">Tend.</canvas></div>
+            </div>
+          </div>
+
+          <!-- ================== ANÁLISIS DE COSTOS ================== -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+            <div class="card">
+              <div class="card-title">💰 Análisis de Costos del Período</div>
+              <div style="display:flex;justify-content:space-between;align-items:baseline;padding:8px 0;border-bottom:1px solid var(--border);">
+                <span style="font-size:12px;color:var(--text2);">Mano de obra (HH × tarifa)</span>
+                <span style="font-size:14px;font-weight:600;font-family:'DM Mono',monospace;" id="pmd-cost-mo">S/ 0</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:baseline;padding:8px 0;border-bottom:1px solid var(--border);">
+                <span style="font-size:12px;color:var(--text2);">Repuestos y materiales</span>
+                <span style="font-size:14px;font-weight:600;font-family:'DM Mono',monospace;" id="pmd-cost-rep">S/ 0</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:baseline;padding:8px 0;border-bottom:1px solid var(--border);">
+                <span style="font-size:12px;color:var(--text2);">Proveedores externos (US$ → S/)</span>
+                <span style="font-size:14px;font-weight:600;font-family:'DM Mono',monospace;" id="pmd-cost-prov">S/ 0</span>
+              </div>
+              <div style="background:#00c8ff15;padding:10px 12px;border-radius:10px;margin-top:8px;display:flex;justify-content:space-between;align-items:baseline;">
+                <span style="font-size:12px;color:var(--accent);font-weight:600;">Costo total MTTO</span>
+                <span style="font-size:18px;font-weight:700;color:var(--accent);font-family:'DM Mono',monospace;" id="pmd-cost-total">S/ 0</span>
+              </div>
+              <div style="margin-top:10px;font-size:11px;color:var(--text3);" id="pmd-cost-presup"></div>
+            </div>
+            <div class="card">
+              <div class="card-title">⚠️ Top Razones de Incumplimiento — Sustentación Gerencial</div>
+              <div class="table-wrap"><table>
+                <thead><tr><th>Razón</th><th>N°</th><th>%</th><th>HH</th><th>Costo</th></tr></thead>
+                <tbody id="pmd-tb-razon"></tbody>
+              </table></div>
+            </div>
+          </div>
+
+          <!-- ================== TABLA EJECUTIVA POR ÁREA ================== -->
+          <div class="card mb-4">
+            <div class="card-title">📋 Tabla Ejecutiva por Área</div>
+            <div class="table-wrap"><table>
+              <thead><tr><th>Área</th><th>Total</th><th>Ejec.</th><th>Reprg.</th><th>Canc.</th><th>Cumpl.%</th><th>HH Plan</th><th>HH Real</th><th>Holgura</th><th>Efic.%</th><th>Costo</th></tr></thead>
+              <tbody id="pmd-tb-area"></tbody>
+            </table></div>
+          </div>
+
+          <!-- ================== EQUIPOS CON MÁS FALLAS ================== -->
+          <div class="card mb-4">
+            <div class="card-title">🔥 Top Equipos por Cantidad de Fallas — Gestión de Criticidad</div>
+            <div class="table-wrap"><table>
+              <thead><tr><th>Equipo</th><th>Área</th><th>Crit.</th><th>Fallas</th><th>MTBF</th><th>MTTR</th><th>HH</th><th>Costo</th><th>Estado</th></tr></thead>
+              <tbody id="pmd-tb-equipos"></tbody>
+            </table></div>
+          </div>
+
+        </div>
+
+        <!-- GANTT -->
+        <div id="plan-gantt" class="plan-sub" style="display:none;">
+          <div class="card mb-4 no-print">
+            <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
+              <div class="field"><label>Año</label><input type="number" id="pmg-anio" value="2026" oninput="PM.renderGantt()" style="width:80px;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:9px 13px;border-radius:9px;font-size:13px;outline:none;"></div>
+              <div class="field"><label>Sem. Inicio</label><input type="number" id="pmg-s1" value="1" min="1" max="53" oninput="PM.renderGantt()" style="width:70px;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:9px 13px;border-radius:9px;font-size:13px;outline:none;"></div>
+              <div class="field"><label>Sem. Fin</label><input type="number" id="pmg-s2" value="13" min="1" max="53" oninput="PM.renderGantt()" style="width:70px;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:9px 13px;border-radius:9px;font-size:13px;outline:none;"></div>
+              <div class="field" style="flex:1;min-width:120px;"><label>Área</label><select id="pmg-area" onchange="PM.renderGantt()"><option value="">Todas</option></select></div>
+              <div class="field" style="flex:1;min-width:120px;"><label>Tipo</label>
+                <select id="pmg-tipo" onchange="PM.renderGantt()">
+                  <option value="">Todos</option><option value="Preventivo">Preventivo</option>
+                  <option value="Correctivo">Correctivo</option><option value="Predictivo">Predictivo</option>
+                  <option value="Mejora">Mejora</option><option value="Inspeccion">Inspección</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:12px;font-size:12px;color:var(--text2);">
+            <span><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:#00c8ff;margin-right:4px;vertical-align:middle;"></span>Programado</span>
+            <span><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:#a855f7;margin-right:4px;vertical-align:middle;"></span>En Proceso</span>
+            <span><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:#00e87a;margin-right:4px;vertical-align:middle;"></span>Ejecutado</span>
+            <span><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:#ff9500;margin-right:4px;vertical-align:middle;"></span>Reprogramado</span>
+            <span><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:#ff3b5c;margin-right:4px;vertical-align:middle;"></span>Cancelado</span>
+          </div>
+          <div class="card" style="padding:0;overflow:hidden;">
+            <div id="pm-gantt-wrap" style="overflow-x:auto;"></div>
+          </div>
+        </div>
+
+        <!-- CONFIGURACIÓN -->
+        <div id="plan-cfg" class="plan-sub" style="display:none;">
+          <div style="display:flex;gap:2px;border-bottom:1px solid var(--border);margin-bottom:20px;overflow-x:auto;scrollbar-width:none;" id="pm-cfg-nav">
+            <div class="tab active" onclick="PM.showCfg('tec')">👷 Técnicos</div>
+            <div class="tab" onclick="PM.showCfg('area')">🏭 Áreas</div>
+            <div class="tab" onclick="PM.showCfg('eq')">⚙️ Equipos</div>
+            <div class="tab" onclick="PM.showCfg('esp')">🎓 Especialidades</div>
+            <div class="tab" onclick="PM.showCfg('raz')">⚠️ Razones</div>
+            <div class="tab" onclick="PM.showCfg('par')">📐 Parámetros HH</div>
+            <div class="tab" onclick="PM.showCfg('rep')">🔩 Repuestos</div>
+            <div class="tab" onclick="PM.showCfg('plt')">📑 Plantillas</div>
+            <div class="tab" onclick="PM.showCfg('tar')">💰 Tarifas</div>
+          </div>
+          <div class="pm-cfg-tab active" id="pmcfg-tec">
+            <div class="card"><div class="card-title">👷 Técnicos del Departamento</div>
+              <div class="alert alert-info mb-4" style="font-size:12px;">Los técnicos registrados aquí determinan las HH disponibles totales del departamento.</div>
+              <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
+                <input type="text" id="pm-nt-nom" placeholder="Nombre completo" style="flex:2;min-width:140px;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:9px 13px;border-radius:9px;font-size:13px;outline:none;">
+                <select id="pm-nt-esp" style="flex:1;min-width:130px;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:9px 13px;border-radius:9px;font-size:13px;outline:none;"><option value="">Especialidad...</option></select>
+                <input type="number" id="pm-nt-h" value="8" min="1" max="12" placeholder="H/día" style="width:70px;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:9px 13px;border-radius:9px;font-size:13px;outline:none;">
+                <button class="btn-sm btn-accent" onclick="PM.addTec()">+ Agregar</button>
+              </div>
+              <div id="pm-lt-tec"></div>
+            </div>
+          </div>
+          <div class="pm-cfg-tab" id="pmcfg-area" style="display:none;">
+            <div class="card"><div class="card-title">🏭 Áreas y Sub-áreas</div>
+              <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
+                <input type="text" id="pm-na-nom" placeholder="Área" style="flex:1;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:9px 13px;border-radius:9px;font-size:13px;outline:none;">
+                <input type="text" id="pm-na-sub" placeholder="Sub-área (opcional)" style="flex:1;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:9px 13px;border-radius:9px;font-size:13px;outline:none;">
+                <button class="btn-sm btn-accent" onclick="PM.addArea()">+ Agregar</button>
+              </div>
+              <div id="pm-lt-area"></div>
+            </div>
+          </div>
+          <div class="pm-cfg-tab" id="pmcfg-eq" style="display:none;">
+            <div class="card"><div class="card-title">⚙️ Equipos / Instalaciones</div>
+              <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
+                <input type="text" id="pm-ne-nom" placeholder="Nombre del equipo" style="flex:2;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:9px 13px;border-radius:9px;font-size:13px;outline:none;">
+                <select id="pm-ne-area" style="flex:1;min-width:110px;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:9px 13px;border-radius:9px;font-size:13px;outline:none;"><option value="">Área...</option></select>
+                <select id="pm-ne-crit" style="flex:1;min-width:100px;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:9px 13px;border-radius:9px;font-size:13px;outline:none;">
+                  <option value="Baja">Baja</option><option value="Media">Media</option>
+                  <option value="Alta">Alta</option><option value="Critica">Crítica</option>
+                </select>
+                <button class="btn-sm btn-accent" onclick="PM.addEq()">+ Agregar</button>
+              </div>
+              <div id="pm-lt-eq"></div>
+            </div>
+          </div>
+          <div class="pm-cfg-tab" id="pmcfg-esp" style="display:none;">
+            <div class="card"><div class="card-title">🎓 Especialidades</div>
+              <div style="display:flex;gap:10px;margin-bottom:14px;">
+                <input type="text" id="pm-nesp-nom" placeholder="Ej: Frigorista, Electricista, Mecánico soldador..." style="flex:1;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:9px 13px;border-radius:9px;font-size:13px;outline:none;">
+                <button class="btn-sm btn-accent" onclick="PM.addEsp()">+ Agregar</button>
+              </div>
+              <div id="pm-lt-esp"></div>
+            </div>
+          </div>
+          <div class="pm-cfg-tab" id="pmcfg-raz" style="display:none;">
+            <div class="card"><div class="card-title">⚠️ Razones de Reprogramación</div>
+              <div style="display:flex;gap:10px;margin-bottom:14px;">
+                <input type="text" id="pm-nraz-nom" placeholder="Ej: Producción no libera, Falta de repuesto..." style="flex:1;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:9px 13px;border-radius:9px;font-size:13px;outline:none;">
+                <button class="btn-sm btn-accent" onclick="PM.addRaz()">+ Agregar</button>
+              </div>
+              <div id="pm-lt-raz"></div>
+            </div>
+          </div>
+          <div class="pm-cfg-tab" id="pmcfg-rep" style="display:none;">
+            <div class="card">
+              <div class="card-title">📦 Catálogo de Repuestos con Stock Mínimo</div>
+              <div class="alert alert-info mb-4" style="font-size:12px;">Define los repuestos críticos. El sistema alertará cuando el stock caiga por debajo del mínimo.</div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
+                <input type="text" id="pm-nrep-cod" placeholder="Código" style="width:90px;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:9px 12px;border-radius:9px;font-size:13px;outline:none;">
+                <input type="text" id="pm-nrep-nom" placeholder="Nombre / Descripción" style="flex:2;min-width:150px;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:9px 12px;border-radius:9px;font-size:13px;outline:none;">
+                <input type="number" id="pm-nrep-act" placeholder="Actual" value="0" min="0" style="width:80px;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:9px 12px;border-radius:9px;font-size:13px;outline:none;">
+                <input type="number" id="pm-nrep-min" placeholder="Mínimo" value="0" min="0" style="width:80px;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:9px 12px;border-radius:9px;font-size:13px;outline:none;">
+                <input type="number" id="pm-nrep-precio" placeholder="Precio unit." value="0" min="0" step="0.01" style="width:110px;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:9px 12px;border-radius:9px;font-size:13px;outline:none;">
+                <select id="pm-nrep-mon" style="width:80px;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:9px 12px;border-radius:9px;font-size:13px;outline:none;"><option value="PEN">S/</option><option value="USD">$</option></select>
+                <button class="btn-sm btn-accent" onclick="PM.addRep()">+ Agregar</button>
+              </div>
+              <div id="pm-lt-rep"></div>
+            </div>
+          </div>
+
+          <div class="pm-cfg-tab" id="pmcfg-pla" style="display:none;">
+            <div class="card">
+              <div class="card-title">📋 Plantillas de Actividades Recurrentes</div>
+              <div class="alert alert-info mb-4" style="font-size:12px;">Crea plantillas para actividades que se repiten. Luego puedes generar múltiples actividades con un clic.</div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
+                <input type="text" id="pm-npla-nom" placeholder="Nombre plantilla (ej: Limpieza semanal C1)" style="flex:2;min-width:160px;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:9px 12px;border-radius:9px;font-size:13px;outline:none;">
+                <select id="pm-npla-frec" style="width:110px;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:9px 12px;border-radius:9px;font-size:13px;outline:none;">
+                  <option value="Semanal">Semanal</option><option value="Quincenal">Quincenal</option>
+                  <option value="Mensual">Mensual</option><option value="Bimestral">Bimestral</option>
+                  <option value="Trimestral">Trimestral</option><option value="Semestral">Semestral</option>
+                  <option value="Anual">Anual</option>
+                </select>
+                <button class="btn-sm btn-accent" onclick="PM.savePlantilla()">+ Guardar como Plantilla</button>
+                <div style="font-size:11px;color:var(--text2);align-self:center;">desde formulario abierto, o usa "Clonar" desde la tabla</div>
+              </div>
+              <div id="pm-lt-pla"></div>
+            </div>
+          </div>
+
+          <div class="pm-cfg-tab" id="pmcfg-par" style="display:none;">
+            <div class="card"><div class="card-title">📐 Parámetros de HH y Costos</div>
+              <div class="alert alert-info mb-4" style="font-size:12px;">HH disponibles = N° técnicos × horas/día × días hábiles. Las tarifas se usan para calcular el costo de mano de obra automáticamente.</div>
+              <div class="form-grid">
+                <div class="field"><label>Días laborables / semana</label><input type="number" id="pm-par-dias" value="6" min="1" max="7"></div>
+                <div class="field"><label>Horas estándar / día</label><input type="number" id="pm-par-hdias" value="8" min="1" max="12"></div>
+                <div class="field"><label>% HH para mantenimiento</label><input type="number" id="pm-par-pct" value="80" min="10" max="100"><div class="field-note">Del total disponible</div></div>
+                <div class="field"><label>Tarifa H-H Soles (S/)</label><input type="number" id="pm-par-tarpen" value="12" min="0" step="0.01"><div class="field-note">Costo promedio mano de obra/hora</div></div>
+                <div class="field"><label>Tarifa H-H Dólares ($)</label><input type="number" id="pm-par-tarusd" value="3.5" min="0" step="0.01"><div class="field-note">Para actividades en USD</div></div>
+                <div class="field"><label>Tipo de cambio S/ por $</label><input type="number" id="pm-par-tc" value="3.75" min="0" step="0.01"><div class="field-note">Para totalización en soles</div></div>
+                <div class="field"><label>Presupuesto Mensual (S/)</label><input type="number" id="pm-par-presup" value="30000" min="0" step="100"><div class="field-note">Meta gerencial</div></div>
+              </div>
+              <button class="btn-sm btn-accent" onclick="PM.savePar()" style="margin-top:14px;">💾 Guardar Parámetros</button>
+              <div id="pm-par-alert" style="margin-top:10px;"></div>
+            </div>
+          </div>
+
+          <!-- TAB REPUESTOS -->
+          <div class="pm-cfg-tab" id="pmcfg-rep" style="display:none;">
+            <div class="card">
+              <div class="card-title">🔩 Catálogo de Repuestos</div>
+              <div class="alert alert-info mb-4" style="font-size:12px;">Catálogo central. Define stock mínimo para alertas de reposición automática.</div>
+              <div style="display:grid;grid-template-columns:2fr 1fr 1fr 100px 100px 100px auto;gap:8px;margin-bottom:14px;align-items:end;">
+                <div class="field"><label>Nombre / Descripción</label><input type="text" id="pm-nrep-nom" placeholder="Ej: Filtro de aceite 10W"></div>
+                <div class="field"><label>Código / SKU</label><input type="text" id="pm-nrep-cod" placeholder="Opcional"></div>
+                <div class="field"><label>Categoría</label>
+                  <select id="pm-nrep-cat">
+                    <option value="Mecanico">Mecánico</option>
+                    <option value="Electrico">Eléctrico</option>
+                    <option value="Frigorista">Refrigeración</option>
+                    <option value="Lubricante">Lubricante</option>
+                    <option value="Consumible">Consumible</option>
+                    <option value="Herramienta">Herramienta</option>
+                    <option value="Otro">Otro</option>
+                  </select>
+                </div>
+                <div class="field"><label>Stock</label><input type="number" id="pm-nrep-stock" min="0" placeholder="0"></div>
+                <div class="field"><label>Stock Mín.</label><input type="number" id="pm-nrep-min" min="0" placeholder="0"></div>
+                <div class="field"><label>Costo Unit. (S/)</label><input type="number" id="pm-nrep-cost" min="0" step="0.01" placeholder="0.00"></div>
+                <button class="btn-sm btn-accent" onclick="PM.addRep()" style="height:38px;">+ Agregar</button>
+              </div>
+              <div id="pm-lt-rep"></div>
+            </div>
+          </div>
+
+          <!-- TAB PLANTILLAS -->
+          <div class="pm-cfg-tab" id="pmcfg-plt" style="display:none;">
+            <div class="card">
+              <div class="card-title">📑 Plantillas de Actividades Recurrentes</div>
+              <div class="alert alert-info mb-4" style="font-size:12px;">Crea plantillas para actividades repetitivas. Luego usa "+ Clonar" desde el registro para generar copias rápidas.</div>
+              <p style="font-size:12px;color:var(--text2);margin-bottom:14px;">
+                Para crear plantillas, ve a la página <strong>Registro</strong>, abre una actividad existente que quieras replicar, y haz clic en el botón <span class="badge badge-blue">📋 Guardar como Plantilla</span> dentro del modal de edición.
+              </p>
+              <div id="pm-lt-plt"></div>
+            </div>
+          </div>
+
+          <!-- TAB TARIFAS -->
+          <div class="pm-cfg-tab" id="pmcfg-tar" style="display:none;">
+            <div class="card">
+              <div class="card-title">💰 Tarifas y Tipo de Cambio</div>
+              <div class="alert alert-info mb-4" style="font-size:12px;">Tarifas para cálculo automático de costos de mano de obra y conversión de divisa.</div>
+              <div class="form-grid">
+                <div class="field">
+                  <label>Tarifa Promedio HH (S/)</label>
+                  <input type="number" id="pm-tar-hh" value="12" min="1" step="0.5">
+                  <div class="field-note">Costo por hora-hombre estándar</div>
+                </div>
+                <div class="field">
+                  <label>Tipo de Cambio US$ → S/</label>
+                  <input type="number" id="pm-tar-tc" value="3.75" min="1" step="0.01">
+                  <div class="field-note">Para convertir facturas de proveedores en USD</div>
+                </div>
+                <div class="field">
+                  <label>Presupuesto Mensual MTTO (S/)</label>
+                  <input type="number" id="pm-tar-presup" value="30000" min="0">
+                  <div class="field-note">Para análisis de ejecución presupuestal</div>
+                </div>
+                <div class="field">
+                  <label>Tarifa HH por Especialidad (avanzado)</label>
+                  <select id="pm-tar-esp-sel" onchange="PM.loadTarEsp()">
+                    <option value="">— Tarifa única para todas —</option>
+                  </select>
+                  <div class="field-note">Si quieres tarifas diferenciadas por rol</div>
+                </div>
+                <div class="field" id="pm-tar-esp-val-f" style="display:none;">
+                  <label>Tarifa para la especialidad seleccionada (S/)</label>
+                  <input type="number" id="pm-tar-esp-val" min="1" step="0.5">
+                </div>
+              </div>
+              <button class="btn-sm btn-accent" onclick="PM.saveTar()" style="margin-top:14px;">💾 Guardar Tarifas</button>
+              <div id="pm-tar-alert" style="margin-top:10px;"></div>
+            </div>
+          </div>
+        </div>
+      </div><!-- /page-plan -->
+
+      <!-- MODAL ACTIVIDAD PLAN -->
+      <div class="modal-overlay" id="pm-modal">
+        <div class="modal" style="max-width:860px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+            <div class="modal-title" style="margin-bottom:0;" id="pm-modal-ttl">📋 Nueva Actividad</div>
+            <button class="btn-sm btn-ghost" onclick="document.getElementById('pm-modal').classList.remove('open')">✕</button>
+          </div>
+          <div class="modal-section">
+            <div class="modal-section-title">🏭 Identificación del Activo</div>
+            <div class="form-grid">
+              <div class="field"><label>Área</label><select id="pm-a-area" onchange="PM.onArea()"><option value="">Seleccionar...</option></select></div>
+              <div class="field"><label>Sub-área</label><select id="pm-a-sub"><option value="">—</option></select></div>
+              <div class="field"><label>Equipo / Instalación</label><select id="pm-a-eq"><option value="">Seleccionar...</option></select></div>
+              <div class="field"><label>Criticidad</label>
+                <select id="pm-a-crit">
+                  <option value="Baja">🟢 Baja</option><option value="Media">🔵 Media</option>
+                  <option value="Alta">🟡 Alta</option><option value="Critica">🔴 Crítica</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div class="modal-section">
+            <div class="modal-section-title">📝 Descripción del Trabajo</div>
+            <div class="form-grid">
+              <div class="field" style="grid-column:1/-1;"><label>Descripción detallada</label>
+                <textarea id="pm-a-desc" rows="2" placeholder="¿Qué trabajo se realizará?" style="resize:vertical;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:9px 13px;border-radius:9px;font-size:13px;outline:none;width:100%;"></textarea>
+              </div>
+              <div class="field"><label>Tipo de Mantenimiento</label>
+                <select id="pm-a-tipo" onchange="PM.onTipo()">
+                  <option value="Preventivo">🔵 Preventivo</option><option value="Correctivo">🔴 Correctivo</option>
+                  <option value="Predictivo">🟣 Predictivo</option><option value="Mejora">🟠 Mejora / Proyecto</option>
+                  <option value="Inspeccion">🟡 Inspección / Auditoría</option><option value="Proveedor">⚪ Proveedor Externo</option>
+                  <option value="Legal">🔒 Legal / SSOMA</option>
+                </select>
+              </div>
+              <div class="field"><label>Frecuencia</label>
+                <select id="pm-a-frec">
+                  <option value="Unico">Único</option><option value="Diario">Diario</option>
+                  <option value="Semanal">Semanal</option><option value="Quincenal">Quincenal</option>
+                  <option value="Mensual">Mensual</option><option value="Bimestral">Bimestral</option>
+                  <option value="Trimestral">Trimestral</option><option value="Semestral">Semestral</option>
+                  <option value="Anual">Anual</option>
+                </select>
+              </div>
+              <div class="field"><label>Origen</label>
+                <select id="pm-a-orig">
+                  <option value="Plan anual">Plan Anual</option><option value="Correctivo">Correctivo/Avería</option>
+                  <option value="Audit interna">Auditoría Interna</option><option value="Audit externa">Auditoría Externa</option>
+                  <option value="Mejora">Proyecto Mejora</option><option value="SSOMA">SSOMA/Seguridad</option>
+                  <option value="Legal">Requisito Legal</option><option value="Garantia">Garantía/Proveedor</option>
+                </select>
+              </div>
+              <div class="field"><label>Especialidad Requerida</label><select id="pm-a-esp"><option value="">—</option></select></div>
+              <div class="field"><label>Coordinar con Área</label>
+                <select id="pm-a-coord">
+                  <option value="">Ninguna</option><option value="Produccion">Producción</option>
+                  <option value="Calidad">Calidad</option><option value="SSOMA">SSOMA</option>
+                  <option value="Almacenes">Almacenes</option><option value="Saneamiento">Saneamiento</option>
+                  <option value="Microbiologia">Microbiología</option><option value="Seg Patrimonial">Seg. Patrimonial</option>
+                  <option value="Gerencia">Gerencia</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div class="modal-section">
+            <div class="modal-section-title">📅 Programación y Estado</div>
+            <div class="form-grid">
+              <div class="field"><label>Año</label><input type="number" id="pm-a-anio" value="2026" min="2024" max="2035"></div>
+              <div class="field"><label>N° Semana</label><input type="number" id="pm-a-sem" min="1" max="53" placeholder="Ej: 22" oninput="PM.semFecha()"></div>
+              <div class="field"><label>Fecha Programada</label><input type="date" id="pm-a-fecha" oninput="PM.fechaSem()"></div>
+              <div class="field"><label>Estado</label>
+                <select id="pm-a-est" onchange="PM.onEst()">
+                  <option value="Programado">Programado</option><option value="En Proceso">En Proceso</option>
+                  <option value="Ejecutado">Ejecutado</option><option value="Reprogramado">Reprogramado</option>
+                  <option value="Cancelado">Cancelado</option>
+                </select>
+              </div>
+              <div class="field" id="pm-a-frep-f" style="display:none;"><label>Fecha Reprogramada</label><input type="date" id="pm-a-frep"></div>
+              <div class="field" id="pm-a-raz-f" style="display:none;"><label>Razón de Reprogramación</label><select id="pm-a-raz"><option value="">Seleccionar...</option></select></div>
+              <div class="field" id="pm-a-razd-f" style="display:none;"><label>Detalle adicional</label><input type="text" id="pm-a-razd" placeholder="Explica brevemente..."></div>
+            </div>
+          </div>
+          <div class="modal-section">
+            <div class="modal-section-title">⏱ Recursos — Horas y Personas</div>
+            <div class="form-grid">
+              <div class="field"><label>Duración Planificada (h)</label><input type="number" id="pm-a-hp" min="0.5" step="0.5" oninput="PM.calcHH()"></div>
+              <div class="field"><label>Duración Real (h)</label><input type="number" id="pm-a-hr" min="0" step="0.5" oninput="PM.calcHH()"></div>
+              <div class="field"><label>N° Técnicos</label><input type="number" id="pm-a-nt" min="1" value="1" oninput="PM.calcHH()"></div>
+              <div class="field"><label>HH Planificadas</label><input type="text" id="pm-a-hhp" readonly placeholder="Auto"></div>
+              <div class="field"><label>HH Reales</label><input type="text" id="pm-a-hhr" readonly placeholder="Auto"></div>
+              <div class="field"><label>Técnico Responsable</label><select id="pm-a-tec"><option value="">—</option></select></div>
+            </div>
+          </div>
+
+          <div class="modal-section">
+            <div class="modal-section-title">💰 Análisis de Costos</div>
+            <div class="form-grid">
+              <div class="field"><label>Moneda</label>
+                <select id="pm-a-moneda" onchange="PM.calcCosto()">
+                  <option value="PEN">S/ (Soles)</option>
+                  <option value="USD">$ (Dólares)</option>
+                </select>
+              </div>
+              <div class="field"><label>Costo Mano de Obra</label><input type="text" id="pm-a-cmo" readonly placeholder="Auto: HH × tarifa"><div class="field-note">Calculado de HH reales</div></div>
+              <div class="field"><label>Costo Repuestos / Materiales</label><input type="number" id="pm-a-crep" min="0" step="0.01" placeholder="0.00" oninput="PM.calcCosto()"></div>
+              <div class="field"><label>Costo Proveedor / Externo</label><input type="number" id="pm-a-cpro" min="0" step="0.01" placeholder="0.00" oninput="PM.calcCosto()"></div>
+              <div class="field"><label>Costo Total</label><input type="text" id="pm-a-ctot" readonly placeholder="Auto" style="font-weight:600;color:var(--accent);"></div>
+            </div>
+          </div>
+
+          <div class="modal-section">
+            <div class="modal-section-title">🔧 Datos Adicionales</div>
+            <div class="form-grid">
+              <div class="field" id="pm-a-mtbf-f" style="display:none;"><label>MTBF (h) — solo si es Correctivo</label><input type="number" id="pm-a-mtbf" min="0" step="0.1" placeholder="Tiempo desde última falla"><div class="field-note">Para cálculo de confiabilidad</div></div>
+              <div class="field" style="grid-column:1/-1;"><label>Observaciones / Materiales / Resultados</label>
+                <textarea id="pm-a-obs" rows="2" style="resize:vertical;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:9px 13px;border-radius:9px;font-size:13px;outline:none;width:100%;" placeholder="Repuestos usados, herramientas, resultados, recomendaciones..."></textarea>
+              </div>
+            </div>
+          </div>
+
+          <!-- COSTOS -->
+          <div class="modal-section">
+            <div class="modal-section-title">💰 Costos del Trabajo</div>
+            <div class="form-grid">
+              <div class="field"><label>Costo Mano de Obra (S/)</label>
+                <input type="number" id="pm-a-cmo" readonly placeholder="Auto: HH × tarifa">
+                <div class="field-note">Calculado: HH Real × tarifa configurada</div>
+              </div>
+              <div class="field"><label>Costo Repuestos (S/)</label>
+                <input type="number" id="pm-a-crep" min="0" step="0.01" placeholder="0.00" oninput="PM.calcCost()">
+              </div>
+              <div class="field"><label>Costo Proveedor (US$)</label>
+                <input type="number" id="pm-a-cprovusd" min="0" step="0.01" placeholder="0.00" oninput="PM.calcCost()">
+                <div class="field-note">Se convertirá a S/ según TC configurado</div>
+              </div>
+              <div class="field"><label>Costo Proveedor (S/)</label>
+                <input type="number" id="pm-a-cprovsol" min="0" step="0.01" placeholder="0.00" oninput="PM.calcCost()">
+                <div class="field-note">Si el proveedor cobró en soles directamente</div>
+              </div>
+              <div class="field" style="grid-column:1/-1;background:#00c8ff15;border-radius:10px;padding:10px 14px;">
+                <label style="color:var(--accent);font-weight:700;">COSTO TOTAL</label>
+                <input type="text" id="pm-a-ctotal" readonly style="font-family:'DM Mono',monospace;font-size:18px;font-weight:700;color:var(--accent);background:transparent;border:none;padding:4px 0;" placeholder="S/ 0.00">
+              </div>
+            </div>
+          </div>
+
+          <div id="pm-modal-alert"></div>
+          <div class="modal-actions">
+            <button class="btn-sm btn-ghost" onclick="document.getElementById('pm-modal').classList.remove('open')">Cancelar</button>
+            <button class="btn-sm btn-ghost" id="pm-btn-plt" style="display:none;" onclick="PM.saveAsPlt()">📋 Guardar como Plantilla</button>
+            <button class="btn-sm btn-accent" onclick="PM.save()">💾 Guardar Actividad</button>
+          </div>
+        </div>
+      </div>
+
+
+
 <!-- MODAL BACHADA -->
 <div class="modal-overlay" id="modal-bachada">
   <div class="modal">
@@ -1371,9 +2039,10 @@ function navigate(page){
   document.getElementById('page-'+page).classList.add('active');
   const nav=document.getElementById('nav-'+page);
   if(nav)nav.classList.add('active');
-  const titles={home:'Panel Principal',congelamiento:'🧊 Proceso de Congelamiento',usuarios:'👥 Gestión de Usuarios',admin:'⚙️ Administración del Sistema'};
+  const titles={home:'Panel Principal',congelamiento:'🧊 Proceso de Congelamiento',usuarios:'👥 Gestión de Usuarios',admin:'⚙️ Administración del Sistema',plan:'📅 Plan de Mantenimiento'};
   document.getElementById('topbar-title').textContent=titles[page]||page;
   if(page==='congelamiento'){renderBachadas();renderEventos();populateSelects();renderEquiposConfig();populateFiltroTecnicos();}
+  if(page==='plan'){PM.init();}
   if(page==='usuarios')renderUsers();
   if(page==='admin'){renderAdminUsers();renderAdminStats();populatePermUsers();}
   closeSidebarMobile();
@@ -2990,6 +3659,1095 @@ async function guardarPostBachada(){
     showToast('Error al guardar el evento.','danger');
   }
 }
+
+
+// ================================================================
+// MÓDULO: PLAN DE MANTENIMIENTO — Namespace PM (aislado)
+// ================================================================
+const PM = (() => {
+  const COL_PM = {
+    acts:  () => db.collection('pm_actividades'),
+    tecs:  () => db.collection('pm_tecnicos'),
+    areas: () => db.collection('pm_areas'),
+    eqs:   () => db.collection('pm_equipos'),
+    esps:  () => db.collection('pm_especialidades'),
+    razs:  () => db.collection('pm_razones'),
+    pars:  () => db.collection('pm_parametros'),
+  };
+  const C = {
+    get:(k,d)=>{try{return JSON.parse(localStorage.getItem('pmx_'+k))??d;}catch{return d;}},
+    set:(k,v)=>localStorage.setItem('pmx_'+k,JSON.stringify(v))
+  };
+  let _listeners=[], _editId=null, _pmCharts={};
+
+  // ---- HELPERS ----
+  const g = id => document.getElementById(id);
+  const setText = (id,v) => { const e=g(id); if(e) e.textContent=v; };
+  const today = () => new Date().toISOString().split('T')[0];
+  const pct = (n,d) => d>0 ? Math.round(n/d*100)+'%' : '0%';
+  const wn = dateStr => {
+    if(!dateStr) return 0;
+    const d=new Date(dateStr), y=d.getFullYear();
+    const jan1=new Date(y,0,1);
+    return Math.ceil(((d-jan1)/86400000+jan1.getDay()+1)/7);
+  };
+
+  const critClass = {Baja:'badge-green',Media:'badge-blue',Alta:'badge-warn',Critica:'badge-red'};
+  const estClass = {Programado:'badge-blue','En Proceso':'badge-teal',Ejecutado:'badge-green',Reprogramado:'badge-warn',Cancelado:'badge-red'};
+  const typeColors = {Preventivo:'#00c8ff',Correctivo:'#ff3b5c',Predictivo:'#a855f7',Mejora:'#ff9500',Inspeccion:'#00e87a',Proveedor:'#8aaac8',Legal:'#ffd700'};
+  const estColors = {Programado:'#00c8ff','En Proceso':'#a855f7',Ejecutado:'#00e87a',Reprogramado:'#ff9500',Cancelado:'#ff3b5c'};
+
+  // ---- INIT / LISTENERS ----
+  function init() {
+    if(_listeners.length) return; // already listening
+    _listeners.push(COL_PM.acts().onSnapshot(s=>{
+      C.set('acts', s.docs.map(d=>({...d.data(),_fid:d.id})));
+      renderReg(); renderDash(); renderGantt();
+    }, e=>console.warn(e)));
+    _listeners.push(COL_PM.tecs().onSnapshot(s=>{
+      C.set('tecs', s.docs.map(d=>({...d.data(),_fid:d.id})));
+      _renderCfgTec(); _populateSels();
+    }, e=>console.warn(e)));
+    _listeners.push(COL_PM.areas().onSnapshot(s=>{
+      C.set('areas', s.docs.map(d=>({...d.data(),_fid:d.id})));
+      _renderCfgArea(); _populateSels();
+    }, e=>console.warn(e)));
+    _listeners.push(COL_PM.eqs().onSnapshot(s=>{
+      C.set('eqs', s.docs.map(d=>({...d.data(),_fid:d.id})));
+      _renderCfgEq(); _populateSels();
+    }, e=>console.warn(e)));
+    _listeners.push(COL_PM.esps().onSnapshot(s=>{
+      C.set('esps', s.docs.map(d=>({...d.data(),_fid:d.id})));
+      _renderCfgEsp(); _populateSels();
+    }, e=>console.warn(e)));
+    _listeners.push(COL_PM.razs().onSnapshot(s=>{
+      C.set('razs', s.docs.map(d=>({...d.data(),_fid:d.id})));
+      _renderCfgRaz(); _seedRazones();
+    }, e=>console.warn(e)));
+    _listeners.push(COL_PM.pars().doc('cfg').onSnapshot(s=>{
+      if(s.exists) C.set('pars', s.data());
+    }, e=>console.warn(e)));
+    _listeners.push(db.collection('pm_repuestos').onSnapshot(s=>{
+      C.set('reps', s.docs.map(d=>({...d.data(),_fid:d.id})));
+      _renderCfgRep();
+    }, e=>console.warn(e)));
+    _listeners.push(db.collection('pm_plantillas').onSnapshot(s=>{
+      C.set('plas', s.docs.map(d=>({...d.data(),_fid:d.id})));
+      _renderCfgPla();
+    }, e=>console.warn(e)));
+    _listeners.push(db.collection('pm_parametros').doc('tarifas').onSnapshot(s=>{
+      if(s.exists) C.set('tar', s.data());
+      _loadTar();
+    }, e=>console.warn(e)));
+    _listeners.push(db.collection('pm_repuestos').onSnapshot(s=>{
+      C.set('reps', s.docs.map(d=>({...d.data(),_fid:d.id})));
+      _renderCfgRep();
+    }, e=>console.warn(e)));
+    _listeners.push(db.collection('pm_plantillas').onSnapshot(s=>{
+      C.set('plts', s.docs.map(d=>({...d.data(),_fid:d.id})));
+      _renderCfgPlt();
+    }, e=>console.warn(e)));
+    // Set default dates
+    const t=today(), d90=new Date(); d90.setDate(d90.getDate()-90);
+    const d90s=d90.toISOString().split('T')[0];
+    ['pmf-desde','pmd-desde'].forEach(id=>{const e=g(id);if(e)e.value=d90s;});
+    ['pmf-hasta','pmd-hasta'].forEach(id=>{const e=g(id);if(e)e.value=t;});
+    showPage('registro');
+  }
+
+  // ---- NAVIGATION ----
+  function showPage(pg) {
+    ['registro','dashboard','gantt','config'].forEach(p=>{
+      const el=g('plan-'+({registro:'reg',dashboard:'dash',gantt:'gantt',config:'cfg'}[p]||p));
+      if(el) el.style.display='none';
+      const tab=g('ptab-'+p);
+      if(tab) tab.classList.remove('active');
+    });
+    const map={registro:'reg',dashboard:'dash',gantt:'gantt',config:'cfg'};
+    const el=g('plan-'+map[pg]);
+    if(el) el.style.display='block';
+    const tab=g('ptab-'+pg);
+    if(tab) tab.classList.add('active');
+    if(pg==='dashboard') setTimeout(()=>renderDash(),100);
+    if(pg==='gantt') setTimeout(()=>renderGantt(),100);
+    if(pg==='config') {_renderCfgTec();_renderCfgArea();_renderCfgEq();_renderCfgEsp();_renderCfgRep();_renderCfgPla();_renderCfgRaz();_loadPars();}
+  }
+
+  function showCfg(tab) {
+    ['tec','area','eq','esp','raz','par','rep','plt','tar'].forEach(t=>{
+      const e=g('pmcfg-'+t);if(e)e.style.display='none';
+    });
+    const e=g('pmcfg-'+tab);if(e)e.style.display='block';
+    const nav=g('pm-cfg-nav');
+    if(nav){const order=['tec','area','eq','esp','raz','par','rep','plt','tar'];nav.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',order[i]===tab));}
+    if(tab==='rep')_renderCfgRep();
+    if(tab==='plt')_renderCfgPlt();
+    if(tab==='tar')_loadTar();
+  }
+
+  // ---- FILTERS ----
+  function _getActs(prefix) {
+    let acts=C.get('acts',[]);
+    const desde=g(prefix+'-desde')?.value||'';
+    const hasta=g(prefix+'-hasta')?.value||'';
+    const area=g(prefix+'-area')?.value||'';
+    const tipo=g(prefix+'-tipo')?.value||'';
+    const estado=g(prefix+'-estado')?.value||'';
+    const crit=g(prefix+'-crit')?.value||'';
+    const sem=parseInt(g(prefix+'-sem')?.value)||0;
+    if(desde)acts=acts.filter(a=>(a.fecha||'')>=desde);
+    if(hasta)acts=acts.filter(a=>(a.fecha||'')<=hasta);
+    if(area)acts=acts.filter(a=>a.area===area);
+    if(tipo)acts=acts.filter(a=>a.tipo===tipo);
+    if(estado)acts=acts.filter(a=>a.estado===estado);
+    if(crit)acts=acts.filter(a=>a.criticidad===crit);
+    if(sem)acts=acts.filter(a=>parseInt(a.semana)===sem);
+    return acts.sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
+  }
+
+  function clearFilters() {
+    ['pmf-desde','pmf-hasta','pmf-tipo','pmf-estado','pmf-crit','pmf-area'].forEach(id=>{const e=g(id);if(e)e.value='';});
+    const e=g('pmf-sem');if(e)e.value='';
+    const t=today(),d90=new Date();d90.setDate(d90.getDate()-90);
+    const e2=g('pmf-desde');if(e2)e2.value=d90.toISOString().split('T')[0];
+    const e3=g('pmf-hasta');if(e3)e3.value=t;
+    renderReg();
+  }
+
+  // ---- RENDER REGISTRO ----
+  function renderReg() {
+    const acts=_getActs('pmf');
+    const all=C.get('acts',[]);
+    setText('pm-s-total',acts.length);
+    setText('pm-s-prog',acts.filter(a=>a.estado==='Programado').length);
+    setText('pm-s-proc',acts.filter(a=>a.estado==='En Proceso').length);
+    setText('pm-s-ejec',acts.filter(a=>a.estado==='Ejecutado').length);
+    setText('pm-s-reprg',acts.filter(a=>a.estado==='Reprogramado').length);
+    setText('pm-s-canc',acts.filter(a=>a.estado==='Cancelado').length);
+    const cnt=g('pm-count');
+    if(cnt) cnt.innerHTML=acts.length<all.length?`Mostrando <strong style="color:var(--accent)">${acts.length}</strong> de ${all.length} actividades`:`${all.length} actividad${all.length!==1?'es':''} en total`;
+    const tbody=g('pm-tbody');
+    if(!tbody)return;
+    if(!acts.length){tbody.innerHTML='<tr><td colspan="20" style="text-align:center;color:var(--text3);padding:28px;">Sin actividades. Agrega la primera con "+ Nueva Actividad"</td></tr>';return;}
+    tbody.innerHTML=acts.map(a=>`<tr style="cursor:pointer;" onclick="PM.openModal('${a._fid}')">
+      <td class="font-mono"><b>S${a.semana||'—'}</b></td>
+      <td class="font-mono">${a.fecha||'—'}</td>
+      <td class="font-mono" style="color:${a.fechaReprg?'var(--warn)':'var(--text3)'};">${a.fechaReprg||'—'}</td>
+      <td><div style="font-size:12px;">${a.area||'—'}</div><div style="font-size:10px;color:var(--text3);">${a.subarea||''}</div></td>
+      <td style="max-width:110px;white-space:normal;font-size:12px;">${a.equipo||'—'}</td>
+      <td style="max-width:180px;white-space:normal;font-size:12px;">${a.descripcion||'—'}</td>
+      <td><span class="badge badge-blue" style="font-size:10px;background:${(typeColors[a.tipo]||'#888')}22;color:${typeColors[a.tipo]||'#888'};">${a.tipo||'—'}</span></td>
+      <td style="font-size:11px;">${a.origen||'—'}</td>
+      <td><span class="badge ${critClass[a.criticidad]||'badge-gray'}" style="font-size:10px;">${a.criticidad||'—'}</span></td>
+      <td style="font-size:11px;">${a.especialidad||'—'}</td>
+      <td style="font-size:11px;">${a.frecuencia||'—'}</td>
+      <td class="font-mono">${a.hPlan?a.hPlan+'h':'—'}</td>
+      <td class="font-mono" style="color:${a.hReal?'var(--accent3)':'var(--text3)'};">${a.hReal?a.hReal+'h':'—'}</td>
+      <td class="font-mono">${a.nTec||1}</td>
+      <td class="font-mono">${a.hhPlan?a.hhPlan+'h':'—'}</td>
+      <td class="font-mono" style="color:${a.hhReal?'var(--accent3)':'var(--text3)'};">${a.hhReal?a.hhReal+'h':'—'}</td>
+      <td><span class="badge ${estClass[a.estado]||'badge-gray'}" style="font-size:10px;">${a.estado||'—'}</span></td>
+      <td style="max-width:120px;white-space:normal;font-size:11px;color:var(--warn);">${a.razon||'—'}</td>
+      <td class="no-print" onclick="event.stopPropagation()" style="display:flex;gap:4px;">
+        <button class="btn-sm btn-ghost" style="padding:3px 8px;font-size:11px;" onclick="PM.openModal('${a._fid}')">✏️</button>
+        <button class="btn-sm btn-ghost" style="padding:3px 8px;font-size:11px;color:var(--accent3);" title="Clonar actividad" onclick="PM.clonar('${a._fid}')">📋</button>
+        <button class="btn-sm btn-ghost" style="padding:3px 8px;font-size:11px;color:var(--danger);" onclick="PM.del('${a._fid}')">🗑</button>
+      </td>
+    </tr>`).join('');
+    // Populate area filter
+    const areas=[...new Set(C.get('acts',[]).map(a=>a.area).filter(Boolean))];
+    const fArea=g('pmf-area');
+    if(fArea){const v=fArea.value;fArea.innerHTML='<option value="">Todas</option>'+areas.map(ar=>`<option value="${ar}"${ar===v?' selected':''}>${ar}</option>`).join('');fArea.value=v;}
+  }
+
+  // ---- RENDER DASHBOARD ----
+  function renderDash() {
+    let acts=C.get('acts',[]);
+    const desde=g('pmd-desde')?.value||'';
+    const hasta=g('pmd-hasta')?.value||'';
+    const area=g('pmd-area')?.value||'';
+    const crit=g('pmd-crit')?.value||'';
+    if(desde)acts=acts.filter(a=>(a.fecha||'')>=desde);
+    if(hasta)acts=acts.filter(a=>(a.fecha||'')<=hasta);
+    if(area)acts=acts.filter(a=>a.area===area);
+    if(crit)acts=acts.filter(a=>a.criticidad===crit);
+
+    const tot=acts.length;
+    const ejec=acts.filter(a=>a.estado==='Ejecutado').length;
+    const reprg=acts.filter(a=>a.estado==='Reprogramado').length;
+    const canc=acts.filter(a=>a.estado==='Cancelado').length;
+    const prog=acts.filter(a=>a.estado==='Programado').length;
+    const proc=acts.filter(a=>a.estado==='En Proceso').length;
+    const prev=acts.filter(a=>a.tipo==='Preventivo').length;
+    const corr=acts.filter(a=>a.tipo==='Correctivo').length;
+    const pred=acts.filter(a=>a.tipo==='Predictivo').length;
+    const cumpl=tot>0?Math.round(ejec/tot*100):0;
+    const hhPlan=acts.reduce((s,a)=>s+(a.hhPlan||0),0);
+    const hhReal=acts.reduce((s,a)=>s+(a.hhReal||0),0);
+
+    // Recursos y HH disponibles
+    const tecs=C.get('tecs',[]);
+    const pars=C.get('pars',{diasSemana:6,horasDia:8});
+    const tar=C.get('tar',{hhTarifa:12,tipoCambio:3.75,presupMensual:30000});
+    let dias=30;
+    if(desde&&hasta){const d1=new Date(desde),d2=new Date(hasta);dias=Math.max(1,(d2-d1)/86400000+1);}
+    const semsPer=dias/7;
+    const hhDisp=tecs.length>0?tecs.reduce((s,t)=>s+(t.horasDia||pars.horasDia||8),0)*semsPer*(pars.diasSemana||6):0;
+    const hhHolg=hhDisp-hhPlan;
+
+    // ===== MTBF y MTTR (basado en correctivos del módulo congelamiento + actividades correctivas) =====
+    const correctivos=acts.filter(a=>a.tipo==='Correctivo'&&a.estado==='Ejecutado');
+    const eventos=DB.get('eventos',[]).filter(e=>e.tipo==='no_programada'&&e.estado==='cerrado');
+    let totalFallas=correctivos.length+eventos.length;
+    let totalTiempoReparacion=correctivos.reduce((s,a)=>s+(a.hReal||0),0)+eventos.reduce((s,e)=>s+(e.durH||0),0);
+    let mttr=totalFallas>0?(totalTiempoReparacion/totalFallas):0;
+    // MTBF: horas totales del período / N° fallas
+    let horasPeriodo=dias*24;
+    let mtbf=totalFallas>0?(horasPeriodo-totalTiempoReparacion)/totalFallas:horasPeriodo;
+
+    // ===== Disponibilidad (uptime planta) =====
+    let disponibilidad=horasPeriodo>0?Math.max(0,(horasPeriodo-totalTiempoReparacion)/horasPeriodo*100):0;
+
+    // ===== Backlog (Programadas + En Proceso + Reprogramadas) =====
+    const backlog=prog+proc+reprg;
+    const backlogCriticas=acts.filter(a=>(a.estado==='Programado'||a.estado==='En Proceso'||a.estado==='Reprogramado')&&a.criticidad==='Critica').length;
+
+    // ===== COSTOS =====
+    const costMO=hhReal*(tar.hhTarifa||12);
+    const costRep=acts.reduce((s,a)=>s+(a.costRep||0),0);
+    const costProvSol=acts.reduce((s,a)=>s+(a.costProvSol||0),0);
+    const costProvUsd=acts.reduce((s,a)=>s+(a.costProvUsd||0),0)*(tar.tipoCambio||3.75);
+    const costProv=costProvSol+costProvUsd;
+    const costTotal=costMO+costRep+costProv;
+    const presupPer=(tar.presupMensual||30000)*(dias/30);
+
+    // ===== UI: Llenar KPIs =====
+    const setText=(id,v)=>{const e=g(id);if(e)e.textContent=v;};
+    const pct=(n,d)=>d>0?Math.round(n/d*100)+'%':'—';
+    setText('pmd-cumpl',cumpl+'%');
+    const bar=g('pmd-cbar');
+    if(bar){bar.style.width=cumpl+'%';bar.style.background=cumpl>=90?'var(--success)':cumpl>=70?'var(--warn)':'var(--danger)';}
+    setText('pmd-tot-s',`${tot} total · ${ejec} ejec`);
+    setText('pmd-mtbf',mtbf>0?Math.round(mtbf)+'h':'∞');
+    setText('pmd-mttr',mttr>0?mttr.toFixed(1)+'h':'—');
+    setText('pmd-backlog',backlog);
+    setText('pmd-backlog-s',backlogCriticas>0?`${backlogCriticas} críticas pendientes`:'sin críticas');
+    setText('pmd-disp',disponibilidad.toFixed(1)+'%');
+    setText('pmd-costo','S/ '+(costTotal>=1000?(costTotal/1000).toFixed(1)+'K':costTotal.toFixed(0)));
+    setText('pmd-costo-s',presupPer>0?'meta: S/ '+(presupPer>=1000?(presupPer/1000).toFixed(1)+'K':presupPer.toFixed(0)):'sin presupuesto');
+
+    // HH
+    setText('pmd-hdisp',hhDisp.toFixed(0)+'h');
+    setText('pmd-hdisp-s',`${tecs.length} téc × ${pars.diasSemana||6}d × ${semsPer.toFixed(1)} sem`);
+    setText('pmd-hplan',hhPlan.toFixed(1)+'h');
+    setText('pmd-hplan-p','uso: '+pct(hhPlan,hhDisp));
+    setText('pmd-hejec',hhReal.toFixed(1)+'h');
+    const holgEl=g('pmd-hholg');
+    if(holgEl){holgEl.textContent=(hhHolg>=0?'+':'')+hhHolg.toFixed(1)+'h';holgEl.style.color=hhHolg>=0?'var(--success)':'var(--danger)';}
+    const efic=hhPlan>0?Math.round(hhReal/hhPlan*100):0;
+    const pcpTotal=prev+corr+pred;
+    setText('pmd-pcp',pcpTotal>0?Math.round(prev/pcpTotal*100)+'/'+Math.round(corr/pcpTotal*100)+'/'+Math.round(pred/pcpTotal*100):'—/—/—');
+
+    // COSTOS
+    setText('pmd-cost-mo','S/ '+costMO.toFixed(2));
+    setText('pmd-cost-rep','S/ '+costRep.toFixed(2));
+    setText('pmd-cost-prov','S/ '+costProv.toFixed(2));
+    setText('pmd-cost-total','S/ '+costTotal.toFixed(2));
+    const presupEl=g('pmd-cost-presup');
+    if(presupEl){
+      const pctP=presupPer>0?Math.round(costTotal/presupPer*100):0;
+      const color=pctP<=80?'var(--success)':pctP<=95?'var(--warn)':'var(--danger)';
+      presupEl.innerHTML=`<span style="color:${color};font-weight:600;">${pctP}%</span> del presupuesto · S/ ${(presupPer-costTotal).toFixed(0)} disponibles`;
+    }
+
+    // Populate area filter dash
+    const areasAll=[...new Set(C.get('acts',[]).map(a=>a.area).filter(Boolean))];
+    const da=g('pmd-area');if(da){const v=da.value;da.innerHTML='<option value="">Todas</option>'+areasAll.map(ar=>`<option value="${ar}"${ar===v?' selected':''}>${ar}</option>`).join('');da.value=v;}
+
+    // ===== CHARTS =====
+    const sems=[...new Set(acts.map(a=>a.semana).filter(Boolean))].sort((a,b)=>a-b).slice(-12);
+    const gc='#1e3352', tc='#8aaac8';
+
+    // Cumplimiento semanal apilado
+    _chart('pmd-ch-sem','bar',{
+      labels:sems.map(s=>'S'+s),
+      datasets:[
+        {label:'Ejecutado',data:sems.map(s=>acts.filter(a=>a.semana===s&&a.estado==='Ejecutado').length),backgroundColor:'#00e87acc',borderRadius:3,stack:'a'},
+        {label:'Reprg.',data:sems.map(s=>acts.filter(a=>a.semana===s&&a.estado==='Reprogramado').length),backgroundColor:'#ff9500cc',borderRadius:3,stack:'a'},
+        {label:'Cancel.',data:sems.map(s=>acts.filter(a=>a.semana===s&&a.estado==='Cancelado').length),backgroundColor:'#ff3b5ccc',borderRadius:3,stack:'a'},
+        {label:'En Proceso',data:sems.map(s=>acts.filter(a=>a.semana===s&&a.estado==='En Proceso').length),backgroundColor:'#a855f7cc',borderRadius:3,stack:'a'},
+        {label:'Programado',data:sems.map(s=>acts.filter(a=>a.semana===s&&a.estado==='Programado').length),backgroundColor:'#00c8ffcc',borderRadius:3,stack:'a'},
+      ]
+    },{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{color:tc,font:{size:9},boxWidth:9,padding:6}}},
+      scales:{x:{grid:{color:gc},ticks:{color:tc,font:{size:9}},stacked:true},y:{grid:{color:gc},ticks:{color:tc,font:{size:9}},stacked:true}}});
+
+    // Tipos donut
+    const tipos=['Preventivo','Correctivo','Predictivo','Mejora','Inspeccion','Proveedor','Legal'];
+    _chart('pmd-ch-tipo','doughnut',{
+      labels:tipos,
+      datasets:[{data:tipos.map(t=>acts.filter(a=>a.tipo===t).length),
+        backgroundColor:tipos.map(t=>(typeColors[t]||'#888')+'cc'),
+        borderColor:tipos.map(t=>typeColors[t]||'#888'),borderWidth:2}]
+    },{responsive:true,maintainAspectRatio:false,cutout:'60%',plugins:{legend:{position:'bottom',labels:{color:tc,font:{size:9},padding:6,boxWidth:9}}}});
+
+    // Criticidad apilado
+    const crits=['Critica','Alta','Media','Baja'];
+    _chart('pmd-ch-crit','bar',{
+      labels:crits,
+      datasets:[
+        {label:'Ejecutado',data:crits.map(c=>acts.filter(a=>a.criticidad===c&&a.estado==='Ejecutado').length),backgroundColor:'#00e87acc',stack:'a',borderRadius:3},
+        {label:'Pendiente',data:crits.map(c=>acts.filter(a=>a.criticidad===c&&a.estado!=='Ejecutado'&&a.estado!=='Cancelado').length),backgroundColor:'#ff3b5ccc',stack:'a',borderRadius:3},
+      ]
+    },{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{color:tc,font:{size:9},boxWidth:9}}},
+      scales:{x:{grid:{color:gc},ticks:{color:tc,font:{size:9}},stacked:true},y:{grid:{color:gc},ticks:{color:tc,font:{size:9}},stacked:true}}});
+
+    // HH semanal Plan vs Real
+    _chart('pmd-ch-hhsem','bar',{
+      labels:sems.map(s=>'S'+s),
+      datasets:[
+        {label:'HH Plan',data:sems.map(s=>acts.filter(a=>a.semana===s).reduce((sm,a)=>sm+(a.hhPlan||0),0)),backgroundColor:'#00c8ff66',borderColor:'#00c8ff',borderWidth:1.5,borderRadius:4},
+        {label:'HH Real',data:sems.map(s=>acts.filter(a=>a.semana===s).reduce((sm,a)=>sm+(a.hhReal||0),0)),backgroundColor:'#00e87acc',borderColor:'#00e87a',borderWidth:1.5,borderRadius:4},
+      ]
+    },{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{color:tc,font:{size:10},boxWidth:10}}},
+      scales:{x:{grid:{color:gc},ticks:{color:tc,font:{size:9}}},y:{grid:{color:gc},ticks:{color:tc,font:{size:9}}}}});
+
+    // HH por área
+    const areas2=[...new Set(acts.map(a=>a.area).filter(Boolean))];
+    _chart('pmd-ch-hh','bar',{
+      labels:areas2,
+      datasets:[
+        {label:'HH Plan',data:areas2.map(ar=>acts.filter(a=>a.area===ar).reduce((s,a)=>s+(a.hhPlan||0),0)),backgroundColor:'#00c8ff44',borderColor:'#00c8ff',borderWidth:1.5,borderRadius:4},
+        {label:'HH Real',data:areas2.map(ar=>acts.filter(a=>a.area===ar).reduce((s,a)=>s+(a.hhReal||0),0)),backgroundColor:'#00e87acc',borderColor:'#00e87a',borderWidth:1.5,borderRadius:4},
+      ]
+    },{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{color:tc,font:{size:10},boxWidth:10}}},
+      scales:{x:{grid:{color:gc},ticks:{color:tc,font:{size:9}}},y:{grid:{color:gc},ticks:{color:tc,font:{size:9}}}}});
+
+    // Cumplimiento % por área
+    _chart('pmd-ch-area','bar',{
+      labels:areas2,
+      datasets:[{label:'Cumplimiento %',
+        data:areas2.map(ar=>{const aa=acts.filter(a=>a.area===ar);return aa.length?Math.round(aa.filter(a=>a.estado==='Ejecutado').length/aa.length*100):0;}),
+        backgroundColor:areas2.map(ar=>{const aa=acts.filter(a=>a.area===ar),cp=aa.length?Math.round(aa.filter(a=>a.estado==='Ejecutado').length/aa.length*100):0;return cp>=90?'#00e87acc':cp>=70?'#ff9500cc':'#ff3b5ccc';}),
+        borderWidth:1.5,borderRadius:4}]
+    },{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{x:{grid:{color:gc},ticks:{color:tc,font:{size:9}}},y:{grid:{color:gc},ticks:{color:tc,font:{size:9},callback:v=>v+'%'},max:100}}});
+
+    // Razones horizontal
+    const razActs=acts.filter(a=>a.razon);
+    const razMap={};razActs.forEach(a=>{razMap[a.razon]=(razMap[a.razon]||0)+1;});
+    const razArr=Object.entries(razMap).sort((a,b)=>b[1]-a[1]).slice(0,8);
+    _chart('pmd-ch-razon','bar',{
+      labels:razArr.map(r=>r[0].length>22?r[0].slice(0,22)+'…':r[0]),
+      datasets:[{label:'Frecuencia',data:razArr.map(r=>r[1]),backgroundColor:'#ff9500cc',borderColor:'#ff9500',borderWidth:1.5,borderRadius:4}]
+    },{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false}},
+      scales:{x:{grid:{color:gc},ticks:{color:tc,font:{size:9}}},y:{grid:{color:gc},ticks:{color:tc,font:{size:9}}}}});
+
+    // Tendencia prev/corr/pred
+    _chart('pmd-ch-tend','line',{
+      labels:sems.map(s=>'S'+s),
+      datasets:[
+        {label:'Preventivo',data:sems.map(s=>acts.filter(a=>a.semana===s&&a.tipo==='Preventivo').length),borderColor:'#00c8ff',backgroundColor:'#00c8ff22',tension:.3,fill:true,pointRadius:3},
+        {label:'Correctivo',data:sems.map(s=>acts.filter(a=>a.semana===s&&a.tipo==='Correctivo').length),borderColor:'#ff3b5c',backgroundColor:'#ff3b5c22',tension:.3,fill:true,pointRadius:3},
+        {label:'Predictivo',data:sems.map(s=>acts.filter(a=>a.semana===s&&a.tipo==='Predictivo').length),borderColor:'#a855f7',backgroundColor:'#a855f722',tension:.3,fill:true,pointRadius:3},
+      ]
+    },{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{color:tc,font:{size:10},boxWidth:10,padding:8}}},
+      scales:{x:{grid:{color:gc},ticks:{color:tc,font:{size:9}}},y:{grid:{color:gc},ticks:{color:tc,font:{size:9}}}}});
+
+    // ===== SEMAFORO EQUIPOS =====
+    const equipos=[...new Set(acts.map(a=>a.equipo).filter(Boolean))];
+    const sem=g('pmd-semaforo');
+    if(sem){
+      const equipoStats=equipos.map(eq=>{
+        const ea=acts.filter(a=>a.equipo===eq);
+        const ee=ea.filter(a=>a.estado==='Ejecutado').length;
+        const cp=ea.length?Math.round(ee/ea.length*100):0;
+        const fallas=ea.filter(a=>a.tipo==='Correctivo').length;
+        return {eq,total:ea.length,cp,fallas};
+      }).sort((a,b)=>a.cp-b.cp);
+      sem.innerHTML=equipoStats.length?equipoStats.map(e=>{
+        const col=e.cp>=85?'var(--success)':e.cp>=70?'var(--warn)':'var(--danger)';
+        return `<div style="background:var(--surface2);border-radius:8px;padding:9px 11px;display:flex;align-items:center;gap:8px;border-left:3px solid ${col};">
+          <div style="width:10px;height:10px;border-radius:50%;background:${col};flex-shrink:0;"></div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${e.eq}</div>
+            <div style="font-size:10px;color:var(--text3);">${e.total} act · ${e.fallas} fallas</div>
+          </div>
+          <div style="font-size:13px;font-weight:700;color:${col};font-family:'DM Mono',monospace;">${e.cp}%</div>
+        </div>`;
+      }).join(''):'<div style="text-align:center;color:var(--text3);padding:20px;grid-column:1/-1;">Registra actividades con equipos asignados para ver el semáforo</div>';
+    }
+
+    // ===== TABLA POR ÁREA =====
+    const tbArea=g('pmd-tb-area');
+    if(tbArea){
+      tbArea.innerHTML=areas2.length?areas2.map(ar=>{
+        const aa=acts.filter(a=>a.area===ar);
+        const ee=aa.filter(a=>a.estado==='Ejecutado').length;
+        const rr=aa.filter(a=>a.estado==='Reprogramado').length;
+        const cc=aa.filter(a=>a.estado==='Cancelado').length;
+        const cp=aa.length?Math.round(ee/aa.length*100):0;
+        const hp=aa.reduce((s,a)=>s+(a.hhPlan||0),0);
+        const hr=aa.reduce((s,a)=>s+(a.hhReal||0),0);
+        const hg=hp-hr;
+        const ef=hp>0?Math.round(hr/hp*100):0;
+        const cost=hr*(tar.hhTarifa||12)+aa.reduce((s,a)=>s+(a.costRep||0)+(a.costProvSol||0)+(a.costProvUsd||0)*(tar.tipoCambio||3.75),0);
+        return`<tr><td><b>${ar}</b></td><td>${aa.length}</td><td>${ee}</td><td>${rr}</td><td>${cc}</td>
+          <td><span class="badge ${cp>=90?'badge-green':cp>=70?'badge-warn':'badge-red'}">${cp}%</span></td>
+          <td class="font-mono">${hp.toFixed(1)}h</td><td class="font-mono">${hr.toFixed(1)}h</td>
+          <td class="font-mono" style="color:${hg>=0?'var(--success)':'var(--danger)'};">${hg>=0?'+':''}${hg.toFixed(1)}h</td>
+          <td class="font-mono">${ef}%</td>
+          <td class="font-mono">S/${cost.toFixed(0)}</td></tr>`;
+      }).join(''):'<tr><td colspan="11" style="text-align:center;color:var(--text3);padding:20px;">Sin datos</td></tr>';
+    }
+
+    // ===== TABLA RAZONES (con costos) =====
+    const tbRaz=g('pmd-tb-razon');
+    if(tbRaz){
+      const allRaz=acts.filter(a=>a.razon);
+      const rm={};allRaz.forEach(a=>{if(!rm[a.razon])rm[a.razon]={count:0,hh:0,cost:0,areas:new Set()};rm[a.razon].count++;rm[a.razon].hh+=(a.hhPlan||0);rm[a.razon].cost+=((a.hhPlan||0)*(tar.hhTarifa||12));rm[a.razon].areas.add(a.area||'—');});
+      const ra=Object.entries(rm).sort((a,b)=>b[1].count-a[1].count).slice(0,8);
+      tbRaz.innerHTML=ra.length?ra.map(([r,v])=>`<tr>
+        <td style="font-size:11px;">${r.length>22?r.slice(0,22)+'…':r}</td>
+        <td><span class="badge badge-red">${v.count}</span></td>
+        <td>${allRaz.length?Math.round(v.count/allRaz.length*100)+'%':'—'}</td>
+        <td class="font-mono">${v.hh.toFixed(0)}h</td>
+        <td class="font-mono" style="color:var(--warn);">S/${v.cost.toFixed(0)}</td></tr>`).join('')
+        :'<tr><td colspan="5" style="text-align:center;color:var(--text3);padding:18px;">Sin reprogramaciones ✅</td></tr>';
+    }
+
+    // ===== TABLA EQUIPOS CON MAS FALLAS =====
+    const tbEq=g('pmd-tb-equipos');
+    if(tbEq){
+      const eqStats=equipos.map(eq=>{
+        const ea=acts.filter(a=>a.equipo===eq);
+        const fallas=ea.filter(a=>a.tipo==='Correctivo').length;
+        const eaa=C.get('areas',[]).find(_=>_.nombre===ea[0]?.area);
+        const crEq=ea[0]?.criticidad||'Media';
+        const hhEq=ea.reduce((s,a)=>s+(a.hReal||0),0);
+        const mtbfEq=fallas>0?(horasPeriodo-hhEq)/fallas:horasPeriodo;
+        const mttrEq=fallas>0?hhEq/fallas:0;
+        const costEq=ea.reduce((s,a)=>s+(a.hReal||0)*(tar.hhTarifa||12)+(a.costRep||0)+(a.costProvSol||0)+(a.costProvUsd||0)*(tar.tipoCambio||3.75),0);
+        const cpEq=ea.length?Math.round(ea.filter(a=>a.estado==='Ejecutado').length/ea.length*100):0;
+        return {eq,area:ea[0]?.area||'—',crit:crEq,fallas,mtbf:mtbfEq,mttr:mttrEq,hh:hhEq,cost:costEq,cp:cpEq};
+      }).filter(e=>e.fallas>0).sort((a,b)=>b.fallas-a.fallas).slice(0,10);
+      tbEq.innerHTML=eqStats.length?eqStats.map(e=>{
+        const critClass2={Critica:'badge-red',Alta:'badge-warn',Media:'badge-blue',Baja:'badge-green'};
+        const estadoBadge=e.fallas>=5?'<span class="badge badge-red">Acción urgente</span>':e.fallas>=3?'<span class="badge badge-warn">En seguimiento</span>':'<span class="badge badge-green">Estable</span>';
+        return `<tr>
+          <td><b>${e.eq}</b></td>
+          <td style="font-size:11px;color:var(--text2);">${e.area}</td>
+          <td><span class="badge ${critClass2[e.crit]||'badge-gray'}">${e.crit}</span></td>
+          <td class="font-mono" style="color:var(--danger);">${e.fallas}</td>
+          <td class="font-mono">${Math.round(e.mtbf)}h</td>
+          <td class="font-mono" style="color:var(--warn);">${e.mttr.toFixed(1)}h</td>
+          <td class="font-mono">${e.hh.toFixed(1)}h</td>
+          <td class="font-mono">S/${e.cost.toFixed(0)}</td>
+          <td>${estadoBadge}</td></tr>`;
+      }).join(''):'<tr><td colspan="9" style="text-align:center;color:var(--text3);padding:20px;">Sin fallas registradas en el período ✅</td></tr>';
+    }
+  }
+
+  function _chart(id,type,data,options){
+    const c=document.getElementById(id);if(!c)return;
+    if(_pmCharts[id])_pmCharts[id].destroy();
+    _pmCharts[id]=new Chart(c,{type,data,options});
+  }
+
+  // ---- RENDER GANTT ----
+  function renderGantt() {
+    const anio=parseInt(g('pmg-anio')?.value)||2026;
+    const s1=parseInt(g('pmg-s1')?.value)||1;
+    const s2=parseInt(g('pmg-s2')?.value)||13;
+    const areaF=g('pmg-area')?.value||'';
+    const tipoF=g('pmg-tipo')?.value||'';
+    let acts=C.get('acts',[]);
+    if(areaF)acts=acts.filter(a=>a.area===areaF);
+    if(tipoF)acts=acts.filter(a=>a.tipo===tipoF);
+    acts=acts.filter(a=>parseInt(a.anio||new Date(a.fecha||'').getFullYear())===anio);
+    const weeks=[];for(let w=s1;w<=Math.min(s2,53);w++)weeks.push(w);
+    const areas=[...new Set(acts.map(a=>a.area||'Sin área').filter(Boolean))].slice(0,25);
+    const wrap=g('pm-gantt-wrap');if(!wrap)return;
+    if(!areas.length){wrap.innerHTML='<div style="text-align:center;color:var(--text3);padding:40px;">Sin actividades para el período seleccionado</div>';return;}
+
+    // Populate gantt area filter
+    const areasAll=[...new Set(C.get('acts',[]).map(a=>a.area).filter(Boolean))];
+    const ga=g('pmg-area');if(ga){const v=ga.value;ga.innerHTML='<option value="">Todas</option>'+areasAll.map(ar=>`<option value="${ar}"${ar===v?' selected':''}>${ar}</option>`).join('');ga.value=v;}
+
+    let html=`<div style="min-width:${180+weeks.length*56}px;">
+      <div style="display:flex;background:var(--surface2);border-bottom:1px solid var(--border);">
+        <div style="width:180px;flex-shrink:0;padding:8px 12px;font-size:10px;font-weight:600;color:var(--text2);border-right:1px solid var(--border);">ÁREA / EQUIPO</div>
+        ${weeks.map(w=>`<div style="width:52px;flex-shrink:0;padding:6px 4px;text-align:center;font-size:10px;font-weight:600;color:var(--text2);border-right:1px solid var(--border);">S${w}</div>`).join('')}
+      </div>`;
+
+    areas.forEach(ar=>{
+      html+=`<div style="display:flex;border-bottom:1px solid var(--border);">
+        <div style="width:180px;flex-shrink:0;padding:8px 12px;font-size:11.5px;color:var(--text);border-right:1px solid var(--border);background:var(--surface2);">${ar}</div>
+        ${weeks.map(w=>{
+          const cellActs=acts.filter(a=>(a.area===ar)&&parseInt(a.semana)===w);
+          const dots=cellActs.slice(0,4).map(a=>`<div title="${a.descripcion||''} | ${a.tipo} | ${a.estado}" style="width:10px;height:10px;border-radius:50%;background:${estColors[a.estado]||'#888'};cursor:pointer;flex-shrink:0;" onclick="PM.openModal('${a._fid}')"></div>`).join('');
+          const extra=cellActs.length>4?`<div style="font-size:9px;color:var(--text3);">+${cellActs.length-4}</div>`:'';
+          return`<div style="width:52px;flex-shrink:0;padding:4px;border-right:1px solid var(--border);display:flex;flex-wrap:wrap;gap:2px;align-items:flex-start;min-height:30px;">${dots}${extra}</div>`;
+        }).join('')}
+      </div>`;
+    });
+    html+='</div>';
+    wrap.innerHTML=html;
+  }
+
+  // ---- MODAL ----
+  function openModal(fid) {
+    _populateSels();
+    _editId=fid;
+    const isEdit=fid!==null;
+    g('pm-modal-ttl').textContent=isEdit?'✏️ Editar Actividad':'📋 Nueva Actividad';
+    g('pm-modal-alert').innerHTML='';
+    if(isEdit){
+      const a=C.get('acts',[]).find(x=>x._fid===fid);
+      if(!a)return;
+      g('pm-a-area').value=a.area||'';
+      onArea();
+      setTimeout(()=>{g('pm-a-sub').value=a.subarea||'';g('pm-a-eq').value=a.equipo||'';},150);
+      g('pm-a-crit').value=a.criticidad||'Media';
+      g('pm-a-desc').value=a.descripcion||'';
+      g('pm-a-tipo').value=a.tipo||'Preventivo';
+      g('pm-a-frec').value=a.frecuencia||'Unico';
+      g('pm-a-orig').value=a.origen||'Plan anual';
+      g('pm-a-esp').value=a.especialidad||'';
+      g('pm-a-coord').value=a.areaCoord||'';
+      g('pm-a-anio').value=a.anio||2026;
+      g('pm-a-sem').value=a.semana||'';
+      g('pm-a-fecha').value=a.fecha||'';
+      g('pm-a-est').value=a.estado||'Programado';
+      g('pm-a-frep').value=a.fechaReprg||'';
+      g('pm-a-raz').value=a.razon||'';
+      g('pm-a-razd').value=a.razonDet||'';
+      g('pm-a-hp').value=a.hPlan||'';
+      g('pm-a-hr').value=a.hReal||'';
+      g('pm-a-nt').value=a.nTec||1;
+      g('pm-a-hhp').value=a.hhPlan?a.hhPlan+'h':'';
+      g('pm-a-hhr').value=a.hhReal?a.hhReal+'h':'';
+      g('pm-a-tec').value=a.tecnico||'';
+      g('pm-a-obs').value=a.obs||'';
+      g('pm-a-crep').value=a.costRep||'';
+      g('pm-a-cprovsol').value=a.costProvSol||'';
+      g('pm-a-cprovusd').value=a.costProvUsd||'';
+      calcCost();
+      onEst();
+      const btnPlt=g('pm-btn-plt');if(btnPlt)btnPlt.style.display='inline-block';
+    } else {
+      ['pm-a-area','pm-a-sub','pm-a-eq','pm-a-esp','pm-a-coord','pm-a-frep','pm-a-raz','pm-a-razd','pm-a-fecha','pm-a-obs','pm-a-crep','pm-a-cprovsol','pm-a-cprovusd','pm-a-cmo','pm-a-ctotal'].forEach(id=>{const e=g(id);if(e)e.value='';});
+      g('pm-a-crit').value='Media';g('pm-a-tipo').value='Preventivo';g('pm-a-frec').value='Unico';
+      g('pm-a-orig').value='Plan anual';g('pm-a-est').value='Programado';
+      g('pm-a-anio').value=new Date().getFullYear();g('pm-a-sem').value='';
+      g('pm-a-nt').value=1;['pm-a-hp','pm-a-hr','pm-a-hhp','pm-a-hhr'].forEach(id=>{const e=g(id);if(e)e.value='';});
+      onEst();
+      const btnPlt=g('pm-btn-plt');if(btnPlt)btnPlt.style.display='none';
+    }
+    document.getElementById('pm-modal').classList.add('open');
+  }
+
+  // Toggle MTBF field visibility based on tipo
+  function onTipoChange() {
+    const tipo = g('pm-a-tipo')?.value || '';
+    const f = g('pm-a-mtbf-f');
+    if(f) f.style.display = tipo==='Correctivo' ? '' : 'none';
+  }
+
+  // Clonar actividad
+  function clonar(fid) {
+    const a = C.get('acts',[]).find(x=>x._fid===fid);
+    if(!a) return;
+    _editId = null;
+    g('pm-modal-ttl').textContent = '📋 Nueva Actividad (clonada)';
+    g('pm-modal-alert').innerHTML='<div class="alert alert-info">📋 Datos copiados de actividad existente. Ajusta fecha y guarda.</div>';
+    g('pm-a-area').value=a.area||'';
+    onArea();
+    setTimeout(()=>{g('pm-a-sub').value=a.subarea||'';g('pm-a-eq').value=a.equipo||'';},150);
+    g('pm-a-crit').value=a.criticidad||'Media';
+    g('pm-a-desc').value=a.descripcion||'';
+    g('pm-a-tipo').value=a.tipo||'Preventivo';
+    g('pm-a-frec').value=a.frecuencia||'Unico';
+    g('pm-a-orig').value=a.origen||'Plan anual';
+    g('pm-a-esp').value=a.especialidad||'';
+    g('pm-a-coord').value=a.areaCoord||'';
+    g('pm-a-anio').value=new Date().getFullYear();
+    // Avanzar 7 días (semanal) o 30 (mensual) según frecuencia
+    const baseDate = new Date(a.fecha||today());
+    const frec = a.frecuencia||'Unico';
+    const daysAdd = {Diario:1,Semanal:7,Quincenal:15,Mensual:30,Bimestral:60,Trimestral:90,Semestral:180,Anual:365}[frec]||7;
+    baseDate.setDate(baseDate.getDate()+daysAdd);
+    g('pm-a-fecha').value = baseDate.toISOString().split('T')[0];
+    g('pm-a-sem').value = wn(g('pm-a-fecha').value);
+    g('pm-a-est').value='Programado';
+    g('pm-a-hp').value=a.hPlan||'';
+    g('pm-a-nt').value=a.nTec||1;
+    g('pm-a-tec').value=a.tecnico||'';
+    g('pm-a-obs').value='';
+    g('pm-a-moneda').value=a.moneda||'PEN';
+    g('pm-a-crep').value='';
+    g('pm-a-cpro').value='';
+    g('pm-a-mtbf').value='';
+    g('pm-a-hr').value='';
+    g('pm-a-hhr').value='';
+    g('pm-a-ctot').value='';
+    g('pm-a-cmo').value='';
+    onEst();
+    calcCosto();
+    document.getElementById('pm-modal').classList.add('open');
+  }
+
+  function onArea() {
+    const areaVal=g('pm-a-area')?.value||'';
+    const areas=C.get('areas',[]);
+    const area=areas.find(a=>a.nombre===areaVal);
+    const subs=area&&area.subarea?area.subarea.split(',').map(s=>s.trim()).filter(Boolean):[];
+    const subSel=g('pm-a-sub');
+    if(subSel)subSel.innerHTML='<option value="">—</option>'+subs.map(s=>`<option value="${s}">${s}</option>`).join('');
+    const eqs=C.get('eqs',[]).filter(e=>!areaVal||e.area===areaVal);
+    const eqSel=g('pm-a-eq');
+    if(eqSel)eqSel.innerHTML='<option value="">Seleccionar...</option>'+eqs.map(e=>`<option value="${e.nombre}">${e.nombre}</option>`).join('');
+    // Auto-fill criticidad from equipo area
+    if(area&&area.criticidad){const c=g('pm-a-crit');if(c)c.value=area.criticidad;}
+  }
+
+  function onEst() {
+    const est=g('pm-a-est')?.value||'';
+    const show=est==='Reprogramado'||est==='Cancelado';
+    ['pm-a-frep-f','pm-a-raz-f','pm-a-razd-f'].forEach(id=>{const e=g(id);if(e)e.style.display=show?'':'none';});
+  }
+
+  function calcHH() {
+    const hp=parseFloat(g('pm-a-hp')?.value)||0;
+    const hr=parseFloat(g('pm-a-hr')?.value)||0;
+    const nt=parseInt(g('pm-a-nt')?.value)||1;
+    const ehp=g('pm-a-hhp');if(ehp)ehp.value=hp>0?(hp*nt).toFixed(1)+'h':'';
+    const ehr=g('pm-a-hhr');if(ehr)ehr.value=hr>0?(hr*nt).toFixed(1)+'h':'';
+    calcCost();
+  }
+
+  function calcCost() {
+    const tar=C.get('tar',{hhTarifa:12,tipoCambio:3.75});
+    const hr=parseFloat(g('pm-a-hr')?.value)||0;
+    const nt=parseInt(g('pm-a-nt')?.value)||1;
+    const hhReal=hr*nt;
+    const costMO=hhReal*(tar.hhTarifa||12);
+    const costRep=parseFloat(g('pm-a-crep')?.value)||0;
+    const costProvSol=parseFloat(g('pm-a-cprovsol')?.value)||0;
+    const costProvUsd=parseFloat(g('pm-a-cprovusd')?.value)||0;
+    const costProvTotal=costProvSol+(costProvUsd*(tar.tipoCambio||3.75));
+    const total=costMO+costRep+costProvTotal;
+    const eMO=g('pm-a-cmo');if(eMO)eMO.value=costMO.toFixed(2);
+    const eT=g('pm-a-ctotal');if(eT)eT.value='S/ '+total.toFixed(2);
+  }
+
+  function semFecha() {
+    const anio=parseInt(g('pm-a-anio')?.value)||new Date().getFullYear();
+    const sem=parseInt(g('pm-a-sem')?.value)||1;
+    const jan1=new Date(anio,0,1);
+    const dow=jan1.getDay()||7;
+    const s1=new Date(anio,0,1+(1-dow+7)%7);
+    const fecha=new Date(s1);fecha.setDate(s1.getDate()+(sem-1)*7);
+    const e=g('pm-a-fecha');if(e)e.value=fecha.toISOString().split('T')[0];
+  }
+
+  function fechaSem() {
+    const fecha=g('pm-a-fecha')?.value||'';
+    if(fecha){const e=g('pm-a-sem');if(e)e.value=wn(fecha);const ea=g('pm-a-anio');if(ea)ea.value=new Date(fecha).getFullYear();}
+  }
+
+  async function save() {
+    const area=g('pm-a-area')?.value||'';
+    const desc=g('pm-a-desc')?.value?.trim()||'';
+    const tipo=g('pm-a-tipo')?.value||'';
+    const fecha=g('pm-a-fecha')?.value||'';
+    const alertEl=g('pm-modal-alert');
+    if(!area||!desc||!fecha){alertEl.innerHTML='<div class="alert alert-error">Completa: Área, Descripción y Fecha.</div>';return;}
+    const hp=parseFloat(g('pm-a-hp')?.value)||0;
+    const hr=parseFloat(g('pm-a-hr')?.value)||0;
+    const nt=parseInt(g('pm-a-nt')?.value)||1;
+    const data={
+      area, subarea:g('pm-a-sub')?.value||'',
+      equipo:g('pm-a-eq')?.value||'', criticidad:g('pm-a-crit')?.value||'Media',
+      descripcion:desc, tipo, frecuencia:g('pm-a-frec')?.value||'',
+      origen:g('pm-a-orig')?.value||'', especialidad:g('pm-a-esp')?.value||'',
+      areaCoord:g('pm-a-coord')?.value||'',
+      anio:parseInt(g('pm-a-anio')?.value)||new Date().getFullYear(),
+      semana:parseInt(g('pm-a-sem')?.value)||wn(fecha),
+      fecha, estado:g('pm-a-est')?.value||'Programado',
+      fechaReprg:g('pm-a-frep')?.value||null,
+      razon:g('pm-a-raz')?.value||null, razonDet:g('pm-a-razd')?.value||null,
+      hPlan:hp||null, hReal:hr||null, nTec:nt,
+      hhPlan:hp>0?parseFloat((hp*nt).toFixed(1)):null,
+      hhReal:hr>0?parseFloat((hr*nt).toFixed(1)):null,
+      tecnico:g('pm-a-tec')?.value||'', obs:g('pm-a-obs')?.value||'',
+      costRep:parseFloat(g('pm-a-crep')?.value)||0,
+      costProvSol:parseFloat(g('pm-a-cprovsol')?.value)||0,
+      costProvUsd:parseFloat(g('pm-a-cprovusd')?.value)||0,
+      ts:new Date().toISOString()
+    };
+    alertEl.innerHTML='<div class="alert alert-info">Guardando...</div>';
+    try{
+      if(_editId)await COL_PM.acts().doc(_editId).update(data);
+      else await COL_PM.acts().add(data);
+      document.getElementById('pm-modal').classList.remove('open');
+    }catch(err){console.error(err);alertEl.innerHTML='<div class="alert alert-error">Error al guardar.</div>';}
+  }
+
+  async function del(fid){
+    if(!confirm('¿Eliminar esta actividad?'))return;
+    try{await COL_PM.acts().doc(fid).delete();}catch(err){console.error(err);}
+  }
+
+  // ---- CONFIG ----
+  function _populateSels() {
+    const areas=C.get('areas',[]);const esps=C.get('esps',[]);const tecs=C.get('tecs',[]);
+    const setOpts=(id,items,keyFn,valFn)=>{const e=g(id);if(!e)return;const v=e.value;e.innerHTML=e.options[0]?.text.includes('Todas')||e.options[0]?.text.includes('Todas')?'<option value="">Todas</option>':'<option value="">—</option>';items.forEach(it=>e.innerHTML+=`<option value="${keyFn(it)}">${valFn(it)}</option>`);e.value=v;};
+    ['pmf-area','pmd-area','pmg-area'].forEach(id=>{const e=g(id);if(!e)return;const v=e.value;e.innerHTML='<option value="">Todas</option>'+areas.map(a=>`<option value="${a.nombre}">${a.nombre}</option>`).join('');e.value=v;});
+    const ma=g('pm-a-area');if(ma){const v=ma.value;ma.innerHTML='<option value="">Seleccionar...</option>'+areas.map(a=>`<option value="${a.nombre}">${a.nombre}</option>`).join('');ma.value=v;}
+    const me=g('pm-a-esp');if(me){const v=me.value;me.innerHTML='<option value="">—</option>'+esps.map(e=>`<option value="${e.nombre}">${e.nombre}</option>`).join('');me.value=v;}
+    const mt=g('pm-a-tec');if(mt){const v=mt.value;mt.innerHTML='<option value="">—</option>'+tecs.map(t=>`<option value="${t.nombre}">${t.nombre}${t.especialidad?' ('+t.especialidad+')':''}</option>`).join('');mt.value=v;}
+    const mr=g('pm-a-raz');if(mr){const v=mr.value;mr.innerHTML='<option value="">Seleccionar...</option>'+C.get('razs',[]).map(r=>`<option value="${r.nombre}">${r.nombre}</option>`).join('');mr.value=v;}
+    const mea=g('pm-ne-area');if(mea){const v=mea.value;mea.innerHTML='<option value="">Área...</option>'+areas.map(a=>`<option value="${a.nombre}">${a.nombre}</option>`).join('');mea.value=v;}
+    const mte=g('pm-nt-esp');if(mte){const v=mte.value;mte.innerHTML='<option value="">Especialidad...</option>'+esps.map(e=>`<option value="${e.nombre}">${e.nombre}</option>`).join('');mte.value=v;}
+  }
+
+  function _cfgList(items,onDel,renderFn){
+    return items.length?items.map(it=>`
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 13px;background:var(--surface2);border-radius:8px;margin-bottom:6px;">
+        <div style="font-size:13px;">${renderFn(it)}</div>
+        <button class="btn-sm btn-ghost" style="padding:3px 9px;font-size:11px;" onclick="PM.${onDel}('${it._fid}')">Eliminar</button>
+      </div>`).join(''):'<div style="color:var(--text3);font-size:13px;padding:12px;">Sin registros. Agrega el primero arriba.</div>';
+  }
+
+  async function addTec(){const n=g('pm-nt-nom')?.value.trim();const e=g('pm-nt-esp')?.value;const h=parseFloat(g('pm-nt-h')?.value)||8;if(!n){alert('Ingresa el nombre.');return;}await COL_PM.tecs().add({nombre:n,especialidad:e,horasDia:h,ts:new Date().toISOString()});g('pm-nt-nom').value='';}
+  async function delTec(fid){if(!confirm('¿Eliminar?'))return;await COL_PM.tecs().doc(fid).delete();}
+  function _renderCfgTec(){const el=g('pm-lt-tec');if(!el)return;el.innerHTML=_cfgList(C.get('tecs',[]),'delTec',t=>`<b>${t.nombre}</b> — ${t.especialidad||'Sin esp.'} — ${t.horasDia||8}h/día`);}
+
+  async function addArea(){const n=g('pm-na-nom')?.value.trim();const s=g('pm-na-sub')?.value.trim();if(!n){alert('Ingresa el área.');return;}await COL_PM.areas().add({nombre:n,subarea:s,ts:new Date().toISOString()});g('pm-na-nom').value='';g('pm-na-sub').value='';}
+  async function delArea(fid){if(!confirm('¿Eliminar?'))return;await COL_PM.areas().doc(fid).delete();}
+  function _renderCfgArea(){const el=g('pm-lt-area');if(!el)return;el.innerHTML=_cfgList(C.get('areas',[]),'delArea',a=>`<b>${a.nombre}</b>${a.subarea?' — Sub: '+a.subarea:''}`);}
+
+  async function addEq(){const n=g('pm-ne-nom')?.value.trim();const ar=g('pm-ne-area')?.value;const cr=g('pm-ne-crit')?.value||'Media';if(!n){alert('Ingresa el equipo.');return;}await COL_PM.eqs().add({nombre:n,area:ar,criticidad:cr,ts:new Date().toISOString()});g('pm-ne-nom').value='';}
+  async function delEq(fid){if(!confirm('¿Eliminar?'))return;await COL_PM.eqs().doc(fid).delete();}
+  function _renderCfgEq(){const el=g('pm-lt-eq');if(!el)return;const cc={Baja:'badge-green',Media:'badge-blue',Alta:'badge-warn',Critica:'badge-red'};el.innerHTML=_cfgList(C.get('eqs',[]),'delEq',e=>`<b>${e.nombre}</b> — ${e.area||'—'} — <span class="badge ${cc[e.criticidad]||'badge-gray'}">${e.criticidad}</span>`);}
+
+  async function addEsp(){const n=g('pm-nesp-nom')?.value.trim();if(!n){alert('Ingresa la especialidad.');return;}await COL_PM.esps().add({nombre:n,ts:new Date().toISOString()});g('pm-nesp-nom').value='';}
+  async function delEsp(fid){if(!confirm('¿Eliminar?'))return;await COL_PM.esps().doc(fid).delete();}
+  function _renderCfgEsp(){const el=g('pm-lt-esp');if(!el)return;el.innerHTML=_cfgList(C.get('esps',[]),'delEsp',e=>`<b>${e.nombre}</b>`);}
+
+  async function addRaz(){const n=g('pm-nraz-nom')?.value.trim();if(!n){alert('Ingresa la razón.');return;}await COL_PM.razs().add({nombre:n,ts:new Date().toISOString()});g('pm-nraz-nom').value='';}
+  async function delRaz(fid){if(!confirm('¿Eliminar?'))return;await COL_PM.razs().doc(fid).delete();}
+  function _renderCfgRaz(){const el=g('pm-lt-raz');if(!el)return;el.innerHTML=_cfgList(C.get('razs',[]),'delRaz',r=>`${r.nombre}`);}
+
+  function _seedRazones(){
+    const razs=C.get('razs',[]);
+    if(razs.length>0)return;
+    const defaults=['Producción no libera el equipo','Falta de repuesto / material','Personal de mantenimiento no disponible','Equipo en operación crítica','Cambio de prioridad gerencial','Proveedor externo no disponible','Condición climática / ambiental','Falta de presupuesto aprobado','Riesgo de seguridad / SSOMA','Intervención de auditoría','Otro motivo'];
+    defaults.forEach(r=>COL_PM.razs().add({nombre:r,ts:new Date().toISOString()}));
+  }
+
+  function _loadPars(){
+    const p=C.get('pars',{diasSemana:6,horasDia:8,pctMant:80,tarifaPEN:12,tarifaUSD:3.5,tc:3.75,presupuesto:30000});
+    const set=(id,v)=>{const e=g(id);if(e)e.value=v;};
+    set('pm-par-dias',p.diasSemana||6);set('pm-par-hdias',p.horasDia||8);set('pm-par-pct',p.pctMant||80);
+    set('pm-par-tarpen',p.tarifaPEN||12);set('pm-par-tarusd',p.tarifaUSD||3.5);
+    set('pm-par-tc',p.tc||3.75);set('pm-par-presup',p.presupuesto||30000);
+  }
+
+  async function savePar(){
+    const data={
+      diasSemana:parseInt(g('pm-par-dias')?.value)||6,
+      horasDia:parseInt(g('pm-par-hdias')?.value)||8,
+      pctMant:parseInt(g('pm-par-pct')?.value)||80,
+      tarifaPEN:parseFloat(g('pm-par-tarpen')?.value)||12,
+      tarifaUSD:parseFloat(g('pm-par-tarusd')?.value)||3.5,
+      tc:parseFloat(g('pm-par-tc')?.value)||3.75,
+      presupuesto:parseFloat(g('pm-par-presup')?.value)||30000,
+    };
+    await COL_PM.pars().doc('cfg').set(data);
+    const al=g('pm-par-alert');if(al){al.innerHTML='<div class="alert alert-success">✅ Parámetros guardados.</div>';setTimeout(()=>al.innerHTML='',3000);}
+  }
+
+  // ---- REPUESTOS ----
+  async function addRep() {
+    const cod=g('pm-nrep-cod')?.value.trim()||'';
+    const nom=g('pm-nrep-nom')?.value.trim()||'';
+    const act=parseInt(g('pm-nrep-act')?.value)||0;
+    const min=parseInt(g('pm-nrep-min')?.value)||0;
+    const precio=parseFloat(g('pm-nrep-precio')?.value)||0;
+    const mon=g('pm-nrep-mon')?.value||'PEN';
+    if(!nom){alert('Ingresa el nombre del repuesto.');return;}
+    await db.collection('pm_repuestos').add({codigo:cod,nombre:nom,stockActual:act,stockMinimo:min,precio,moneda:mon,ts:new Date().toISOString()});
+    ['pm-nrep-cod','pm-nrep-nom','pm-nrep-act','pm-nrep-min','pm-nrep-precio'].forEach(id=>{const e=g(id);if(e)e.value='';});
+  }
+  async function delRep(fid){if(!confirm('¿Eliminar repuesto?'))return;await db.collection('pm_repuestos').doc(fid).delete();}
+  function _renderCfgRep() {
+    const el=g('pm-lt-rep');if(!el)return;
+    const reps=C.get('reps',[]);
+    if(!reps.length){el.innerHTML='<div style="color:var(--text3);font-size:13px;padding:12px;">Sin repuestos. Agrega el primero arriba.</div>';return;}
+    el.innerHTML=reps.map(r=>{
+      const bajo=r.stockActual<r.stockMinimo;
+      const simbolo=r.moneda==='USD'?'$':'S/';
+      return `<div style="display:grid;grid-template-columns:80px 1fr 70px 70px 100px auto;gap:10px;align-items:center;padding:9px 13px;background:${bajo?'#ff3b5c11':'var(--surface2)'};border-radius:8px;margin-bottom:6px;border:1px solid ${bajo?'#ff3b5c44':'var(--border)'};">
+        <div style="font-family:'DM Mono',monospace;font-size:12px;color:var(--text2);">${r.codigo||'—'}</div>
+        <div style="font-size:13px;">${r.nombre}${bajo?' <span style="color:var(--danger);font-size:11px;">⚠️ BAJO</span>':''}</div>
+        <div style="text-align:center;font-family:'DM Mono',monospace;font-size:12px;color:${bajo?'var(--danger)':'var(--text)'};font-weight:600;">${r.stockActual}</div>
+        <div style="text-align:center;font-family:'DM Mono',monospace;font-size:12px;color:var(--text3);">min ${r.stockMinimo}</div>
+        <div style="text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:var(--accent3);">${simbolo} ${(r.precio||0).toFixed(2)}</div>
+        <button class="btn-sm btn-ghost" style="padding:3px 9px;font-size:11px;" onclick="PM.delRep('${r._fid}')">Eliminar</button>
+      </div>`;
+    }).join('');
+  }
+
+  // ---- PLANTILLAS ----
+  async function savePlantilla() {
+    const nombre = g('pm-npla-nom')?.value.trim();
+    const frec = g('pm-npla-frec')?.value || 'Semanal';
+    if(!nombre){alert('Ingresa el nombre de la plantilla.');return;}
+    // Tomar datos del modal actual
+    const data = {
+      nombre, frecuencia: frec,
+      area:g('pm-a-area')?.value||'', subarea:g('pm-a-sub')?.value||'',
+      equipo:g('pm-a-eq')?.value||'', criticidad:g('pm-a-crit')?.value||'Media',
+      descripcion:g('pm-a-desc')?.value||'', tipo:g('pm-a-tipo')?.value||'Preventivo',
+      origen:g('pm-a-orig')?.value||'Plan anual', especialidad:g('pm-a-esp')?.value||'',
+      hPlan:parseFloat(g('pm-a-hp')?.value)||0, nTec:parseInt(g('pm-a-nt')?.value)||1,
+      ts:new Date().toISOString()
+    };
+    if(!data.descripcion){alert('Abre el formulario de actividad primero, llena los datos, y luego viene a guardar como plantilla.');return;}
+    await db.collection('pm_plantillas').add(data);
+    g('pm-npla-nom').value='';
+    showToast('✅ Plantilla guardada','success');
+  }
+  async function delPla(fid){if(!confirm('¿Eliminar plantilla?'))return;await db.collection('pm_plantillas').doc(fid).delete();}
+  function _renderCfgPla() {
+    const el=g('pm-lt-pla');if(!el)return;
+    const plas=C.get('plas',[]);
+    if(!plas.length){el.innerHTML='<div style="color:var(--text3);font-size:13px;padding:12px;">Sin plantillas. Abre una actividad en Registro, llénala, y luego guarda aquí como plantilla.</div>';return;}
+    el.innerHTML=plas.map(p=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--surface2);border-radius:8px;margin-bottom:6px;">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:14px;font-weight:600;margin-bottom:3px;">${p.nombre}</div>
+        <div style="font-size:11px;color:var(--text2);">${p.area||'—'} · ${p.equipo||'—'} · ${p.tipo} · ${p.frecuencia} · ${p.hPlan||0}h × ${p.nTec||1} téc.</div>
+      </div>
+      <div style="display:flex;gap:6px;">
+        <button class="btn-sm btn-accent" style="padding:4px 10px;font-size:11px;" onclick="PM.usarPlantilla('${p._fid}')">📌 Usar</button>
+        <button class="btn-sm btn-ghost" style="padding:4px 10px;font-size:11px;color:var(--danger);" onclick="PM.delPla('${p._fid}')">🗑</button>
+      </div>
+    </div>`).join('');
+  }
+  function usarPlantilla(fid) {
+    const p = C.get('plas',[]).find(x=>x._fid===fid);
+    if(!p)return;
+    _editId = null;
+    g('pm-modal-ttl').textContent = '📋 Nueva Actividad (desde plantilla)';
+    g('pm-modal-alert').innerHTML='<div class="alert alert-info">📌 Datos cargados desde plantilla "'+p.nombre+'". Ajusta fecha y guarda.</div>';
+    g('pm-a-area').value=p.area||'';
+    onArea();
+    setTimeout(()=>{g('pm-a-sub').value=p.subarea||'';g('pm-a-eq').value=p.equipo||'';},150);
+    g('pm-a-crit').value=p.criticidad||'Media';
+    g('pm-a-desc').value=p.descripcion||'';
+    g('pm-a-tipo').value=p.tipo||'Preventivo';
+    g('pm-a-frec').value=p.frecuencia||'Semanal';
+    g('pm-a-orig').value=p.origen||'Plan anual';
+    g('pm-a-esp').value=p.especialidad||'';
+    g('pm-a-anio').value=new Date().getFullYear();
+    g('pm-a-fecha').value=today();
+    g('pm-a-sem').value=wn(today());
+    g('pm-a-est').value='Programado';
+    g('pm-a-hp').value=p.hPlan||'';
+    g('pm-a-nt').value=p.nTec||1;
+    ['pm-a-hr','pm-a-hhr','pm-a-obs','pm-a-crep','pm-a-cpro','pm-a-cmo','pm-a-ctot','pm-a-mtbf','pm-a-frep','pm-a-raz','pm-a-razd'].forEach(id=>{const e=g(id);if(e)e.value='';});
+    g('pm-a-moneda').value='PEN';
+    onEst();
+    calcHH();
+    PM.showPage('registro');
+    setTimeout(()=>document.getElementById('pm-modal').classList.add('open'),200);
+  }
+
+  // Toast helper
+  function showToast(msg, type='info'){
+    let t = document.getElementById('toast-msg-pm');
+    if(!t){
+      t = document.createElement('div');
+      t.id = 'toast-msg-pm';
+      t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:9999;padding:12px 24px;border-radius:10px;font-size:14px;font-weight:600;box-shadow:0 8px 24px #00000066;transition:opacity .3s;';
+      document.body.appendChild(t);
+    }
+    const colors = {danger:'#ff3b5c',success:'#00e87a',info:'#00c8ff',warn:'#ff9500'};
+    t.style.background = colors[type]||colors.info;
+    t.style.color = type==='danger'||type==='warn' ? '#fff' : '#060d1a';
+    t.style.opacity = '1';
+    t.textContent = msg;
+    clearTimeout(t._timer);
+    t._timer = setTimeout(()=>{ t.style.opacity='0'; }, 3000);
+  }
+
+  // ===== REPUESTOS =====
+  async function addRep(){
+    const n=g('pm-nrep-nom')?.value?.trim();
+    if(!n){alert('Ingresa el nombre del repuesto.');return;}
+    const data={
+      nombre:n, codigo:g('pm-nrep-cod')?.value||'',
+      categoria:g('pm-nrep-cat')?.value||'Otro',
+      stock:parseInt(g('pm-nrep-stock')?.value)||0,
+      stockMin:parseInt(g('pm-nrep-min')?.value)||0,
+      costoUnit:parseFloat(g('pm-nrep-cost')?.value)||0,
+      ts:new Date().toISOString()
+    };
+    try{
+      await db.collection('pm_repuestos').add(data);
+      ['pm-nrep-nom','pm-nrep-cod','pm-nrep-stock','pm-nrep-min','pm-nrep-cost'].forEach(id=>{const e=g(id);if(e)e.value='';});
+    }catch(err){console.error(err);}
+  }
+  async function delRep(fid){if(!confirm('¿Eliminar?'))return;await db.collection('pm_repuestos').doc(fid).delete();}
+
+  function _renderCfgRep(){
+    const el=g('pm-lt-rep');if(!el)return;
+    const reps=C.get('reps',[]);
+    if(!reps.length){el.innerHTML='<div style="color:var(--text3);font-size:13px;padding:12px;">Sin repuestos. Agrega el primero arriba.</div>';return;}
+    el.innerHTML='<div class="table-wrap"><table><thead><tr><th>Nombre</th><th>SKU</th><th>Categoría</th><th>Stock</th><th>Mín.</th><th>Estado</th><th>Costo</th><th>Acción</th></tr></thead><tbody>'+
+      reps.map(r=>{
+        const alerta=r.stock<=r.stockMin;
+        return `<tr><td><b>${r.nombre}</b></td><td style="font-size:11px;">${r.codigo||'—'}</td><td><span class="badge badge-blue">${r.categoria}</span></td>
+        <td class="font-mono" style="color:${alerta?'var(--danger)':'var(--success)'};font-weight:600;">${r.stock}</td>
+        <td class="font-mono">${r.stockMin}</td>
+        <td>${alerta?'<span class="badge badge-red">⚠️ Reponer</span>':'<span class="badge badge-green">✓ OK</span>'}</td>
+        <td class="font-mono">S/ ${r.costoUnit.toFixed(2)}</td>
+        <td><button class="btn-sm btn-ghost" style="padding:3px 9px;font-size:11px;" onclick="PM.delRep('${r._fid}')">🗑</button></td></tr>`;
+      }).join('')+'</tbody></table></div>';
+  }
+
+  // ===== TARIFAS =====
+  function _loadTar(){
+    const t=C.get('tar',{hhTarifa:12,tipoCambio:3.75,presupMensual:30000});
+    const e1=g('pm-tar-hh');if(e1)e1.value=t.hhTarifa||12;
+    const e2=g('pm-tar-tc');if(e2)e2.value=t.tipoCambio||3.75;
+    const e3=g('pm-tar-presup');if(e3)e3.value=t.presupMensual||30000;
+    // Llenar selector de especialidades
+    const esps=C.get('esps',[]);
+    const sel=g('pm-tar-esp-sel');
+    if(sel){const v=sel.value;sel.innerHTML='<option value="">— Tarifa única para todas —</option>'+esps.map(e=>`<option value="${e.nombre}">${e.nombre}</option>`).join('');sel.value=v;}
+  }
+  function loadTarEsp(){
+    const esp=g('pm-tar-esp-sel')?.value;
+    g('pm-tar-esp-val-f').style.display=esp?'block':'none';
+    if(esp){
+      const t=C.get('tar',{});
+      const tarEsp=t.tarifasEsp||{};
+      const e=g('pm-tar-esp-val');if(e)e.value=tarEsp[esp]||'';
+    }
+  }
+  async function saveTar(){
+    const cur=C.get('tar',{tarifasEsp:{}});
+    const tarifasEsp=cur.tarifasEsp||{};
+    const espSel=g('pm-tar-esp-sel')?.value;
+    if(espSel){tarifasEsp[espSel]=parseFloat(g('pm-tar-esp-val')?.value)||0;}
+    const data={
+      hhTarifa:parseFloat(g('pm-tar-hh')?.value)||12,
+      tipoCambio:parseFloat(g('pm-tar-tc')?.value)||3.75,
+      presupMensual:parseFloat(g('pm-tar-presup')?.value)||30000,
+      tarifasEsp
+    };
+    try{
+      await db.collection('pm_parametros').doc('tarifas').set(data);
+      C.set('tar',data);
+      const al=g('pm-tar-alert');if(al){al.innerHTML='<div class="alert alert-success">✅ Tarifas guardadas. Los costos se actualizarán automáticamente.</div>';setTimeout(()=>al.innerHTML='',3000);}
+      renderDash();
+    }catch(err){console.error(err);const al=g('pm-tar-alert');if(al)al.innerHTML='<div class="alert alert-error">Error al guardar.</div>';}
+  }
+
+  // ===== PLANTILLAS =====
+  async function saveAsPlt(){
+    if(!_editId){alert('Debes guardar la actividad primero.');return;}
+    const a=C.get('acts',[]).find(x=>x._fid===_editId);
+    if(!a)return;
+    const nombre=prompt('Nombre de la plantilla:',a.descripcion?.slice(0,40)||'Plantilla');
+    if(!nombre)return;
+    const plt={
+      nombre, area:a.area, subarea:a.subarea, equipo:a.equipo, criticidad:a.criticidad,
+      descripcion:a.descripcion, tipo:a.tipo, frecuencia:a.frecuencia, origen:a.origen,
+      especialidad:a.especialidad, areaCoord:a.areaCoord, hPlan:a.hPlan, nTec:a.nTec,
+      tecnico:a.tecnico, ts:new Date().toISOString()
+    };
+    try{
+      await db.collection('pm_plantillas').add(plt);
+      const al=g('pm-modal-alert');if(al){al.innerHTML='<div class="alert alert-success">✅ Plantilla guardada. La encuentras en Configuración → Plantillas.</div>';setTimeout(()=>al.innerHTML='',3000);}
+    }catch(err){console.error(err);}
+  }
+  async function delPlt(fid){if(!confirm('¿Eliminar plantilla?'))return;await db.collection('pm_plantillas').doc(fid).delete();}
+  function _renderCfgPlt(){
+    const el=g('pm-lt-plt');if(!el)return;
+    const plts=C.get('plts',[]);
+    if(!plts.length){el.innerHTML='<div style="color:var(--text3);font-size:13px;padding:12px;">Sin plantillas guardadas todavía.</div>';return;}
+    el.innerHTML=plts.map(p=>`
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:11px 14px;background:var(--surface2);border-radius:8px;margin-bottom:6px;">
+        <div style="flex:1;">
+          <div style="font-size:13px;font-weight:600;">${p.nombre}</div>
+          <div style="font-size:11px;color:var(--text2);margin-top:2px;">${p.tipo} · ${p.area} · ${p.equipo||'—'} · ${p.frecuencia||'Único'}</div>
+        </div>
+        <div style="display:flex;gap:6px;">
+          <button class="btn-sm btn-accent" style="padding:5px 12px;font-size:11px;" onclick="PM.usePlt('${p._fid}')">📋 Usar</button>
+          <button class="btn-sm btn-ghost" style="padding:5px 9px;font-size:11px;" onclick="PM.delPlt('${p._fid}')">🗑</button>
+        </div>
+      </div>`).join('');
+  }
+  function usePlt(fid){
+    const p=C.get('plts',[]).find(x=>x._fid===fid);if(!p)return;
+    openModal(null);
+    setTimeout(()=>{
+      g('pm-a-area').value=p.area||'';onArea();
+      setTimeout(()=>{
+        g('pm-a-sub').value=p.subarea||'';g('pm-a-eq').value=p.equipo||'';
+      },150);
+      g('pm-a-crit').value=p.criticidad||'Media';
+      g('pm-a-desc').value=p.descripcion||'';
+      g('pm-a-tipo').value=p.tipo||'Preventivo';
+      g('pm-a-frec').value=p.frecuencia||'Unico';
+      g('pm-a-orig').value=p.origen||'Plan anual';
+      g('pm-a-esp').value=p.especialidad||'';
+      g('pm-a-coord').value=p.areaCoord||'';
+      g('pm-a-hp').value=p.hPlan||'';
+      g('pm-a-nt').value=p.nTec||1;
+      g('pm-a-tec').value=p.tecnico||'';
+      calcHH();
+      showPage('registro');
+    },100);
+  }
+
+  // ===== CLONAR ACTIVIDAD =====
+  function clone(fid){
+    const a=C.get('acts',[]).find(x=>x._fid===fid);if(!a)return;
+    if(!confirm(`¿Clonar esta actividad?\\n\\n"${a.descripcion}"\\n\\nSe creará una copia idéntica que puedes editar.`))return;
+    openModal(null);
+    setTimeout(()=>{
+      g('pm-a-area').value=a.area||'';onArea();
+      setTimeout(()=>{
+        g('pm-a-sub').value=a.subarea||'';g('pm-a-eq').value=a.equipo||'';
+      },150);
+      g('pm-a-crit').value=a.criticidad||'Media';
+      g('pm-a-desc').value='[CLON] '+(a.descripcion||'');
+      g('pm-a-tipo').value=a.tipo||'Preventivo';
+      g('pm-a-frec').value=a.frecuencia||'Unico';
+      g('pm-a-orig').value=a.origen||'Plan anual';
+      g('pm-a-esp').value=a.especialidad||'';
+      g('pm-a-coord').value=a.areaCoord||'';
+      g('pm-a-hp').value=a.hPlan||'';
+      g('pm-a-nt').value=a.nTec||1;
+      g('pm-a-tec').value=a.tecnico||'';
+      g('pm-a-est').value='Programado';
+      calcHH();
+    },100);
+  }
+
+  // ---- RETURN PUBLIC API ----
+  return {
+    init, showPage, showCfg, renderReg, renderDash, renderGantt,
+    openModal, onArea, onEst, calcHH, calcCost, semFecha, fechaSem, save, del, clone,
+    clearFilters, limpiarFiltros:clearFilters,
+    addTec, delTec, addArea, delArea, addEq, delEq, addEsp, delEsp, addRaz, delRaz, savePar,
+    addRep, delRep, saveTar, loadTarEsp, saveAsPlt, delPlt, usePlt
+  };
+})();
 
 </script>
 

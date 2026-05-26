@@ -2269,6 +2269,45 @@ async function saveBachada(){
       await COL.bachadas().doc(String(fid)).update(docData);
     } else {
       docData.id=Date.now();
+      // ANTES DE GUARDAR LA NUEVA BACHADA: cerrar evento abierto previo del mismo equipo
+      // usando la hora de inicio de esta bachada como hora fin del evento
+      try {
+        const evsAbiertos = DB.get('eventos', []).filter(e => 
+          e.equipo === eq && 
+          e.estado === 'abierto' &&
+          !e.fin // sin hora fin registrada
+        );
+        if(evsAbiertos.length > 0) {
+          // Tomar el más reciente (mayor ts)
+          const evCerrar = evsAbiertos.sort((a,b) => 
+            (b.ts || '').localeCompare(a.ts || '')
+          )[0];
+          // Calcular duración
+          const fechaIni = evCerrar.fechaIni || fecha;
+          const fechaFin = fecha; // fecha de la nueva bachada
+          const horaIni = evCerrar.inicio;
+          const horaFin = inicio; // hora inicio de la nueva bachada
+          if(horaIni && horaFin) {
+            // Calcular durH considerando posible cruce de día
+            const [h1,m1] = horaIni.split(':').map(Number);
+            const [h2,m2] = horaFin.split(':').map(Number);
+            const dt1 = new Date(fechaIni + 'T' + horaIni + ':00');
+            const dt2 = new Date(fechaFin + 'T' + horaFin + ':00');
+            const durH = Math.max(0, (dt2 - dt1) / 3600000);
+            await COL.eventos().doc(evCerrar._fid).update({
+              fechaFin: fechaFin,
+              fin: horaFin,
+              durH: parseFloat(durH.toFixed(2)),
+              estado: 'cerrado',
+              autoClosed: true // marcador para identificar cierres automáticos
+            });
+            console.log('Evento auto-cerrado:', evCerrar._fid, 'durH:', durH);
+          }
+        }
+      } catch(err) {
+        console.warn('Auto-cierre evento falló:', err);
+        // No bloquea la creación de la bachada
+      }
       await COL.bachadas().add(docData);
     }
     closeModal('modal-bachada');

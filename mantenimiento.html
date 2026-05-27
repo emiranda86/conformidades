@@ -696,12 +696,20 @@ tr.clickable-row:hover td { background: var(--surface2); }
               <div class="form-grid">
                 <div class="field"><label>Equipo</label>
                   <select id="tl-equipo" onchange="renderTimeline()">
+                    <option value="ALL">🔄 Todos los congeladores</option>
                     <option value="C1">Congelador 1</option><option value="C2">Congelador 2</option>
                     <option value="C3">Congelador 3</option><option value="C4">Congelador 4</option>
                     <option value="C5">Congelador 5</option><option value="C6">Congelador 6</option>
                     <option value="C7">Congelador 7</option><option value="C8">Congelador 8</option>
                     <option value="C9">Congelador 9</option><option value="C10">Congelador 10</option>
                     <option value="C11">Congelador 11</option><option value="TE">Túnel Estático</option>
+                  </select>
+                </div>
+                <div class="field"><label>Turno</label>
+                  <select id="tl-turno" onchange="renderTimeline()">
+                    <option value="all">🕐 Día completo (08h → 08h)</option>
+                    <option value="dia">☀️ Solo Día (08–20h)</option>
+                    <option value="noche">🌙 Solo Noche (20–08h)</option>
                   </select>
                 </div>
                 <div class="field"><label>Fecha</label><input type="date" id="tl-fecha" onchange="renderTimeline()"></div>
@@ -720,7 +728,7 @@ tr.clickable-row:hover td { background: var(--surface2); }
             </div>
             <div class="card mb-4">
               <div class="card-title" id="tl-title">📅 Línea de Tiempo — Congelador 1</div>
-              <div style="position:relative;overflow-x:auto;">
+              <div id="tl-charts-container" style="position:relative;overflow-x:auto;">
                 <canvas id="chart-timeline" height="120"></canvas>
               </div>
               <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:14px;font-size:12px;" id="tl-legend">
@@ -2263,150 +2271,280 @@ document.addEventListener('keydown', function(e) {
 
 // ======== TIMELINE POR EQUIPO ========
 function renderTimeline() {
-  const equipo = document.getElementById('tl-equipo')?.value || 'C1';
+  const equipoSel = document.getElementById('tl-equipo')?.value || 'C1';
   const fecha = document.getElementById('tl-fecha')?.value || today();
   const tipoF = document.getElementById('tl-tipo')?.value || '';
+  const turnoF = document.getElementById('tl-turno')?.value || 'all';
 
   const titleEl = document.getElementById('tl-title');
-  if(titleEl) titleEl.textContent = '📅 Línea de Tiempo — ' + (equipo==='TE'?'Túnel Estático':'Congelador '+equipo.replace('C','')) + ' · ' + fecha;
+  const equipoLabel = (eq) => eq==='TE' ? 'Túnel Estático' : 'Congelador ' + eq.replace('C','');
 
-  // Reference times (hours) for deviation detection
-  const REF = { tcong: 6, carga_descarga: 1, descongelamiento: 1.5, programada: 2, no_programada: 0 };
+  // Lista de equipos: si es ALL, todos C1-C11 + TE
+  const equiposLista = equipoSel === 'ALL'
+    ? ['C1','C2','C3','C4','C5','C6','C7','C8','C9','C10','C11','TE']
+    : [equipoSel];
 
-  const bachs = DB.get('bachadas',[]).filter(b => b.equipo===equipo && b.fecha===fecha && b.estado==='cerrado');
-  const evs   = DB.get('eventos',[]).filter(e => e.equipo===equipo && e.fechaIni===fecha && e.estado==='cerrado');
-
-  // Build segments: each has { label, startH, endH, type, color, desv }
-  const segments = [];
-
-  // Bachadas — ordenadas por hora inicio
-  const bachsSorted = bachs.slice().sort((a,b)=>(a.inicio||'00:00').localeCompare(b.inicio||'00:00'));
-  bachsSorted.forEach(b => {
-    if(tipoF && tipoF!=='bachada') return;
-    if(!b.inicio) return;
-    const [sh,sm] = b.inicio.split(':').map(Number);
-    let startH = sh + sm/60;
-    let endH = b.fin ? (()=>{const[eh,em]=b.fin.split(':').map(Number);let e=eh+em/60;if(e<startH)e+=24;return e;})() : startH+(b.tcong||0);
-    if(endH > 24) endH = 24;
-    const durReal = endH - startH;
-    const desv = durReal > REF.tcong ? (durReal - REF.tcong).toFixed(2) : null;
-    segments.push({ label:'Bach #'+b.bach, startH, endH, type:'bachada', color:'#00c8ff', borderColor:'#0088cc', desv, desc: b.producto+' ('+b.aros+' aros, '+((b.peso||0).toFixed(0))+'kg)', tcong: durReal });
-  });
-
-
-
-  // Eventos manuales registrados
-  evs.forEach(e => {
-    if(tipoF && tipoF!==e.tipo) return;
-    if(!e.inicio) return;
-    const [sh,sm] = e.inicio.split(':').map(Number);
-    let startH = sh + sm/60;
-    let endH = e.fin ? (()=>{const[eh,em]=e.fin.split(':').map(Number);let en=eh+em/60;if(en<startH)en+=24;return en;})() : startH+(e.durH||0);
-    if(endH > 24) endH = 24;
-    const ref = REF[e.tipo]||0;
-    const desv = ref>0 && (e.durH||0)>ref ? ((e.durH||0)-ref).toFixed(2) : null;
-    const colorMap = { carga_descarga:'#ff6600', descongelamiento:'#4a6a8a', sin_produccion:'#00ffb3', programada:'#00e87a', no_programada:'#ff3b5c' };
-    segments.push({ label: e.tipoLabel||(e.tipo), startH, endH, type:e.tipo, color: colorMap[e.tipo]||'#888', borderColor: colorMap[e.tipo]||'#888', desv, desc: e.desc||e.accion||'', durH: e.durH });
-  });
-
-  segments.sort((a,b) => a.startH - b.startH);
-
-  // Chart.js horizontal bar (bar with indexAxis x = hours)
-  const canvas = document.getElementById('chart-timeline');
-  if(!canvas) return;
-  if(charts['timeline']) charts['timeline'].destroy();
-
-  // Build dataset as floating bars: [startH, endH] per segment
-  const labels = segments.map(s => s.label);
-  const data   = segments.map(s => [s.startH, s.endH]);
-  const bgColors = segments.map(s => s.desv ? s.color.replace(')', ',0.9)').replace('#','rgba(') : s.color+'88');
-  const borderColors = segments.map(s => s.desv ? '#ff3b5c' : s.borderColor);
-  const borderW = segments.map(s => s.desv ? 3 : 1);
-
-  // Fallback if no segments
-  if(segments.length === 0) {
-    const tbody = document.getElementById('tbody-timeline');
-    if(tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:20px;">Sin datos para el equipo y fecha seleccionados</td></tr>';
-    const ctx = canvas.getContext('2d');
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-    return;
+  if(titleEl) {
+    titleEl.textContent = equipoSel === 'ALL'
+      ? '📅 Línea de Tiempo — Todos los Congeladores · ' + fecha + ' · ' + (turnoF==='dia'?'Turno Día':turnoF==='noche'?'Turno Noche':'Día Completo (08–08h)')
+      : '📅 Línea de Tiempo — ' + equipoLabel(equipoSel) + ' · ' + fecha + ' · ' + (turnoF==='dia'?'Turno Día':turnoF==='noche'?'Turno Noche':'Día Completo (08–08h)');
   }
 
-  charts['timeline'] = new Chart(canvas, {
-    type: 'bar',
-    data: {
-      labels,
-      datasets: [{
-        label: 'Eventos',
-        data,
-        backgroundColor: bgColors,
-        borderColor: borderColors,
-        borderWidth: borderW,
-        borderRadius: 4,
-      }]
-    },
-    options: {
-      indexAxis: 'y',
-      responsive: true,
-      maintainAspectRatio: true,
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          callbacks: {
-            label: function(ctx) {
-              const s = segments[ctx.dataIndex];
-              const dur = (s.endH - s.startH).toFixed(2);
-              let txt = [`Inicio: ${toHHMM(s.startH)}  Fin: ${toHHMM(s.endH)}  Duración: ${dur}h`];
-              if(s.desv) txt.push(`⚠️ Desviación: +${s.desv}h sobre el promedio`);
-              if(s.desc) txt.push(`Obs: ${s.desc}`);
-              return txt;
-            }
-          }
+  // Rango horario según turno (en horas absolutas desde 0)
+  // Día: 08:00 a 20:00 → eje 0-12 (offset 8h)
+  // Noche: 20:00 a 08:00 → eje 0-12 (offset 20h, cruce día)
+  // All: 08:00 a 08:00 → eje 0-24 (offset 8h, cruce día)
+  let rangeStart, rangeEnd, axisMin, axisMax;
+  if(turnoF === 'dia') {
+    rangeStart = 8; rangeEnd = 20; axisMin = 8; axisMax = 20;
+  } else if(turnoF === 'noche') {
+    rangeStart = 20; rangeEnd = 32; axisMin = 20; axisMax = 32; // 32 = 08h del día siguiente
+  } else {
+    rangeStart = 8; rangeEnd = 32; axisMin = 8; axisMax = 32; // Día completo
+  }
+
+  const REF = { tcong: 6, carga_descarga: 1, descongelamiento: 1.5, programada: 2, no_programada: 0 };
+  const colorMap = { carga_descarga:'#ff6600', descongelamiento:'#4a6a8a', sin_produccion:'#00ffb3', programada:'#00e87a', no_programada:'#ff3b5c' };
+
+  // ---- Helper: construye segmentos para un equipo en un día (cruza medianoche cuando turno noche o all)
+  function buildSegments(equipo) {
+    // Obtenemos bachadas/eventos de la fecha actual Y del día anterior (para turno noche que arranca el día anterior 20:00)
+    // y del día siguiente (para cruce de medianoche)
+    const fechaObj = new Date(fecha + 'T00:00:00');
+    const dPrev = new Date(fechaObj); dPrev.setDate(dPrev.getDate() - 1);
+    const dNext = new Date(fechaObj); dNext.setDate(dNext.getDate() + 1);
+    const fmt = d => d.toISOString().split('T')[0];
+    const fPrev = fmt(dPrev);
+    const fNext = fmt(dNext);
+
+    const allBachs = DB.get('bachadas',[]).filter(b => b.equipo===equipo && b.estado==='cerrado' && (b.fecha===fecha || b.fecha===fPrev || b.fecha===fNext));
+    const allEvs   = DB.get('eventos',[]).filter(e => e.equipo===equipo && e.estado==='cerrado' && (e.fechaIni===fecha || e.fechaIni===fPrev || e.fechaIni===fNext));
+
+    const segs = [];
+
+    // Procesar bachadas
+    allBachs.forEach(b => {
+      if(tipoF && tipoF!=='bachada') return;
+      if(!b.inicio) return;
+      const [sh,sm] = b.inicio.split(':').map(Number);
+      let startAbs = sh + sm/60;
+      // Ajustar según fecha relativa al día principal
+      if(b.fecha === fPrev) startAbs -= 24; // ayer
+      if(b.fecha === fNext) startAbs += 24; // mañana
+
+      let endAbs;
+      if(b.fin) {
+        const [eh,em] = b.fin.split(':').map(Number);
+        endAbs = eh + em/60;
+        if(b.fecha === fPrev) endAbs -= 24;
+        if(b.fecha === fNext) endAbs += 24;
+        if(b.fechaFin && b.fechaFin !== b.fecha) {
+          // Tiene fechaFin diferente, recalcular
+          if(b.fechaFin === fecha) endAbs = eh + em/60;
+          else if(b.fechaFin === fNext) endAbs = eh + em/60 + 24;
+        } else if(endAbs < startAbs) {
+          endAbs += 24; // cruce de medianoche dentro del mismo día
         }
-      },
-      scales: {
-        x: {
-          min: 0, max: 24,
-          grid: { color: '#1e3352' },
-          ticks: { color: '#8aaac8', font: { size: 10 }, callback: v => toHHMM(v) },
-          title: { display: true, text: 'Hora del día (0–24h)', color: '#8aaac8', font: { size: 11 } }
-        },
-        y: {
-          grid: { color: '#1e3352' },
-          ticks: { color: '#e8f4ff', font: { size: 11 } },
-          title: { display: true, text: 'Eventos / Bachadas', color: '#8aaac8', font: { size: 11 } }
-        }
+      } else {
+        endAbs = startAbs + (b.tcong || 0);
       }
+
+      // Solo incluir si interseca con el rango visible
+      if(endAbs < rangeStart || startAbs > rangeEnd) return;
+
+      // Recortar al rango visible
+      const segStart = Math.max(startAbs, rangeStart);
+      const segEnd   = Math.min(endAbs,   rangeEnd);
+      if(segEnd <= segStart) return;
+
+      const durReal = endAbs - startAbs;
+      const desv = durReal > REF.tcong ? (durReal - REF.tcong).toFixed(2) : null;
+      segs.push({
+        label: 'Bach #'+b.bach,
+        startH: segStart, endH: segEnd,
+        realStart: startAbs, realEnd: endAbs,
+        type:'bachada', color:'#00c8ff', borderColor:'#0088cc', desv,
+        desc: b.producto+' ('+b.aros+' aros, '+((b.peso||0).toFixed(0))+'kg)',
+        equipo: equipo
+      });
+    });
+
+    // Procesar eventos
+    allEvs.forEach(e => {
+      if(tipoF && tipoF!==e.tipo) return;
+      if(!e.inicio) return;
+      const [sh,sm] = e.inicio.split(':').map(Number);
+      let startAbs = sh + sm/60;
+      if(e.fechaIni === fPrev) startAbs -= 24;
+      if(e.fechaIni === fNext) startAbs += 24;
+
+      let endAbs;
+      if(e.fin) {
+        const [eh,em] = e.fin.split(':').map(Number);
+        endAbs = eh + em/60;
+        if(e.fechaFin && e.fechaFin !== e.fechaIni) {
+          if(e.fechaFin === fecha) endAbs = eh + em/60;
+          else if(e.fechaFin === fNext) endAbs = eh + em/60 + 24;
+          else if(e.fechaFin === fPrev) endAbs = eh + em/60 - 24;
+        } else if(endAbs < startAbs) {
+          endAbs += 24;
+        } else {
+          if(e.fechaIni === fPrev) endAbs -= 24;
+          if(e.fechaIni === fNext) endAbs += 24;
+        }
+      } else {
+        endAbs = startAbs + (e.durH || 0);
+      }
+
+      if(endAbs < rangeStart || startAbs > rangeEnd) return;
+      const segStart = Math.max(startAbs, rangeStart);
+      const segEnd   = Math.min(endAbs,   rangeEnd);
+      if(segEnd <= segStart) return;
+
+      const ref = REF[e.tipo] || 0;
+      const desv = ref > 0 && (e.durH||0) > ref ? ((e.durH||0)-ref).toFixed(2) : null;
+      segs.push({
+        label: e.tipoLabel || e.tipo,
+        startH: segStart, endH: segEnd,
+        realStart: startAbs, realEnd: endAbs,
+        type: e.tipo, color: colorMap[e.tipo]||'#888', borderColor: colorMap[e.tipo]||'#888',
+        desv, desc: e.desc || e.accion || '',
+        equipo: equipo
+      });
+    });
+
+    segs.sort((a,b) => a.startH - b.startH);
+    return segs;
+  }
+
+  // Destruir charts previos del timeline (todos los que tengan prefijo "timeline-")
+  Object.keys(charts).forEach(k => {
+    if(k.startsWith('timeline')) {
+      try { charts[k].destroy(); } catch(e) {}
+      delete charts[k];
     }
   });
 
-  // Detail table
-  const tbody = document.getElementById('tbody-timeline');
-  if(tbody) {
-    if(!segments.length) {
-      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:20px;">Sin datos</td></tr>';
-    } else {
-      tbody.innerHTML = segments.map(s => {
-        const dur = (s.endH - s.startH).toFixed(2);
-        const desvCell = s.desv
-          ? `<span class="badge badge-red">+${s.desv}h</span>`
-          : `<span class="badge badge-green">OK</span>`;
-        return `<tr>
-          <td><span class="badge" style="background:${s.color}22;color:${s.color};border:1px solid ${s.color}44;">${s.label}</span></td>
-          <td class="font-mono">${toHHMM(s.startH)}</td>
-          <td class="font-mono">${toHHMM(s.endH)}</td>
-          <td class="font-mono">${dur}h</td>
-          <td>${desvCell}</td>
-          <td style="max-width:200px;white-space:normal;font-size:11.5px;">${s.desc||'—'}</td>
-        </tr>`;
-      }).join('');
+  // Reconstruir container
+  const container = document.getElementById('tl-charts-container');
+  if(!container) return;
+
+  if(equipoSel === 'ALL') {
+    // Generar un canvas por equipo que tenga datos
+    container.innerHTML = '';
+    let totalSegments = 0;
+    equiposLista.forEach((eq, idx) => {
+      const segs = buildSegments(eq);
+      if(!segs.length) return; // omitir equipos sin datos
+      totalSegments += segs.length;
+      const block = document.createElement('div');
+      block.style.cssText = 'margin-bottom:18px;background:var(--surface2);border-radius:10px;padding:12px 14px;border:1px solid var(--border);';
+      block.innerHTML = `
+        <div style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--accent);margin-bottom:8px;">${equipoLabel(eq)}</div>
+        <canvas id="timeline-${eq}" height="${Math.max(60, segs.length*22)}"></canvas>
+      `;
+      container.appendChild(block);
+      const canvas = document.getElementById('timeline-'+eq);
+      drawChart(canvas, segs, 'timeline-'+eq);
+    });
+    if(totalSegments === 0) {
+      container.innerHTML = '<div style="text-align:center;color:var(--text3);padding:40px;">Sin datos para el día y turno seleccionados en ningún equipo</div>';
     }
+    // Limpiar tabla detalle (solo se muestra cuando hay un equipo seleccionado)
+    const tbody = document.getElementById('tbody-timeline');
+    if(tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:16px;">Selecciona un equipo específico para ver detalle</td></tr>';
+  } else {
+    // Un solo equipo
+    container.innerHTML = '<canvas id="chart-timeline" height="120"></canvas>';
+    const segs = buildSegments(equipoSel);
+    const canvas = document.getElementById('chart-timeline');
+    drawChart(canvas, segs, 'timeline');
+
+    // Tabla detalle solo para equipo único
+    const tbody = document.getElementById('tbody-timeline');
+    if(tbody) {
+      if(!segs.length) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:20px;">Sin datos para el equipo, día y turno seleccionados</td></tr>';
+      } else {
+        tbody.innerHTML = segs.map(s => {
+          const dur = (s.realEnd - s.realStart).toFixed(2);
+          const desvCell = s.desv
+            ? `<span class="badge badge-red">+${s.desv}h</span>`
+            : `<span class="badge badge-green">OK</span>`;
+          return `<tr>
+            <td><span class="badge" style="background:${s.color}22;color:${s.color};border:1px solid ${s.color}44;">${s.label}</span></td>
+            <td class="font-mono">${toHHMM(s.realStart)}</td>
+            <td class="font-mono">${toHHMM(s.realEnd)}</td>
+            <td class="font-mono">${dur}h</td>
+            <td>${desvCell}</td>
+            <td style="max-width:200px;white-space:normal;font-size:11.5px;">${s.desc||'—'}</td>
+          </tr>`;
+        }).join('');
+      }
+    }
+  }
+
+  // ---- Helper interno: dibujar chart
+  function drawChart(canvas, segments, chartKey) {
+    if(!canvas) return;
+    if(!segments.length) {
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      return;
+    }
+    const labels = segments.map(s => s.label);
+    const data = segments.map(s => [s.startH, s.endH]);
+    const bgColors = segments.map(s => s.color+'cc');
+    const borderColors = segments.map(s => s.desv ? '#ff3b5c' : s.borderColor);
+    const borderW = segments.map(s => s.desv ? 3 : 1);
+
+    charts[chartKey] = new Chart(canvas, {
+      type: 'bar',
+      data: { labels, datasets: [{ label:'Eventos', data, backgroundColor:bgColors, borderColor:borderColors, borderWidth:borderW, borderRadius:4 }] },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: function(ctx) {
+                const s = segments[ctx.dataIndex];
+                const dur = (s.realEnd - s.realStart).toFixed(2);
+                let txt = [`Inicio: ${toHHMM(s.realStart)}  Fin: ${toHHMM(s.realEnd)}  Duración: ${dur}h`];
+                if(s.desv) txt.push(`⚠️ Desviación: +${s.desv}h sobre el promedio`);
+                if(s.desc) txt.push(`Obs: ${s.desc}`);
+                return txt;
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            min: axisMin, max: axisMax,
+            grid: { color: '#1e3352' },
+            ticks: { color: '#8aaac8', font: { size: 10 }, stepSize: 2, callback: v => toHHMM(v) },
+            title: { display: true, text: `Hora del día (${toHHMM(axisMin)} → ${toHHMM(axisMax)})`, color: '#8aaac8', font: { size: 11 } }
+          },
+          y: {
+            grid: { color: '#1e3352' },
+            ticks: { color: '#e8f4ff', font: { size: 11 } },
+            title: { display: false }
+          }
+        }
+      }
+    });
   }
 }
 
 function toHHMM(h) {
-  const hh = Math.floor(h);
-  const mm = Math.round((h - hh) * 60);
+  // Normalizar horas > 24 a formato 24h (32 → 08 del día siguiente)
+  let display = h;
+  if(display >= 24) display = display - 24;
+  if(display < 0) display = display + 24;
+  const hh = Math.floor(display);
+  const mm = Math.round((display - hh) * 60);
   return String(hh).padStart(2,'0') + ':' + String(mm).padStart(2,'0');
 }
 

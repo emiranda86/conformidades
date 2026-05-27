@@ -106,6 +106,7 @@ tr:hover td{background:var(--surface2);}
 .badge-green{background:#00e87a22;color:var(--success);}
 .badge-warn{background:#ff950022;color:var(--warn);}
 .badge-red{background:#ff3b5c22;color:var(--danger);}
+.badge-purple{background:#a855f722;color:#a855f7;}
 .badge-gray{background:#ffffff11;color:var(--text2);}
 .badge-teal{background:#00ffb322;color:var(--accent3);}
 
@@ -721,7 +722,7 @@ tr.clickable-row:hover td { background: var(--surface2); }
                     <option value="descongelamiento">Descongelamiento</option>
                     <option value="sin_produccion">Sin Producción</option>
                     <option value="programada">Mant. Programado</option>
-                    <option value="no_programada">Falla / Avería</option>
+                    <option value="no_programada">Falla / Avería</option><option value="fin_proceso">Fin de Proceso</option>
                   </select>
                 </div>
               </div>
@@ -1056,7 +1057,7 @@ tr.clickable-row:hover td { background: var(--surface2); }
             <option value="descongelamiento">Descongelamiento</option>
             <option value="sin_produccion">Sin Producción</option>
             <option value="programada">Mant. Programado</option>
-            <option value="no_programada">Falla / Avería</option>
+            <option value="no_programada">Falla / Avería</option><option value="fin_proceso">Fin de Proceso</option>
           </select>
         </div>
         <div class="field"><label>Fecha Inicio Evento</label><input type="date" id="e-fecha-ini"></div>
@@ -1531,26 +1532,21 @@ function onEquipoChange(){
     document.getElementById('b-bach-note').textContent='Último bach registrado: '+(last||'ninguno');
     document.getElementById('b-alert').innerHTML='';
     // Verificar si hay descongelamiento registrado después de la última bach 4
-    if(sugerido===5 || (sugerido>5 && (sugerido-1)%4===0)){
+    if(sugerido>=5){
       const eqNombre = eq==='TE'?'Túnel Estático':'Congelador '+eq.replace('C','');
       const evDesconge = DB.get('eventos',[]).filter(e=>e.equipo===eq&&e.tipo==='descongelamiento');
       const ultimaBach4 = bachs.filter(b=>b.bach===4||(b.bach>4&&(b.bach)%4===0)).sort((a,b2)=>b2.bach-a.bach)[0];
       const yaDescongeló = ultimaBach4 && evDesconge.some(e=>e.fechaIni>=ultimaBach4.fecha);
       if(!yaDescongeló){
+        // Alerta NO BLOQUEANTE — informa pero deja registrar normalmente
+        const severidad = sugerido >= 6 ? 'critica' : 'alta';
+        const bgCol = severidad === 'critica' ? '#ff3b5c' : '#ff9500';
         document.getElementById('b-alert').innerHTML=`
-          <div style="background:#ff3b5c18;border:2px solid #ff3b5c;border-radius:12px;padding:16px 18px;margin-bottom:4px;">
-            <div style="font-size:15px;font-weight:700;color:#ff3b5c;margin-bottom:6px;">🚨 ALERTA — DESCONGELAMIENTO REQUERIDO</div>
-            <div style="font-size:13px;color:#e8f4ff;line-height:1.6;">
-              <strong>${eqNombre}</strong> ha completado <strong>${last} bachadas</strong> sin registrar descongelamiento.<br>
-              Antes de cargar una nueva bachada, debe realizarse y registrarse el descongelamiento del equipo.
-            </div>
-            <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
-              <button class="btn-sm" style="background:#ff3b5c;color:#fff;padding:7px 14px;" onclick="closeModal('modal-bachada');showTab('cong','eventos')">
-                📋 Ir a Registrar Descongelamiento
-              </button>
-              <button class="btn-sm btn-ghost" style="font-size:11px;" onclick="document.getElementById('b-alert').innerHTML=''">
-                Ignorar (bajo mi responsabilidad)
-              </button>
+          <div style="background:${bgCol}18;border:2px solid ${bgCol};border-radius:12px;padding:14px 16px;margin-bottom:4px;">
+            <div style="font-size:14px;font-weight:700;color:${bgCol};margin-bottom:4px;">${severidad==='critica'?'🚨':'⚠️'} AVISO — DESCONGELAMIENTO PENDIENTE</div>
+            <div style="font-size:12.5px;color:#e8f4ff;line-height:1.5;">
+              <strong>${eqNombre}</strong> ya completó <strong>${last} bachadas</strong> sin descongelamiento.<br>
+              Puedes continuar registrando, pero recuerda que al iniciar la <strong>siguiente bach 1</strong> el sistema cerrará automáticamente el descongelamiento previo.
             </div>
           </div>`;
       }
@@ -1842,7 +1838,7 @@ async function saveEvento(){
     return;
   }
 
-  const tiposLabel={carga_descarga:'Carga/Descarga',descongelamiento:'Descongel.',sin_produccion:'Sin Producción',programada:'Mant. Prog.',no_programada:'Falla/Avería'};
+  const tiposLabel={carga_descarga:'Carga/Descarga',descongelamiento:'Descongel.',sin_produccion:'Sin Producción',programada:'Mant. Prog.',no_programada:'Falla/Avería',fin_proceso:'Fin de Proceso'};
   const durH=fin?calcTimeDiffHours(fechaIni,inicio,fechaFin||fechaIni,fin):null;
   const estado=fin?'cerrado':'abierto';
 
@@ -1885,7 +1881,7 @@ function renderEventos(){
     </tr>`).join('');
 }
 
-function getBadgeEvento(tipo){return{carga_descarga:'badge-gray',descongelamiento:'badge-blue',sin_produccion:'badge-teal',programada:'badge-warn',no_programada:'badge-red'}[tipo]||'badge-gray';}
+function getBadgeEvento(tipo){return{carga_descarga:'badge-gray',descongelamiento:'badge-blue',sin_produccion:'badge-teal',programada:'badge-warn',no_programada:'badge-red',fin_proceso:'badge-purple'}[tipo]||'badge-gray';}
 async function delEvento(id){if(!canAdmin()||!confirm('¿Eliminar?'))return;try{const item=DB.get('eventos',[]).find(e=>e.id===id||e._fid===id);const fid=item?._fid||String(id);await COL.eventos().doc(fid).delete();}catch(err){console.error(err);}}
 
 // ======== DASHBOARD ========
@@ -2214,6 +2210,9 @@ function goToPage(n) {
     if (p) p.classList.toggle('active', i === n);
     if (b) b.classList.toggle('active-page', i === n);
   }
+  // Ocultar filtros generales en página 5 (Comportamiento por Equipo) — usa sus propios filtros
+  const filtGen = document.getElementById('dash-filtros-generales');
+  if (filtGen) filtGen.style.display = n === 5 ? 'none' : '';
   if (n === 2) { setTimeout(renderDashboard, 50); }
   if (n === 5) { setTimeout(renderTimeline, 50); }
 }
@@ -2303,8 +2302,8 @@ function renderTimeline() {
     rangeStart = 8; rangeEnd = 32; axisMin = 8; axisMax = 32; // Día completo
   }
 
-  const REF = { tcong: 6, carga_descarga: 1, descongelamiento: 1.5, programada: 2, no_programada: 0 };
-  const colorMap = { carga_descarga:'#ff6600', descongelamiento:'#4a6a8a', sin_produccion:'#00ffb3', programada:'#00e87a', no_programada:'#ff3b5c' };
+  const REF = { tcong: 6, carga_descarga: 1, descongelamiento: 1.5, programada: 2, no_programada: 0, fin_proceso: 0 };
+  const colorMap = { carga_descarga:'#ff6600', descongelamiento:'#4a6a8a', sin_produccion:'#00ffb3', programada:'#00e87a', no_programada:'#ff3b5c', fin_proceso:'#a855f7' };
 
   // ---- Helper: construye segmentos para un equipo en un día (cruza medianoche cuando turno noche o all)
   function buildSegments(equipo) {
@@ -2430,27 +2429,27 @@ function renderTimeline() {
   if(!container) return;
 
   if(equipoSel === 'ALL') {
-    // Generar un canvas por equipo que tenga datos
-    container.innerHTML = '';
+    // Grid de 2 columnas en desktop, 1 en móvil
+    container.innerHTML = '<div id="tl-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(450px,1fr));gap:14px;"></div>';
+    const grid = document.getElementById('tl-grid');
     let totalSegments = 0;
     equiposLista.forEach((eq, idx) => {
       const segs = buildSegments(eq);
-      if(!segs.length) return; // omitir equipos sin datos
+      if(!segs.length) return;
       totalSegments += segs.length;
       const block = document.createElement('div');
-      block.style.cssText = 'margin-bottom:18px;background:var(--surface2);border-radius:10px;padding:12px 14px;border:1px solid var(--border);';
+      block.style.cssText = 'background:var(--surface2);border-radius:10px;padding:12px 14px;border:1px solid var(--border);min-width:0;';
       block.innerHTML = `
         <div style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--accent);margin-bottom:8px;">${equipoLabel(eq)}</div>
-        <canvas id="timeline-${eq}" height="${Math.max(60, segs.length*22)}"></canvas>
+        <div style="position:relative;"><canvas id="timeline-${eq}" height="${Math.max(80, segs.length*26)}"></canvas></div>
       `;
-      container.appendChild(block);
+      grid.appendChild(block);
       const canvas = document.getElementById('timeline-'+eq);
       drawChart(canvas, segs, 'timeline-'+eq);
     });
     if(totalSegments === 0) {
       container.innerHTML = '<div style="text-align:center;color:var(--text3);padding:40px;">Sin datos para el día y turno seleccionados en ningún equipo</div>';
     }
-    // Limpiar tabla detalle (solo se muestra cuando hay un equipo seleccionado)
     const tbody = document.getElementById('tbody-timeline');
     if(tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:16px;">Selecciona un equipo específico para ver detalle</td></tr>';
   } else {
@@ -3116,7 +3115,7 @@ async function guardarPostBachada(){
     return;
   }
 
-  const tiposLabel = {carga_descarga:'Carga/Descarga',descongelamiento:'Descongel.',sin_produccion:'Sin Producción',programada:'Mant. Prog.',no_programada:'Falla/Avería'};
+  const tiposLabel = {carga_descarga:'Carga/Descarga',descongelamiento:'Descongel.',sin_produccion:'Sin Producción',programada:'Mant. Prog.',no_programada:'Falla/Avería',fin_proceso:'Fin de Proceso'};
 
   const reg = {
     id: Date.now(),
@@ -3424,6 +3423,7 @@ async function guardarPostBachada(){
         <option value="sin_produccion">⏸ Sin Producción</option>
         <option value="programada">🔧 Mantenimiento Programado</option>
         <option value="no_programada">🚨 Falla / Avería</option>
+        <option value="fin_proceso">🏁 Fin de Proceso (domingo / feriado)</option>
       </select>
     </div>
 

@@ -639,13 +639,13 @@ tr.clickable-row:hover td { background: var(--surface2); }
         <!-- DASHBOARD -->
         <div class="tab-content" id="tab-cong-dashboard">
           <div class="card mb-6">
-            <div class="card-title">🔍 Filtros</div>
+            <div class="card-title">🔍 Filtros Generales del Dashboard</div>
             <div class="form-grid">
               <div class="field"><label>Desde</label><input type="date" id="dash-from" onchange="renderDashboard()"></div>
               <div class="field"><label>Hasta</label><input type="date" id="dash-to" onchange="renderDashboard()"></div>
               <div class="field"><label>Equipo</label>
                 <select id="dash-equipo" onchange="renderDashboard()">
-                  <option value="">Todos</option>
+                  <option value="">Todos los congeladores</option>
                   <option value="C1">Congelador 1</option><option value="C2">Congelador 2</option><option value="C3">Congelador 3</option>
                   <option value="C4">Congelador 4</option><option value="C5">Congelador 5</option><option value="C6">Congelador 6</option>
                   <option value="C7">Congelador 7</option><option value="C8">Congelador 8</option><option value="C9">Congelador 9</option>
@@ -654,7 +654,15 @@ tr.clickable-row:hover td { background: var(--surface2); }
               </div>
               <div class="field"><label>Turno</label>
                 <select id="dash-turno" onchange="renderDashboard()">
-                  <option value="">Ambos</option><option value="Día">Día</option><option value="Noche">Noche</option>
+                  <option value="">Ambos turnos</option><option value="Día">Día (08–20h)</option><option value="Noche">Noche (20–08h)</option>
+                </select>
+              </div>
+              <div class="field"><label>N° Bachada</label>
+                <select id="dash-bach" onchange="renderDashboard()">
+                  <option value="">Todas</option>
+                  <option value="1">Bach #1</option><option value="2">Bach #2</option><option value="3">Bach #3</option>
+                  <option value="4">Bach #4</option><option value="5">Bach #5</option><option value="6">Bach #6</option>
+                  <option value="7">Bach #7</option><option value="8">Bach #8</option>
                 </select>
               </div>
               <div class="field"><label>Producto</label><select id="dash-producto" onchange="renderDashboard()"><option value="">Todos</option></select></div>
@@ -676,7 +684,7 @@ tr.clickable-row:hover td { background: var(--surface2); }
               <div class="pbi-kpi c-blue"><div class="pbi-kpi-icon">📦</div><div class="pbi-kpi-label">Producción Total</div><div class="pbi-kpi-value" id="kpi-prod">0</div><div class="pbi-kpi-sub">kg congelados</div></div>
               <div class="pbi-kpi c-green"><div class="pbi-kpi-icon">✅</div><div class="pbi-kpi-label">Bachadas OK</div><div class="pbi-kpi-value" id="kpi-bach">0</div><div class="pbi-kpi-sub">completadas</div></div>
               <div class="pbi-kpi c-warn"><div class="pbi-kpi-icon">⏱</div><div class="pbi-kpi-label">T. Congelamiento Prom.</div><div class="pbi-kpi-value" id="kpi-tcong">--</div><div class="pbi-kpi-sub">horas / bachada</div></div>
-              <div class="pbi-kpi c-teal"><div class="pbi-kpi-icon">🔄</div><div class="pbi-kpi-label">T. Carga/Descarga Prom.</div><div class="pbi-kpi-value" id="kpi-tcd">--</div><div class="pbi-kpi-sub">horas</div></div>
+              <div class="pbi-kpi c-teal"><div class="pbi-kpi-icon">🔄</div><div class="pbi-kpi-label">T. Carga/Descarga Prom.</div><div class="pbi-kpi-value" id="kpi-tcd">--</div><div class="pbi-kpi-sub">horas · sólo congeladores</div></div>
               <div class="pbi-kpi c-red"><div class="pbi-kpi-icon">🛑</div><div class="pbi-kpi-label">T. Parada Total</div><div class="pbi-kpi-value" id="kpi-tparada">--</div><div class="pbi-kpi-sub">horas perdidas</div></div>
             </div>
 
@@ -2088,6 +2096,7 @@ function renderDashboard(){
   const to=document.getElementById('dash-to')?.value;
   const equipoF=document.getElementById('dash-equipo')?.value;
   const turnoF=document.getElementById('dash-turno')?.value;
+  const bachF=parseInt(document.getElementById('dash-bach')?.value)||0;
   const prodF=document.getElementById('dash-producto')?.value;
 
   let bachs=DB.get('bachadas',[]).filter(b=>b.estado==='cerrado');
@@ -2101,12 +2110,13 @@ function renderDashboard(){
   if(to){bachs=bachs.filter(b=>b.fecha<=to);evs=evs.filter(e=>e.fechaIni<=to);}
   if(equipoF){bachs=bachs.filter(b=>b.equipo===equipoF);evs=evs.filter(e=>e.equipo===equipoF);}
   if(turnoF)bachs=bachs.filter(b=>b.turno===turnoF);
+  if(bachF)bachs=bachs.filter(b=>parseInt(b.bach)===bachF);
   if(prodF)bachs=bachs.filter(b=>b.producto===prodF);
 
   // producción
   const totalProd=bachs.reduce((s,b)=>s+(b.peso||0),0);
   const avgTcong=bachs.length?bachs.reduce((s,b)=>s+(b.tcong||0),0)/bachs.length:null;
-  const evCD=evs.filter(e=>e.tipo==='carga_descarga');
+  const evCD=evs.filter(e=>e.tipo==='carga_descarga' && e.equipo!=='TE'); // Excluir Túnel Estático (tiempo de C/D muy diferente)
   const avgCD=evCD.length?evCD.reduce((s,e)=>s+(e.durH||0),0)/evCD.length:null;
   const totalPar=evs.reduce((s,e)=>s+(e.durH||0),0);
 
@@ -2610,51 +2620,50 @@ function renderTimeline() {
 
   // ---- Helper: construye segmentos para un equipo en un día (cruza medianoche cuando turno noche o all)
   function buildSegments(equipo) {
-    // Obtenemos bachadas/eventos de la fecha actual Y del día anterior (para turno noche que arranca el día anterior 20:00)
-    // y del día siguiente (para cruce de medianoche)
-    const fechaObj = new Date(fecha + 'T00:00:00');
-    const dPrev = new Date(fechaObj); dPrev.setDate(dPrev.getDate() - 1);
-    const dNext = new Date(fechaObj); dNext.setDate(dNext.getDate() + 1);
-    const fmt = d => d.toISOString().split('T')[0];
-    const fPrev = fmt(dPrev);
-    const fNext = fmt(dNext);
+    // Convierte fecha+hora a "horas desde la medianoche del día principal (fecha)"
+    // Esto maneja correctamente eventos/bachadas de cualquier día previo o posterior.
+    const baseDate = new Date(fecha + 'T00:00:00');
+    const baseMs = baseDate.getTime();
+    
+    function toAbsHours(fStr, hStr) {
+      if(!fStr || !hStr) return null;
+      const d = new Date(fStr + 'T' + hStr + ':00');
+      return (d.getTime() - baseMs) / 3600000; // horas desde la medianoche del día principal
+    }
 
-    const allBachs = DB.get('bachadas',[]).filter(b => b.equipo===equipo && b.estado==='cerrado' && (b.fecha===fecha || b.fecha===fPrev || b.fecha===fNext));
-    const allEvs   = DB.get('eventos',[]).filter(e => e.equipo===equipo && e.estado==='cerrado' && (e.fechaIni===fecha || e.fechaIni===fPrev || e.fechaIni===fNext));
+    // Filtrar amplio: cualquier registro del equipo cerrado (luego filtramos por intersección)
+    const allBachs = DB.get('bachadas',[]).filter(b => b.equipo===equipo && b.estado==='cerrado');
+    const allEvs   = DB.get('eventos',[]).filter(e => e.equipo===equipo && e.estado==='cerrado');
 
     const segs = [];
 
-    // Procesar bachadas
+    // ---- Procesar bachadas ----
     allBachs.forEach(b => {
       if(tipoF && tipoF!=='bachada') return;
-      if(!b.inicio) return;
-      const [sh,sm] = b.inicio.split(':').map(Number);
-      let startAbs = sh + sm/60;
-      // Ajustar según fecha relativa al día principal
-      if(b.fecha === fPrev) startAbs -= 24; // ayer
-      if(b.fecha === fNext) startAbs += 24; // mañana
-
+      if(!b.inicio || !b.fecha) return;
+      
+      const startAbs = toAbsHours(b.fecha, b.inicio);
+      if(startAbs === null) return;
+      
       let endAbs;
       if(b.fin) {
-        const [eh,em] = b.fin.split(':').map(Number);
-        endAbs = eh + em/60;
-        if(b.fecha === fPrev) endAbs -= 24;
-        if(b.fecha === fNext) endAbs += 24;
-        if(b.fechaFin && b.fechaFin !== b.fecha) {
-          // Tiene fechaFin diferente, recalcular
-          if(b.fechaFin === fecha) endAbs = eh + em/60;
-          else if(b.fechaFin === fNext) endAbs = eh + em/60 + 24;
-        } else if(endAbs < startAbs) {
-          endAbs += 24; // cruce de medianoche dentro del mismo día
+        // Si hay fechaFin explícita, úsala; sino asumir mismo día (o siguiente si cruza medianoche)
+        const fechaFin = b.fechaFin || b.fecha;
+        endAbs = toAbsHours(fechaFin, b.fin);
+        // Sin fechaFin pero fin < inicio = cruce medianoche
+        if(endAbs !== null && endAbs < startAbs && !b.fechaFin) {
+          endAbs += 24;
         }
+      } else if(b.tcong) {
+        endAbs = startAbs + b.tcong;
       } else {
-        endAbs = startAbs + (b.tcong || 0);
+        return; // sin fin ni tcong, ignorar
       }
+      if(endAbs === null) return;
 
-      // Solo incluir si interseca con el rango visible
-      if(endAbs < rangeStart || startAbs > rangeEnd) return;
+      // ¿Interseca con la ventana visible? La ventana es [rangeStart, rangeEnd] en horas desde medianoche
+      if(endAbs <= rangeStart || startAbs >= rangeEnd) return;
 
-      // Recortar al rango visible
       const segStart = Math.max(startAbs, rangeStart);
       const segEnd   = Math.min(endAbs,   rangeEnd);
       if(segEnd <= segStart) return;
@@ -2671,34 +2680,29 @@ function renderTimeline() {
       });
     });
 
-    // Procesar eventos
+    // ---- Procesar eventos ----
     allEvs.forEach(e => {
       if(tipoF && tipoF!==e.tipo) return;
-      if(!e.inicio) return;
-      const [sh,sm] = e.inicio.split(':').map(Number);
-      let startAbs = sh + sm/60;
-      if(e.fechaIni === fPrev) startAbs -= 24;
-      if(e.fechaIni === fNext) startAbs += 24;
-
+      if(!e.inicio || !e.fechaIni) return;
+      
+      const startAbs = toAbsHours(e.fechaIni, e.inicio);
+      if(startAbs === null) return;
+      
       let endAbs;
       if(e.fin) {
-        const [eh,em] = e.fin.split(':').map(Number);
-        endAbs = eh + em/60;
-        if(e.fechaFin && e.fechaFin !== e.fechaIni) {
-          if(e.fechaFin === fecha) endAbs = eh + em/60;
-          else if(e.fechaFin === fNext) endAbs = eh + em/60 + 24;
-          else if(e.fechaFin === fPrev) endAbs = eh + em/60 - 24;
-        } else if(endAbs < startAbs) {
+        const fechaFin = e.fechaFin || e.fechaIni;
+        endAbs = toAbsHours(fechaFin, e.fin);
+        if(endAbs !== null && endAbs < startAbs && !e.fechaFin) {
           endAbs += 24;
-        } else {
-          if(e.fechaIni === fPrev) endAbs -= 24;
-          if(e.fechaIni === fNext) endAbs += 24;
         }
+      } else if(e.durH) {
+        endAbs = startAbs + e.durH;
       } else {
-        endAbs = startAbs + (e.durH || 0);
+        return;
       }
+      if(endAbs === null) return;
 
-      if(endAbs < rangeStart || startAbs > rangeEnd) return;
+      if(endAbs <= rangeStart || startAbs >= rangeEnd) return;
       const segStart = Math.max(startAbs, rangeStart);
       const segEnd   = Math.min(endAbs,   rangeEnd);
       if(segEnd <= segStart) return;

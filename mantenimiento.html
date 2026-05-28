@@ -423,6 +423,35 @@ tr.clickable-row:hover td { background: var(--surface2); }
 .detalle-status { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
 .status-cerrado-badge { background: #00e87a22; color: var(--success); }
 .status-pendiente-badge { background: #ff950022; color: var(--warn); }
+
+/* ===== ESTILO POWER BI ===== */
+.pbi-section { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 18px; margin-bottom: 16px; }
+.pbi-header-bar { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; background: linear-gradient(135deg, #0d1c2e, #132237); border: 1px solid var(--border2); border-radius: 12px; margin-bottom: 16px; }
+.pbi-header-title { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 10px; }
+.pbi-header-icon { width: 34px; height: 34px; border-radius: 9px; background: var(--accent); color: var(--bg); display: flex; align-items: center; justify-content: center; font-size: 16px; }
+.pbi-header-sub { font-size: 11px; color: var(--text2); margin-top: 2px; }
+.pbi-kpi { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; position: relative; overflow: hidden; transition: transform .15s, box-shadow .15s; }
+.pbi-kpi:hover { transform: translateY(-2px); box-shadow: 0 8px 20px #00000044; }
+.pbi-kpi::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; }
+.pbi-kpi.c-blue::before { background: #00c8ff; }
+.pbi-kpi.c-green::before { background: #00e87a; }
+.pbi-kpi.c-warn::before { background: #ff9500; }
+.pbi-kpi.c-red::before { background: #ff3b5c; }
+.pbi-kpi.c-teal::before { background: #00ffb3; }
+.pbi-kpi.c-purple::before { background: #a855f7; }
+.pbi-kpi-icon { position: absolute; right: 12px; top: 12px; font-size: 20px; opacity: 0.25; }
+.pbi-kpi-label { font-size: 10px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; margin-bottom: 6px; }
+.pbi-kpi-value { font-family: 'Syne', sans-serif; font-size: 26px; font-weight: 800; color: var(--text); line-height: 1; }
+.pbi-kpi-sub { font-size: 11px; color: var(--text3); margin-top: 4px; }
+.pbi-kpi-trend { font-size: 11px; margin-top: 5px; display: flex; align-items: center; gap: 4px; font-weight: 600; }
+.pbi-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+.pbi-card-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.pbi-card-title { font-size: 12px; font-weight: 700; color: var(--text); letter-spacing: 0.03em; display: flex; align-items: center; gap: 7px; }
+.pbi-card-badge { font-size: 10px; color: var(--text3); background: var(--surface2); padding: 3px 9px; border-radius: 20px; }
+.pbi-filter-bar { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; margin-bottom: 16px; }
+.pbi-filter-bar .field { min-width: 120px; flex: 1; }
+.pbi-filter-bar .field label { font-size: 10px; font-weight: 600; color: var(--text2); letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 5px; display: block; }
+@media(max-width:768px){ .pbi-filter-bar .field { min-width: 100%; } }
 </style>
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -634,55 +663,114 @@ tr.clickable-row:hover td { background: var(--surface2); }
 
           <!-- KPIs PRODUCCIÓN -->
           <div class="dash-page active" id="dash-page-1">
-          <div style="font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:var(--text2);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px;">📦 Indicadores de Producción</div>
-          <div class="grid-5 mb-6">
-            <div class="kpi kpi-blue"><div class="kpi-label">Producción Total</div><div class="kpi-value" id="kpi-prod">0</div><div class="kpi-sub">kg congelados</div></div>
-            <div class="kpi kpi-green"><div class="kpi-label">Bachadas OK</div><div class="kpi-value" id="kpi-bach">0</div><div class="kpi-sub">completadas</div></div>
-            <div class="kpi kpi-warn"><div class="kpi-label">T.Cong Promedio</div><div class="kpi-value" id="kpi-tcong">--</div><div class="kpi-sub">horas/bachada</div></div>
-            <div class="kpi kpi-teal"><div class="kpi-label">T.Carg/Descarg Prom.</div><div class="kpi-value" id="kpi-tcd">--</div><div class="kpi-sub">horas</div></div>
-            <div class="kpi kpi-red"><div class="kpi-label">T.Parada Total</div><div class="kpi-value" id="kpi-tparada">--</div><div class="kpi-sub">horas perdidas</div></div>
-          </div>
+            <div class="pbi-header-bar">
+              <div>
+                <div class="pbi-header-title"><span class="pbi-header-icon">📦</span> Panel de Producción</div>
+                <div class="pbi-header-sub">Indicadores de congelamiento y rendimiento operativo</div>
+              </div>
+              <div class="pbi-card-badge" id="pbi-prod-periodo">Período seleccionado</div>
+            </div>
 
-          <!-- KPIs MANTENIMIENTO -->
-          <div style="font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:var(--text2);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px;">🔧 Indicadores de Mantenimiento (Equipos Seleccionados)</div>
-          <div class="grid-4 mb-6">
-            <div class="kpi kpi-blue"><div class="kpi-label">MTBF</div><div class="kpi-value" id="kpi-mtbf">--</div><div class="kpi-sub">horas entre fallas</div></div>
-            <div class="kpi kpi-warn"><div class="kpi-label">MTTR</div><div class="kpi-value" id="kpi-mttr">--</div><div class="kpi-sub">horas por reparación</div></div>
-            <div class="kpi kpi-green"><div class="kpi-label">Disponibilidad</div><div class="kpi-value" id="kpi-disp">--</div><div class="kpi-sub">% tiempo operativo</div></div>
-            <div class="kpi kpi-teal"><div class="kpi-label">Confiabilidad</div><div class="kpi-value" id="kpi-conf">--</div><div class="kpi-sub">% operación sin fallas</div></div>
-          </div>
-          <div class="grid-4 mb-6">
-            <div class="kpi kpi-green"><div class="kpi-label">Eficiencia (OEE base)</div><div class="kpi-value" id="kpi-oee">--</div><div class="kpi-sub">disponibilidad × rendimiento</div></div>
-            <div class="kpi kpi-red"><div class="kpi-label">N° Fallas (período)</div><div class="kpi-value" id="kpi-fallas">0</div><div class="kpi-sub">paradas no programadas</div></div>
-            <div class="kpi kpi-warn"><div class="kpi-label">Paradas Programadas</div><div class="kpi-value" id="kpi-prog">0</div><div class="kpi-sub">mantenimientos</div></div>
-            <div class="kpi kpi-blue"><div class="kpi-label">Descongelamientos</div><div class="kpi-value" id="kpi-desc">0</div><div class="kpi-sub">en período</div></div>
-          </div>
+            <div style="font-size:11px;font-weight:700;color:var(--text2);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px;">📦 Producción y Tiempos</div>
+            <div class="grid-5 mb-6">
+              <div class="pbi-kpi c-blue"><div class="pbi-kpi-icon">📦</div><div class="pbi-kpi-label">Producción Total</div><div class="pbi-kpi-value" id="kpi-prod">0</div><div class="pbi-kpi-sub">kg congelados</div></div>
+              <div class="pbi-kpi c-green"><div class="pbi-kpi-icon">✅</div><div class="pbi-kpi-label">Bachadas OK</div><div class="pbi-kpi-value" id="kpi-bach">0</div><div class="pbi-kpi-sub">completadas</div></div>
+              <div class="pbi-kpi c-warn"><div class="pbi-kpi-icon">⏱</div><div class="pbi-kpi-label">T. Congelamiento Prom.</div><div class="pbi-kpi-value" id="kpi-tcong">--</div><div class="pbi-kpi-sub">horas / bachada</div></div>
+              <div class="pbi-kpi c-teal"><div class="pbi-kpi-icon">🔄</div><div class="pbi-kpi-label">T. Carga/Descarga Prom.</div><div class="pbi-kpi-value" id="kpi-tcd">--</div><div class="pbi-kpi-sub">horas</div></div>
+              <div class="pbi-kpi c-red"><div class="pbi-kpi-icon">🛑</div><div class="pbi-kpi-label">T. Parada Total</div><div class="pbi-kpi-value" id="kpi-tparada">--</div><div class="pbi-kpi-sub">horas perdidas</div></div>
+            </div>
+
+            <div style="font-size:11px;font-weight:700;color:var(--text2);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px;">🔧 Confiabilidad de Equipos</div>
+            <div class="grid-5 mb-6">
+              <div class="pbi-kpi c-blue"><div class="pbi-kpi-icon">🔧</div><div class="pbi-kpi-label">MTBF</div><div class="pbi-kpi-value" id="kpi-mtbf">--</div><div class="pbi-kpi-sub">horas entre fallas</div></div>
+              <div class="pbi-kpi c-warn"><div class="pbi-kpi-icon">🛠</div><div class="pbi-kpi-label">MTTR</div><div class="pbi-kpi-value" id="kpi-mttr">--</div><div class="pbi-kpi-sub">horas por reparación</div></div>
+              <div class="pbi-kpi c-green"><div class="pbi-kpi-icon">🟢</div><div class="pbi-kpi-label">Disponibilidad</div><div class="pbi-kpi-value" id="kpi-disp">--</div><div class="pbi-kpi-sub">% tiempo operativo</div></div>
+              <div class="pbi-kpi c-teal"><div class="pbi-kpi-icon">📊</div><div class="pbi-kpi-label">Confiabilidad</div><div class="pbi-kpi-value" id="kpi-conf">--</div><div class="pbi-kpi-sub">% sin fallas</div></div>
+              <div class="pbi-kpi c-purple"><div class="pbi-kpi-icon">🎯</div><div class="pbi-kpi-label">OEE</div><div class="pbi-kpi-value" id="kpi-oee">--</div><div class="pbi-kpi-sub">eficiencia global</div></div>
+            </div>
+
+            <div style="font-size:11px;font-weight:700;color:var(--text2);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px;">⚠️ Eventos del Período</div>
+            <div class="grid-3 mb-6">
+              <div class="pbi-kpi c-red"><div class="pbi-kpi-icon">🚨</div><div class="pbi-kpi-label">Fallas / Averías</div><div class="pbi-kpi-value" id="kpi-fallas">0</div><div class="pbi-kpi-sub">no programadas</div></div>
+              <div class="pbi-kpi c-green"><div class="pbi-kpi-icon">🔧</div><div class="pbi-kpi-label">Mant. Programados</div><div class="pbi-kpi-value" id="kpi-prog">0</div><div class="pbi-kpi-sub">en período</div></div>
+              <div class="pbi-kpi c-blue"><div class="pbi-kpi-icon">❄️</div><div class="pbi-kpi-label">Descongelamientos</div><div class="pbi-kpi-value" id="kpi-desc">0</div><div class="pbi-kpi-sub">en período</div></div>
+            </div>
 
           </div><!-- end dash-page-1 -->
           <div class="dash-page" id="dash-page-2">
-          <!-- CHARTS -->
-          <div class="grid-2 mb-6">
-            <div class="card"><div class="card-title">Producción por Equipo (kg)</div><canvas id="chart-prod" height="200"></canvas></div>
-            <div class="card"><div class="card-title">Horas de Parada por Tipo</div><canvas id="chart-tipos" height="200"></canvas></div>
+          <div class="pbi-header-bar">
+            <div>
+              <div class="pbi-header-title"><span class="pbi-header-icon">📈</span> Análisis Gráfico</div>
+              <div class="pbi-header-sub">Visualización de producción, paradas y confiabilidad</div>
+            </div>
+            <div class="pbi-card-badge">Datos del período seleccionado</div>
           </div>
-          <div class="grid-2 mb-6">
-            <div class="card"><div class="card-title">T.Congelamiento Promedio por Equipo (h)</div><canvas id="chart-tcong" height="200"></canvas></div>
-            <div class="card"><div class="card-title">MTBF / MTTR por Equipo (h)</div><canvas id="chart-mant" height="200"></canvas></div>
+
+          <div class="grid-2 mb-4">
+            <div class="pbi-card">
+              <div class="pbi-card-head"><div class="pbi-card-title">📦 Producción por Equipo</div><div class="pbi-card-badge">kg</div></div>
+              <div style="position:relative;height:230px;"><canvas id="chart-prod"></canvas></div>
+            </div>
+            <div class="pbi-card">
+              <div class="pbi-card-head"><div class="pbi-card-title">🛑 Horas de Parada por Tipo</div><div class="pbi-card-badge">horas</div></div>
+              <div style="position:relative;height:230px;"><canvas id="chart-tipos"></canvas></div>
+            </div>
+          </div>
+          <div class="grid-2 mb-4">
+            <div class="pbi-card">
+              <div class="pbi-card-head"><div class="pbi-card-title">⏱ T. Congelamiento Promedio por Equipo</div><div class="pbi-card-badge">horas</div></div>
+              <div style="position:relative;height:230px;"><canvas id="chart-tcong"></canvas></div>
+            </div>
+            <div class="pbi-card">
+              <div class="pbi-card-head"><div class="pbi-card-title">🔧 MTBF / MTTR por Equipo</div><div class="pbi-card-badge">horas</div></div>
+              <div style="position:relative;height:230px;"><canvas id="chart-mant"></canvas></div>
+            </div>
+          </div>
+          <div class="grid-2 mb-4">
+            <div class="pbi-card">
+              <div class="pbi-card-head"><div class="pbi-card-title">📅 Producción Diaria (tendencia)</div><div class="pbi-card-badge">kg/día</div></div>
+              <div style="position:relative;height:230px;"><canvas id="chart-prod-dia"></canvas></div>
+            </div>
+            <div class="pbi-card">
+              <div class="pbi-card-head"><div class="pbi-card-title">🥧 Distribución de Producción por Producto</div><div class="pbi-card-badge">%</div></div>
+              <div style="position:relative;height:230px;"><canvas id="chart-productos"></canvas></div>
+            </div>
           </div>
 
           </div><!-- end dash-page-2 -->
           <div class="dash-page" id="dash-page-3">
-          <!-- TABLA MANTENIMIENTO -->
-          <div class="card mb-6">
-            <div class="card-title">📊 Tabla de Indicadores de Mantenimiento por Equipo</div>
+          <div class="pbi-header-bar">
+            <div>
+              <div class="pbi-header-title"><span class="pbi-header-icon">🔧</span> Panel de Mantenimiento</div>
+              <div class="pbi-header-sub">Confiabilidad, disponibilidad e indicadores por equipo</div>
+            </div>
+            <div class="pbi-card-badge">Tabla detallada</div>
+          </div>
+
+          <div class="pbi-card mb-4">
+            <div class="pbi-card-head">
+              <div class="pbi-card-title">📊 Indicadores de Mantenimiento por Equipo</div>
+              <div class="pbi-card-badge">Click en encabezado para ordenar</div>
+            </div>
             <div class="table-wrap">
               <table>
                 <thead><tr>
                   <th>Equipo</th><th>Fallas</th><th>T.Fallas (h)</th><th>MTBF (h)</th><th>MTTR (h)</th>
-                  <th>Disponibilidad %</th><th>Confiabilidad %</th><th>Paradas Prog.</th><th>Descongel.</th><th>Bachadas</th><th>Producción (kg)</th>
+                  <th>Disponib. %</th><th>Confiab. %</th><th>Prog.</th><th>Descong.</th><th>Bachadas</th><th>Prod. (kg)</th>
                 </tr></thead>
                 <tbody id="tbody-kpis-eq"></tbody>
               </table>
+            </div>
+          </div>
+
+          <div class="grid-2 mb-4">
+            <div class="pbi-card">
+              <div class="pbi-card-head"><div class="pbi-card-title">🟢 Disponibilidad por Equipo</div><div class="pbi-card-badge">%</div></div>
+              <div style="position:relative;height:240px;"><canvas id="chart-disp-eq"></canvas></div>
+            </div>
+            <div class="pbi-card">
+              <div class="pbi-card-head"><div class="pbi-card-title">🚨 Fallas por Equipo</div><div class="pbi-card-badge">cantidad</div></div>
+              <div style="position:relative;height:240px;"><canvas id="chart-fallas-eq"></canvas></div>
             </div>
           </div>
 
@@ -1147,6 +1235,51 @@ const firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
+
+// ============================================================
+// PROTECCIÓN GLOBAL ANTI-DOBLE-CLICK
+// Envuelve cualquier handler async para prevenir doble ejecución
+// ============================================================
+const _actionLocks = {};
+async function guardedAction(lockKey, btnEl, fn) {
+  // Si ya está ejecutándose esta acción, ignorar
+  if(_actionLocks[lockKey]) return;
+  _actionLocks[lockKey] = true;
+
+  // Guardar estado original del botón
+  let originalText = '', originalHTML = '';
+  if(btnEl) {
+    originalHTML = btnEl.innerHTML;
+    btnEl.disabled = true;
+    btnEl.style.opacity = '0.6';
+    btnEl.style.cursor = 'wait';
+    btnEl.dataset._origHtml = originalHTML;
+    // Solo cambiar texto si es un botón de guardar (no de eliminar pequeño)
+    if(!btnEl.dataset.noLoadingText) {
+      btnEl.innerHTML = '⏳ Procesando...';
+    }
+  }
+
+  try {
+    await fn();
+  } catch(err) {
+    console.error('Error en acción ['+lockKey+']:', err);
+  } finally {
+    _actionLocks[lockKey] = false;
+    if(btnEl) {
+      btnEl.disabled = false;
+      btnEl.style.opacity = '';
+      btnEl.style.cursor = '';
+      btnEl.innerHTML = btnEl.dataset._origHtml || originalHTML;
+    }
+  }
+}
+
+// Helper para obtener el botón que disparó el evento
+function _evtBtn() {
+  return (typeof event !== 'undefined' && event && event.currentTarget) ? event.currentTarget :
+         (typeof event !== 'undefined' && event && event.target) ? event.target : null;
+}
 
 // ======== DB LOCAL (caché) ========
 // Usamos localStorage solo como caché para acceso rápido
@@ -2040,6 +2173,25 @@ function renderDashboard(){
   });
   renderMultiBar('chart-mant',equipos,[{label:'MTBF (h)',data:mtbfEq,color:'#00c8ff'},{label:'MTTR (h)',data:mttrEq,color:'#ff3b5c'}]);
 
+  // NUEVO: Producción diaria (tendencia)
+  const fechasMap = {};
+  bachs.filter(b=>b.estado==='cerrado').forEach(b=>{
+    const f = b.fecha || '';
+    if(f) fechasMap[f] = (fechasMap[f]||0) + (b.peso||0);
+  });
+  const fechasOrd = Object.keys(fechasMap).sort();
+  renderLine('chart-prod-dia', fechasOrd.map(f=>f.slice(5)), fechasOrd.map(f=>Math.round(fechasMap[f])), 'Producción (kg)', '#00c8ff');
+
+  // NUEVO: Distribución por producto (doughnut)
+  const prodMap = {};
+  bachs.filter(b=>b.estado==='cerrado').forEach(b=>{
+    const p = b.producto || 'Sin especificar';
+    prodMap[p] = (prodMap[p]||0) + (b.peso||0);
+  });
+  const prodLabels = Object.keys(prodMap);
+  const prodColors = ['#00c8ff','#00e87a','#ff9500','#a855f7','#ff3b5c','#00ffb3','#ffd700','#8aaac8'];
+  renderDoughnut('chart-productos', prodLabels, prodLabels.map(p=>Math.round(prodMap[p])), prodColors.slice(0, prodLabels.length));
+
   // Tabla por equipo
   const tbody=document.getElementById('tbody-kpis-eq');
   if(tbody){
@@ -2070,6 +2222,36 @@ function renderDashboard(){
     if(!tbody.innerHTML.trim())tbody.innerHTML='<tr><td colspan="11" style="text-align:center;color:var(--text3);padding:20px;">Sin datos suficientes para calcular indicadores</td></tr>';
   }
 
+  // NUEVO: Charts de mantenimiento por equipo (disponibilidad y fallas)
+  const dispData = [], fallasData = [], eqConDatos = [];
+  equipos.forEach(eq=>{
+    const eb=bachs.filter(b=>b.equipo===eq);
+    const ef=evs.filter(e=>e.equipo===eq&&e.tipo==='no_programada');
+    if(!eb.length && !evs.filter(e=>e.equipo===eq).length) return;
+    eqConDatos.push(eq);
+    const tF=ef.reduce((s,e)=>s+(e.durH||0),0);
+    const dsp=Math.min(100,((periodHours-tF)/periodHours)*100);
+    dispData.push(parseFloat(dsp.toFixed(1)));
+    fallasData.push(ef.length);
+  });
+  if(document.getElementById('chart-disp-eq')){
+    const c=document.getElementById('chart-disp-eq');
+    if(charts['chart-disp-eq'])charts['chart-disp-eq'].destroy();
+    charts['chart-disp-eq']=new Chart(c,{type:'bar',data:{labels:eqConDatos,datasets:[{label:'Disponibilidad %',data:dispData,
+      backgroundColor:dispData.map(v=>v>=90?'#00e87a88':v>=70?'#ff950088':'#ff3b5c88'),
+      borderColor:dispData.map(v=>v>=90?'#00e87a':v>=70?'#ff9500':'#ff3b5c'),borderWidth:1.5,borderRadius:5}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+        scales:{x:{grid:{color:'#1e3352'},ticks:{color:'#8aaac8',font:{size:9}}},y:{grid:{color:'#1e3352'},ticks:{color:'#8aaac8',font:{size:9},callback:v=>v+'%'},max:100}}}});
+  }
+  if(document.getElementById('chart-fallas-eq')){
+    const c=document.getElementById('chart-fallas-eq');
+    if(charts['chart-fallas-eq'])charts['chart-fallas-eq'].destroy();
+    charts['chart-fallas-eq']=new Chart(c,{type:'bar',data:{labels:eqConDatos,datasets:[{label:'Fallas',data:fallasData,
+      backgroundColor:'#ff3b5c88',borderColor:'#ff3b5c',borderWidth:1.5,borderRadius:5}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+        scales:{x:{grid:{color:'#1e3352'},ticks:{color:'#8aaac8',font:{size:9}}},y:{grid:{color:'#1e3352'},ticks:{color:'#8aaac8',font:{size:9}}}}}});
+  }
+
   // Prod por producto
   const tbodyPP=document.getElementById('tbody-prod-prod');
   if(tbodyPP){
@@ -2087,7 +2269,15 @@ function renderBar(id,labels,data,label,color){
   const c=document.getElementById(id);if(!c)return;
   if(charts[id])charts[id].destroy();
   charts[id]=new Chart(c,{type:'bar',data:{labels,datasets:[{label,data,backgroundColor:color+'88',borderColor:color,borderWidth:1.5,borderRadius:5}]},
-    options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false}},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{x:{grid:{color:'#1e3352'},ticks:{color:'#8aaac8',font:{size:9}}},y:{grid:{color:'#1e3352'},ticks:{color:'#8aaac8',font:{size:9}}}}}});
+}
+
+function renderLine(id,labels,data,label,color){
+  const c=document.getElementById(id);if(!c)return;
+  if(charts[id])charts[id].destroy();
+  charts[id]=new Chart(c,{type:'line',data:{labels,datasets:[{label,data,borderColor:color,backgroundColor:color+'22',borderWidth:2,tension:.3,fill:true,pointRadius:3,pointBackgroundColor:color}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
       scales:{x:{grid:{color:'#1e3352'},ticks:{color:'#8aaac8',font:{size:9}}},y:{grid:{color:'#1e3352'},ticks:{color:'#8aaac8',font:{size:9}}}}}});
 }
 
@@ -2095,7 +2285,7 @@ function renderMultiBar(id,labels,datasets){
   const c=document.getElementById(id);if(!c)return;
   if(charts[id])charts[id].destroy();
   charts[id]=new Chart(c,{type:'bar',data:{labels,datasets:datasets.map(d=>({label:d.label,data:d.data,backgroundColor:d.color+'88',borderColor:d.color,borderWidth:1.5,borderRadius:5}))},
-    options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{position:'top',labels:{color:'#8aaac8',font:{size:10}}}},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{color:'#8aaac8',font:{size:10}}}},
       scales:{x:{grid:{color:'#1e3352'},ticks:{color:'#8aaac8',font:{size:9}}},y:{grid:{color:'#1e3352'},ticks:{color:'#8aaac8',font:{size:9}}}}}});
 }
 
@@ -2103,7 +2293,7 @@ function renderDoughnut(id,labels,data,colors){
   const c=document.getElementById(id);if(!c)return;
   if(charts[id])charts[id].destroy();
   charts[id]=new Chart(c,{type:'doughnut',data:{labels,datasets:[{data,backgroundColor:colors.map(c=>c+'cc'),borderColor:colors,borderWidth:2}]},
-    options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{position:'bottom',labels:{color:'#8aaac8',font:{size:11},padding:10}}}}});
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{color:'#8aaac8',font:{size:11},padding:10}}}}});
 }
 
 // ======== REPORTE ========
@@ -2184,7 +2374,19 @@ function renderTecnicos(){
       <span>${t}</span><button class="btn-sm btn-ghost" style="padding:3px 9px;font-size:11px;" onclick="removeTecnico('${t}')">Eliminar</button>
     </div>`).join('');
 }
-async function addTecnico(){const v=document.getElementById('new-tecnico').value.trim();if(!v)return;const tecs=DB.get('tecnicos',[]);if(!tecs.includes(v)){const ord=tecs.length;await COL.tecnicos().add({nombre:v,orden:ord});}document.getElementById('new-tecnico').value='';}
+async function addTecnico() {
+  if(_actionLocks['addTec']) return;
+  _actionLocks['addTec'] = true;
+  const _gb = (typeof event!=='undefined'&&event)?(event.currentTarget||event.target):null;
+  let _goh='';
+  if(_gb){_goh=_gb.innerHTML;_gb.disabled=true;_gb.style.opacity='0.6';_gb.style.cursor='wait';if(!_gb.dataset.noLoadingText)_gb.innerHTML='⏳ Procesando...';}
+  try {const v=document.getElementById('new-tecnico').value.trim();if(!v)return;const tecs=DB.get('tecnicos',[]);if(!tecs.includes(v)){const ord=tecs.length;await COL.tecnicos().add({nombre:v,orden:ord});}document.getElementById('new-tecnico').value='';  } catch(_err) {
+    console.error('Error en addTecnico:', _err);
+  } finally {
+    _actionLocks['addTec'] = false;
+    if(_gb){_gb.disabled=false;_gb.style.opacity='';_gb.style.cursor='';_gb.innerHTML=_goh;}
+  }
+}
 async function removeTecnico(nombre){try{const snap=await COL.tecnicos().where('nombre','==',nombre).get();for(const d of snap.docs)await d.ref.delete();}catch(err){console.error(err);}}
 
 function renderProductos(){
@@ -2194,7 +2396,19 @@ function renderProductos(){
       <span>${p}</span><button class="btn-sm btn-ghost" style="padding:3px 9px;font-size:11px;" onclick="removeProducto('${p}')">Eliminar</button>
     </div>`).join('');
 }
-async function addProducto(){const v=document.getElementById('new-producto').value.trim();if(!v)return;const prods=DB.get('productos',[]);if(!prods.includes(v)){await COL.productos().add({nombre:v,orden:prods.length});}document.getElementById('new-producto').value='';}
+async function addProducto() {
+  if(_actionLocks['addProd']) return;
+  _actionLocks['addProd'] = true;
+  const _gb = (typeof event!=='undefined'&&event)?(event.currentTarget||event.target):null;
+  let _goh='';
+  if(_gb){_goh=_gb.innerHTML;_gb.disabled=true;_gb.style.opacity='0.6';_gb.style.cursor='wait';if(!_gb.dataset.noLoadingText)_gb.innerHTML='⏳ Procesando...';}
+  try {const v=document.getElementById('new-producto').value.trim();if(!v)return;const prods=DB.get('productos',[]);if(!prods.includes(v)){await COL.productos().add({nombre:v,orden:prods.length});}document.getElementById('new-producto').value='';  } catch(_err) {
+    console.error('Error en addProducto:', _err);
+  } finally {
+    _actionLocks['addProd'] = false;
+    if(_gb){_gb.disabled=false;_gb.style.opacity='';_gb.style.cursor='';_gb.innerHTML=_goh;}
+  }
+}
 async function removeProducto(nombre){try{const snap=await COL.productos().where('nombre','==',nombre).get();for(const d of snap.docs)await d.ref.delete();}catch(err){console.error(err);}}
 
 function renderEquiposConfig(){
@@ -2208,11 +2422,23 @@ function renderEquiposConfig(){
       <div class="field-note">Horas operativas esperadas/día</div>
     </div>`).join('');
 }
-async function saveEquiposConfig(){
+async function saveEquiposConfig() {
+  if(_actionLocks['saveEquip']) return;
+  _actionLocks['saveEquip'] = true;
+  const _gb = (typeof event!=='undefined'&&event)?(event.currentTarget||event.target):null;
+  let _goh='';
+  if(_gb){_goh=_gb.innerHTML;_gb.disabled=true;_gb.style.opacity='0.6';_gb.style.cursor='wait';if(!_gb.dataset.noLoadingText)_gb.innerHTML='⏳ Procesando...';}
+  try {
   const equipos=['C1','C2','C3','C4','C5','C6','C7','C8','C9','C10','C11','TE'];
   const cfg={};
   equipos.forEach(eq=>{const el=document.getElementById('cfg-eq-'+eq);if(el)cfg[eq]=parseFloat(el.value)||24;});
   try{await COL.config().doc('equipos').set(cfg);alert('✅ Configuración guardada.');}catch(err){alert('Error al guardar configuración.');}
+  } catch(_err) {
+    console.error('Error en saveEquiposConfig:', _err);
+  } finally {
+    _actionLocks['saveEquip'] = false;
+    if(_gb){_gb.disabled=false;_gb.style.opacity='';_gb.style.cursor='';_gb.innerHTML=_goh;}
+  }
 }
 
 // ======== USUARIOS ========
@@ -2240,7 +2466,13 @@ function renderUsers(){
   renderAdminUsers();
 }
 function openUserModal(){if(!canAdmin()){alert('Solo administradores.');return;}document.getElementById('modal-usuario').classList.add('open');}
-async function saveUser(){
+async function saveUser() {
+  if(_actionLocks['saveUser']) return;
+  _actionLocks['saveUser'] = true;
+  const _gb = (typeof event!=='undefined'&&event)?(event.currentTarget||event.target):null;
+  let _goh='';
+  if(_gb){_goh=_gb.innerHTML;_gb.disabled=true;_gb.style.opacity='0.6';_gb.style.cursor='wait';if(!_gb.dataset.noLoadingText)_gb.innerHTML='⏳ Procesando...';}
+  try {
   const nombre=document.getElementById('u-nombre').value.trim();
   const email=document.getElementById('u-email').value.trim();
   const pass=document.getElementById('u-pass').value;
@@ -2253,6 +2485,12 @@ async function saveUser(){
   const snap2=await COL.users().where('email','==',email).get();
   if(!snap2.empty){document.getElementById('u-alert').innerHTML='<div class="alert alert-error">Correo ya registrado.</div>';return;}
   try{await COL.users().add({id:Date.now(),nombre,email,pass,rol,activo:true,ts:new Date().toISOString()});closeModal('modal-usuario');}catch(err){document.getElementById('u-alert').innerHTML='<div class="alert alert-error">Error al guardar.</div>';}
+  } catch(_err) {
+    console.error('Error en saveUser:', _err);
+  } finally {
+    _actionLocks['saveUser'] = false;
+    if(_gb){_gb.disabled=false;_gb.style.opacity='';_gb.style.cursor='';_gb.innerHTML=_goh;}
+  }
 }
 async function toggleUser(id){if(!canAdmin())return;const u=DB.get('users',[]).find(x=>x.id===id);if(!u||u.id===1)return;try{await COL.users().doc(u._fid).update({activo:!u.activo});}catch(err){console.error(err);}}
 async function delUser(id){if(!canAdmin()||!confirm('¿Eliminar?'))return;const u=DB.get('users',[]).find(x=>x.id===id);if(!u)return;try{await COL.users().doc(u._fid).delete();}catch(err){console.error(err);}}
@@ -2278,7 +2516,7 @@ function goToPage(n) {
   // Ocultar filtros generales en página 5 (Comportamiento por Equipo) — usa sus propios filtros
   const filtGen = document.getElementById('dash-filtros-generales');
   if (filtGen) filtGen.style.display = n === 5 ? 'none' : '';
-  if (n === 2) { setTimeout(renderDashboard, 50); }
+  if (n === 1 || n === 2 || n === 3) { setTimeout(renderDashboard, 50); }
   if (n === 5) { setTimeout(renderTimeline, 50); }
 }
 
@@ -2669,6 +2907,12 @@ function loadUserPerm() {
 }
 
 async function saveUserPerm() {
+  if(_actionLocks['userPerm']) return;
+  _actionLocks['userPerm'] = true;
+  const _gb = (typeof event!=='undefined'&&event)?(event.currentTarget||event.target):null;
+  let _goh='';
+  if(_gb){_goh=_gb.innerHTML;_gb.disabled=true;_gb.style.opacity='0.6';_gb.style.cursor='wait';if(!_gb.dataset.noLoadingText)_gb.innerHTML='⏳ Procesando...';}
+  try {
   const fid = document.getElementById('perm-user-sel').value;
   const rol = document.getElementById('perm-rol-sel').value;
   if(!fid) { document.getElementById('perm-alert').innerHTML = '<div class="alert alert-error">Selecciona un usuario.</div>'; return; }
@@ -2678,6 +2922,12 @@ async function saveUserPerm() {
     setTimeout(() => { document.getElementById('perm-alert').innerHTML = ''; }, 3000);
   } catch(err) {
     document.getElementById('perm-alert').innerHTML = '<div class="alert alert-error">Error al guardar.</div>';
+  }
+  } catch(_err) {
+    console.error('Error en saveUserPerm:', _err);
+  } finally {
+    _actionLocks['userPerm'] = false;
+    if(_gb){_gb.disabled=false;_gb.style.opacity='';_gb.style.cursor='';_gb.innerHTML=_goh;}
   }
 }
 
@@ -2791,6 +3041,12 @@ function getModulosSeleccionados(containerId) {
 }
 
 async function crearUsuario() {
+  if(_actionLocks['crearUser']) return;
+  _actionLocks['crearUser'] = true;
+  const _gb = (typeof event!=='undefined'&&event)?(event.currentTarget||event.target):null;
+  let _goh='';
+  if(_gb){_goh=_gb.innerHTML;_gb.disabled=true;_gb.style.opacity='0.6';_gb.style.cursor='wait';if(!_gb.dataset.noLoadingText)_gb.innerHTML='⏳ Procesando...';}
+  try {
   const nombre = document.getElementById('au-nombre').value.trim();
   const email  = document.getElementById('au-email').value.trim();
   const pass   = document.getElementById('au-pass').value.trim();
@@ -2819,6 +3075,12 @@ async function crearUsuario() {
   } catch(err) {
     console.error(err);
     alertEl.innerHTML='<span style="color:var(--danger);">Error al guardar. Verifica conexión.</span>';
+  }
+  } catch(_err) {
+    console.error('Error en crearUsuario:', _err);
+  } finally {
+    _actionLocks['crearUser'] = false;
+    if(_gb){_gb.disabled=false;_gb.style.opacity='';_gb.style.cursor='';_gb.innerHTML=_goh;}
   }
 }
 
@@ -2911,6 +3173,12 @@ function cancelarEdicion() {
 }
 
 async function guardarEdicion() {
+  if(_actionLocks['guardEdit']) return;
+  _actionLocks['guardEdit'] = true;
+  const _gb = (typeof event!=='undefined'&&event)?(event.currentTarget||event.target):null;
+  let _goh='';
+  if(_gb){_goh=_gb.innerHTML;_gb.disabled=true;_gb.style.opacity='0.6';_gb.style.cursor='wait';if(!_gb.dataset.noLoadingText)_gb.innerHTML='⏳ Procesando...';}
+  try {
   const fid    = document.getElementById('au-edit-fid').value;
   const nombre = document.getElementById('au-edit-nombre').value.trim();
   const email  = document.getElementById('au-edit-email').value.trim();
@@ -2930,6 +3198,12 @@ async function guardarEdicion() {
   } catch(err) {
     console.error(err);
     alertEl.innerHTML = '<span style="color:var(--danger);">Error al guardar.</span>';
+  }
+  } catch(_err) {
+    console.error('Error en guardarEdicion:', _err);
+  } finally {
+    _actionLocks['guardEdit'] = false;
+    if(_gb){_gb.disabled=false;_gb.style.opacity='';_gb.style.cursor='';_gb.innerHTML=_goh;}
   }
 }
 
@@ -2964,6 +3238,12 @@ function abrirPermisos(fid, nombre) {
 }
 
 async function guardarPermisos() {
+  if(_actionLocks['guardPerm']) return;
+  _actionLocks['guardPerm'] = true;
+  const _gb = (typeof event!=='undefined'&&event)?(event.currentTarget||event.target):null;
+  let _goh='';
+  if(_gb){_goh=_gb.innerHTML;_gb.disabled=true;_gb.style.opacity='0.6';_gb.style.cursor='wait';if(!_gb.dataset.noLoadingText)_gb.innerHTML='⏳ Procesando...';}
+  try {
   const fid = document.getElementById('perm-fid').value;
   const alertEl = document.getElementById('perm-save-alert');
 
@@ -2986,6 +3266,12 @@ async function guardarPermisos() {
   } catch(err) {
     console.error(err);
     alertEl.innerHTML = '<span style="color:var(--danger);">Error al guardar.</span>';
+  }
+  } catch(_err) {
+    console.error('Error en guardarPermisos:', _err);
+  } finally {
+    _actionLocks['guardPerm'] = false;
+    if(_gb){_gb.disabled=false;_gb.style.opacity='';_gb.style.cursor='';_gb.innerHTML=_goh;}
   }
 }
 
@@ -3168,7 +3454,13 @@ function onPbTipoChange(){
   document.getElementById('pb-falla-field').style.display = tipo==='no_programada' ? 'block' : 'none';
 }
 
-async function guardarPostBachada(){
+async function guardarPostBachada() {
+  if(_actionLocks['postBach']) return;
+  _actionLocks['postBach'] = true;
+  const _gb = (typeof event!=='undefined'&&event)?(event.currentTarget||event.target):null;
+  let _goh='';
+  if(_gb){_goh=_gb.innerHTML;_gb.disabled=true;_gb.style.opacity='0.6';_gb.style.cursor='wait';if(!_gb.dataset.noLoadingText)_gb.innerHTML='⏳ Procesando...';}
+  try {
   const tipo = document.getElementById('pb-tipo').value;
   const inicio = document.getElementById('pb-inicio').value;
   const tecnico = document.getElementById('pb-tecnico').value;
@@ -3213,6 +3505,12 @@ async function guardarPostBachada(){
   } catch(err){
     console.error(err);
     showToast('Error al guardar el evento.','danger');
+  }
+  } catch(_err) {
+    console.error('Error en guardarPostBachada:', _err);
+  } finally {
+    _actionLocks['postBach'] = false;
+    if(_gb){_gb.disabled=false;_gb.style.opacity='';_gb.style.cursor='';_gb.innerHTML=_goh;}
   }
 }
 

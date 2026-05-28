@@ -1574,7 +1574,34 @@ function calcTCong(){
   }
 }
 
+let _savingBachada = false;
 async function saveBachada(){
+  // Protección 1: variable de bloqueo
+  if(_savingBachada) return;
+  _savingBachada = true;
+  
+  // Protección 2: deshabilitar botón visualmente
+  const _saveBtn = document.getElementById('b-save-btn');
+  const _originalText = _saveBtn ? _saveBtn.textContent : '';
+  if(_saveBtn) {
+    _saveBtn.disabled = true;
+    _saveBtn.style.opacity = '0.6';
+    _saveBtn.style.cursor = 'wait';
+    _saveBtn.textContent = '⏳ Guardando...';
+  }
+  
+  // Protección 3: liberar todos los bloqueos cuando termine (incluso si hay error)
+  const _releaseLock = () => {
+    _savingBachada = false;
+    if(_saveBtn) {
+      _saveBtn.disabled = false;
+      _saveBtn.style.opacity = '';
+      _saveBtn.style.cursor = '';
+      _saveBtn.textContent = _originalText;
+    }
+  };
+  
+  try {
   const eq=document.getElementById('b-equipo').value;
   const bach=parseInt(document.getElementById('b-bach').value);
   const producto=document.getElementById('b-producto').value;
@@ -1654,6 +1681,13 @@ async function saveBachada(){
       showAlert('alert-bachadas','Inicio de bachada registrado. Edita cuando termine para completar.','warn');
     }
   } catch(err){console.error(err);document.getElementById('b-alert').innerHTML='<div class="alert alert-error">Error al guardar. Verifica conexión.</div>';}
+  } catch(err) {
+    console.error('Error general en saveBachada:', err);
+    const ae = document.getElementById('b-alert');
+    if(ae) ae.innerHTML = '<div class="alert alert-error">Error inesperado: ' + (err.message || err) + '</div>';
+  } finally {
+    _releaseLock();
+  }
 }
 
 function renderBachadas(){
@@ -1817,7 +1851,31 @@ document.getElementById('e-inicio').addEventListener('input',calcTEvento);
 document.getElementById('e-fin').addEventListener('input',calcTEvento);
 document.getElementById('e-fecha-fin').addEventListener('input',calcTEvento);
 
+let _savingEvento = false;
 async function saveEvento(){
+  if(_savingEvento) return;
+  _savingEvento = true;
+  
+  const _saveBtnE = document.getElementById('e-save-btn');
+  const _originalTextE = _saveBtnE ? _saveBtnE.textContent : '';
+  if(_saveBtnE) {
+    _saveBtnE.disabled = true;
+    _saveBtnE.style.opacity = '0.6';
+    _saveBtnE.style.cursor = 'wait';
+    _saveBtnE.textContent = '⏳ Guardando...';
+  }
+  
+  const _releaseLockE = () => {
+    _savingEvento = false;
+    if(_saveBtnE) {
+      _saveBtnE.disabled = false;
+      _saveBtnE.style.opacity = '';
+      _saveBtnE.style.cursor = '';
+      _saveBtnE.textContent = _originalTextE;
+    }
+  };
+  
+  try {
   const equipo=document.getElementById('e-equipo').value;
   const tipo=document.getElementById('e-tipo').value;
   const fechaIni=document.getElementById('e-fecha-ini').value;
@@ -1855,6 +1913,13 @@ async function saveEvento(){
     closeModal('modal-evento');
     showAlert('alert-eventos',estado==='cerrado'?'✅ Evento cerrado. Equipo registrado como operativo.':'Evento abierto registrado. Edita cuando el equipo quede operativo.',estado==='cerrado'?'success':'warn');
   } catch(err){console.error(err);document.getElementById('e-alert').innerHTML='<div class="alert alert-error">Error al guardar. Verifica conexión.</div>';}
+  } catch(err) {
+    console.error('Error general en saveEvento:', err);
+    const ae = document.getElementById('e-alert');
+    if(ae) ae.innerHTML = '<div class="alert alert-error">Error inesperado: ' + (err.message || err) + '</div>';
+  } finally {
+    _releaseLockE();
+  }
 }
 
 function renderEventos(){

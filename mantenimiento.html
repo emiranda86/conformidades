@@ -2727,37 +2727,95 @@ function renderTimeline() {
   // CONSTRUCCIÓN DE SEGMENTOS POR EQUIPO
   // ----------------------------------------------------------
   function buildSegments(equipo) {
-    // Base = medianoche del día seleccionado (en milisegundos)
-    const baseMs = new Date(fecha + 'T00:00:00').getTime();
-    const toAbs = (fStr, hStr) => {
-      if(!fStr || !hStr) return null;
-      return (new Date(fStr + 'T' + hStr + ':00').getTime() - baseMs) / 3600000;
-    };
+    // ----------------------------------------------------------
+    // LÓGICA DE DÍA OPERATIVO
+    // ----------------------------------------------------------
+    // El día operativo va de 08:00 del día seleccionado a 08:00 del día siguiente.
+    // El campo `fecha` en BD representa el DÍA OPERATIVO, no la fecha calendario.
+    // Si una hora < 08:00, pertenece al día calendario siguiente al operativo.
+    //
+    // Eje de visualización: horas desde la medianoche del día calendario seleccionado.
+    //   - 08:00 del día operativo = posición 8
+    //   - 23:59 del día operativo = posición 23.98
+    //   - 00:00 del día siguiente calendario = posición 24 (sigue siendo el operativo)
+    //   - 07:59 del día siguiente calendario = posición 31.98
+    //   - 08:00 del día siguiente calendario = posición 32 (fin del operativo)
+    //
+    // FÓRMULA: posición = hora numérica + (hora < 8 ? 24 : 0)
+    //
+    // Filtro: SOLO registros cuyo campo `fecha` == día operativo seleccionado
+    // (Esto agrupa correctamente bachadas/eventos que cruzan medianoche.)
+    // ----------------------------------------------------------
 
-    // Solo registros del equipo y cerrados (los abiertos se mostrarán cuando se cierren)
-    const allBachs = DB.get('bachadas',[]).filter(b => b.equipo===equipo && b.estado==='cerrado');
-    const allEvs   = DB.get('eventos',[]).filter(e => e.equipo===equipo && e.estado==='cerrado');
+    const OP_DAY = fecha; // Día operativo seleccionado (formato YYYY-MM-DD)
+
+    // Convierte (fechaOperativa, hora) → posición en horas desde la medianoche del día seleccionado
+    // Si la hora es < 08:00, suma 24h (pertenece a las horas 24-32 del día operativo)
+    function opHourPos(fOp, hStr) {
+      if(!fOp || !hStr) return null;
+      if(fOp !== OP_DAY) return null; // No es del día operativo actual
+      const [hh, mm] = hStr.split(':').map(Number);
+      let pos = hh + mm/60;
+      if(pos < 8) pos += 24; // Pertenece a la madrugada del día operativo (horas 24-32)
+      return pos;
+    }
+
+    // ============================================================
+    // FILTRADO: solo registros cuyo campo `fecha` coincide con el día operativo
+    // ============================================================
+    const allBachs = DB.get('bachadas',[]).filter(b =>
+      b.equipo===equipo && b.estado==='cerrado' && b.fecha===OP_DAY
+    );
+    const allEvs = DB.get('eventos',[]).filter(e =>
+      e.equipo===equipo && e.estado==='cerrado' && e.fechaIni===OP_DAY
+    );
 
     const items = [];
 
-    // --- BACHADAS ---
+    // ---- BACHADAS ----
     allBachs.forEach(b => {
-      if(!b.inicio || !b.fecha) return;
-      const startAbs = toAbs(b.fecha, b.inicio);
+      if(!b.inicio) return;
+      const startAbs = opHourPos(b.fecha, b.inicio);
       if(startAbs === null) return;
 
       let endAbs = null;
       if(b.fin) {
-        const fechaFin = b.fechaFin || b.fecha;
-        endAbs = toAbs(fechaFin, b.fin);
-        // Detección robusta de cruce de medianoche
-        if(endAbs !== null && endAbs < startAbs) endAbs += 24;
+        // Para el fin: si tiene fechaFin, podría ser día calendario distinto pero MISMO operativo
+        // La regla: si fechaFin === fecha O fechaFin es el día calendario siguiente al operativo
+        //   con hora < 08:00 → sigue siendo el mismo operativo
+        // Calculamos endAbs como opHourPos del operativo + hora
+        // Si fechaFin == OP_DAY → usar opHourPos
+        // Si fechaFin == OP_DAY+1 día Y fin < 08:00 → posición = fin + 24
+        const [eh, em] = b.fin.split(':').map(Number);
+        let endHour = eh + em/60;
+
+        if(!b.fechaFin || b.fechaFin === OP_DAY) {
+          // Fin en el mismo día operativo
+          if(endHour < 8) endHour += 24;
+          endAbs = endHour;
+        } else {
+          // fechaFin diferente — verificar si es el día calendario siguiente con hora <8
+          const opDate = new Date(OP_DAY + 'T00:00:00');
+          const opNext = new Date(opDate); opNext.setDate(opDate.getDate() + 1);
+          const opNextStr = opNext.toISOString().split('T')[0];
+          if(b.fechaFin === opNextStr && endHour < 8) {
+            endAbs = endHour + 24;
+          } else if(b.fechaFin === opNextStr && endHour >= 8) {
+            // Fin a las 08:00 o más del día siguiente — ya es otro operativo, recortar
+            endAbs = 32; // fin del operativo
+          } else {
+            // fechaFin lejana — dato inconsistente
+            return;
+          }
+        }
+        // Si endAbs quedó <= startAbs aplicar cruce explícito (defensa)
+        if(endAbs <= startAbs) endAbs = startAbs + (b.tcong || 6);
       } else if(b.tcong) {
         endAbs = startAbs + b.tcong;
       }
       if(endAbs === null) return;
 
-      // Sanity: duración irrealmente larga = dato corrupto
+      // Sanity: duración irreal
       if((endAbs - startAbs) > 24) return;
 
       items.push({
@@ -2766,30 +2824,49 @@ function renderTimeline() {
         label: 'Bach #' + b.bach,
         rawTipo: 'bachada',
         bachNum: b.bach,
-        meta: { producto: b.producto, aros: b.aros, peso: b.peso, fecha: b.fecha }
+        turno: b.turno,
+        meta: { producto: b.producto, aros: b.aros, peso: b.peso, fecha: b.fecha, turno: b.turno }
       });
     });
 
-    // --- EVENTOS ---
+    // ---- EVENTOS ----
     allEvs.forEach(e => {
-      if(!e.inicio || !e.fechaIni) return;
-      const startAbs = toAbs(e.fechaIni, e.inicio);
+      if(!e.inicio) return;
+      const startAbs = opHourPos(e.fechaIni, e.inicio);
       if(startAbs === null) return;
 
       let endAbs = null;
       if(e.fin) {
-        const fechaFin = e.fechaFin || e.fechaIni;
-        endAbs = toAbs(fechaFin, e.fin);
-        // Solo aplicar cruce automático si fechaFin no fue declarada explícita
-        if(endAbs !== null && endAbs < startAbs && !e.fechaFin) endAbs += 24;
+        const [eh, em] = e.fin.split(':').map(Number);
+        let endHour = eh + em/60;
+
+        if(!e.fechaFin || e.fechaFin === OP_DAY) {
+          if(endHour < 8) endHour += 24;
+          endAbs = endHour;
+        } else {
+          const opDate = new Date(OP_DAY + 'T00:00:00');
+          const opNext = new Date(opDate); opNext.setDate(opDate.getDate() + 1);
+          const opNextStr = opNext.toISOString().split('T')[0];
+          if(e.fechaFin === opNextStr && endHour < 8) {
+            endAbs = endHour + 24;
+          } else if(e.fechaFin === opNextStr && endHour >= 8) {
+            // Evento que termina ya en otro día operativo — recortar al límite
+            endAbs = 32;
+          } else {
+            // fechaFin > opNextStr: evento de larga duración (típico fin_proceso)
+            // Recortar visualmente al límite del operativo
+            endAbs = 32;
+          }
+        }
+        if(endAbs <= startAbs) endAbs = startAbs + (e.durH || 1);
       } else if(e.durH) {
         endAbs = startAbs + e.durH;
       }
       if(endAbs === null) return;
 
-      // Sanity check según tipo
+      // Sanity por tipo
       const maxDur = (e.tipo === 'fin_proceso') ? 96 : 48;
-      if((endAbs - startAbs) > maxDur) return;
+      if((endAbs - startAbs) > maxDur && e.tipo !== 'fin_proceso') return;
 
       items.push({
         kind: 'evento',
@@ -2800,7 +2877,7 @@ function renderTimeline() {
       });
     });
 
-    // Filtrar por ventana visible (intersección)
+    // Filtrar por ventana visible (intersección con rangeStart..rangeEnd)
     let visibles = items.filter(it => it.endAbs > rangeStart && it.startAbs < rangeEnd);
 
     // Filtro por tipo
@@ -2815,9 +2892,7 @@ function renderTimeline() {
     visibles.sort((a,b) => a.startAbs - b.startAbs);
 
     // ----------------------------------------------------------
-    // CONSTRUIR SEGMENTOS VISUALES
-    // Cada item se transforma en un segmento dibujable.
-    // fin_proceso → NO se dibuja (es espacio vacío). Pero igualmente lo registramos para análisis.
+    // SEGMENTOS VISUALES
     // ----------------------------------------------------------
     const segs = [];
     visibles.forEach(it => {
@@ -2825,10 +2900,9 @@ function renderTimeline() {
       const segEnd   = Math.min(it.endAbs,   rangeEnd);
       if(segEnd <= segStart) return;
 
-      // FIN DE PROCESO → no se dibuja, queda como espacio vacío en la línea
+      // FIN DE PROCESO → NO se dibuja (espacio vacío)
       if(it.rawTipo === 'fin_proceso') return;
 
-      // Marcadores de truncamiento
       const truncIni = it.startAbs < rangeStart;
       const truncFin = it.endAbs > rangeEnd;
       let labelStr = it.label;
@@ -2838,7 +2912,6 @@ function renderTimeline() {
       const color = colorMap[it.rawTipo] || (it.kind==='bachada' ? '#00c8ff' : '#888');
       const borderColor = it.kind==='bachada' ? '#0088cc' : color;
 
-      // Desviación (solo para bachadas y eventos con REF > 0)
       let desv = null;
       const durReal = it.endAbs - it.startAbs;
       if(it.kind === 'bachada' && durReal > REF.tcong) {
@@ -2847,10 +2920,10 @@ function renderTimeline() {
         desv = (durReal - REF[it.rawTipo]).toFixed(2);
       }
 
-      // Descripción para tooltip
       let desc = '';
       if(it.kind === 'bachada' && it.meta) {
         desc = (it.meta.producto||'') + ' (' + (it.meta.aros||0) + ' aros, ' + ((it.meta.peso||0).toFixed(0)) + 'kg)';
+        if(it.turno) desc += ' · Turno ' + it.turno;
       } else if(it.kind === 'evento' && it.meta) {
         desc = it.meta.desc || it.meta.accion || '';
       }

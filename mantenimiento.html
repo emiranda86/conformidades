@@ -624,6 +624,47 @@ tr.clickable-row:hover td { background: var(--surface2); }
             <button class="btn-sm btn-accent no-print" onclick="openEventoModal(null)">+ Nuevo Evento</button>
           </div>
           <div id="alert-eventos"></div>
+
+          <!-- Filtros de Eventos -->
+          <div class="card mb-4 no-print">
+            <div class="card-title">🔍 Filtros</div>
+            <div class="form-grid">
+              <div class="field"><label>Desde</label><input type="date" id="ev-from" onchange="filtrarEventos()"></div>
+              <div class="field"><label>Hasta</label><input type="date" id="ev-to" onchange="filtrarEventos()"></div>
+              <div class="field"><label>Equipo</label>
+                <select id="ev-equipo" onchange="filtrarEventos()">
+                  <option value="">Todos</option>
+                  <option value="C1">Congelador 1</option><option value="C2">Congelador 2</option><option value="C3">Congelador 3</option>
+                  <option value="C4">Congelador 4</option><option value="C5">Congelador 5</option><option value="C6">Congelador 6</option>
+                  <option value="C7">Congelador 7</option><option value="C8">Congelador 8</option><option value="C9">Congelador 9</option>
+                  <option value="C10">Congelador 10</option><option value="C11">Congelador 11</option><option value="TE">Túnel Estático</option>
+                </select>
+              </div>
+              <div class="field"><label>Tipo de Evento</label>
+                <select id="ev-tipo" onchange="filtrarEventos()">
+                  <option value="">Todos</option>
+                  <option value="carga_descarga">Carga / Descarga</option>
+                  <option value="descongelamiento">Descongelamiento</option>
+                  <option value="sin_produccion">Sin Producción</option>
+                  <option value="programada">Mant. Programado</option>
+                  <option value="no_programada">Falla / Avería</option>
+                  <option value="fin_proceso">Fin de Proceso</option>
+                </select>
+              </div>
+              <div class="field"><label>Estado</label>
+                <select id="ev-estado" onchange="filtrarEventos()">
+                  <option value="">Todos</option>
+                  <option value="cerrado">Cerrado</option>
+                  <option value="abierto">Abierto</option>
+                </select>
+              </div>
+              <div class="field" style="align-self:flex-end;">
+                <button class="btn-sm btn-ghost" onclick="limpiarFiltrosEventos()" style="width:100%;">✕ Limpiar</button>
+              </div>
+            </div>
+            <div id="ev-count" style="font-size:12px;color:var(--text2);margin-top:8px;"></div>
+          </div>
+
           <div class="table-wrap">
             <table>
               <thead><tr>
@@ -655,14 +696,6 @@ tr.clickable-row:hover td { background: var(--surface2); }
               <div class="field"><label>Turno</label>
                 <select id="dash-turno" onchange="renderDashboard()">
                   <option value="">Ambos turnos</option><option value="Día">Día (08–20h)</option><option value="Noche">Noche (20–08h)</option>
-                </select>
-              </div>
-              <div class="field"><label>N° Bachada</label>
-                <select id="dash-bach" onchange="renderDashboard()">
-                  <option value="">Todas</option>
-                  <option value="1">Bach #1</option><option value="2">Bach #2</option><option value="3">Bach #3</option>
-                  <option value="4">Bach #4</option><option value="5">Bach #5</option><option value="6">Bach #6</option>
-                  <option value="7">Bach #7</option><option value="8">Bach #8</option>
                 </select>
               </div>
               <div class="field"><label>Producto</label><select id="dash-producto" onchange="renderDashboard()"><option value="">Todos</option></select></div>
@@ -2064,20 +2097,55 @@ async function saveEvento(){
 }
 
 function renderEventos(){
-  const evs=DB.get('eventos',[]);
+  filtrarEventos();
+}
+
+function filtrarEventos(){
+  let evs=DB.get('eventos',[]).slice();
+  const totalAll = evs.length;
+
+  const from = document.getElementById('ev-from')?.value || '';
+  const to   = document.getElementById('ev-to')?.value || '';
+  const equipoF = document.getElementById('ev-equipo')?.value || '';
+  const tipoF   = document.getElementById('ev-tipo')?.value || '';
+  const estadoF = document.getElementById('ev-estado')?.value || '';
+
+  if(from) evs = evs.filter(e => (e.fechaIni||'') >= from);
+  if(to)   evs = evs.filter(e => (e.fechaIni||'') <= to);
+  if(equipoF) evs = evs.filter(e => e.equipo === equipoF);
+  if(tipoF)   evs = evs.filter(e => e.tipo === tipoF);
+  if(estadoF) evs = evs.filter(e => e.estado === estadoF);
+
+  // Ordenar: fecha DESC, hora DESC
+  evs.sort((a,b)=>{
+    const da = (a.fechaIni||'') + ' ' + (a.inicio||'');
+    const db = (b.fechaIni||'') + ' ' + (b.inicio||'');
+    return db.localeCompare(da);
+  });
+
+  const counter = document.getElementById('ev-count');
+  if(counter){
+    counter.innerHTML = evs.length < totalAll
+      ? `Mostrando <strong style="color:var(--accent)">${evs.length}</strong> de ${totalAll} eventos`
+      : `${totalAll} evento${totalAll!==1?'s':''} en total`;
+  }
+
   const tbody=document.getElementById('tbody-eventos');
   if(!tbody)return;
-  if(!evs.length){tbody.innerHTML='<tr><td colspan="11" style="text-align:center;color:var(--text3);padding:28px;">Sin eventos registrados</td></tr>';return;}
-  tbody.innerHTML=evs.slice().reverse().map(e=>`
+  if(!evs.length){
+    tbody.innerHTML='<tr><td colspan="11" style="text-align:center;color:var(--text3);padding:28px;">' + (totalAll===0 ? 'Sin eventos registrados' : 'Sin eventos que coincidan con los filtros') + '</td></tr>';
+    return;
+  }
+  tbody.innerHTML=evs.map(e=>`
     <tr class="clickable-row" id="fila-e-${e.id}" onclick="verDetalleEvento(${e.id},event)">
       <td><span class="badge badge-blue">${e.equipo}</span></td>
-      <td><span class="badge ${getBadgeEvento(e.tipo)}">${e.tipoLabel}</span></td>
+      <td><span class="badge ${getBadgeEvento(e.tipo)}">${e.tipoLabel||e.tipo}</span></td>
       <td class="font-mono">${e.fechaIni} ${e.inicio}</td>
       <td class="font-mono">${e.fechaFin&&e.fin?(e.fechaFin+' '+e.fin):'<span style="color:var(--text3)">Pendiente</span>'}</td>
-      <td class="font-mono">${e.durH!==null?hoursToStr(e.durH):'<span style="color:var(--text3)">—</span>'}</td>
+      <td class="font-mono">${e.durH!==null&&e.durH!==undefined?hoursToStr(e.durH):'<span style="color:var(--text3)">—</span>'}</td>
       <td style="max-width:160px;white-space:normal;font-size:11.5px;">${e.desc||'—'}</td>
       <td style="max-width:160px;white-space:normal;font-size:11.5px;">${e.accion||'<span style="color:var(--text3)">—</span>'}</td>
-      <td>${e.tecnico}</td>
+      <td>${e.tecnico||'—'}</td>
       <td>${e.fechaIni}</td>
       <td><span class="status-pill ${e.estado==='cerrado'?'status-activo':'status-pendiente'}">${e.estado==='cerrado'?'✅ Cerrado':'🔴 Abierto'}</span></td>
       <td class="no-print" style="display:flex;gap:6px;" onclick="event.stopPropagation()">
@@ -2085,6 +2153,14 @@ function renderEventos(){
         <button class="btn-sm btn-ghost" style="padding:4px 9px;font-size:11px;" onclick="delEvento(${e.id})">🗑</button>
       </td>
     </tr>`).join('');
+}
+
+function limpiarFiltrosEventos(){
+  ['ev-from','ev-to','ev-equipo','ev-tipo','ev-estado'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.value = '';
+  });
+  filtrarEventos();
 }
 
 function getBadgeEvento(tipo){return{carga_descarga:'badge-gray',descongelamiento:'badge-blue',sin_produccion:'badge-teal',programada:'badge-warn',no_programada:'badge-red',fin_proceso:'badge-purple'}[tipo]||'badge-gray';}
@@ -2096,7 +2172,6 @@ function renderDashboard(){
   const to=document.getElementById('dash-to')?.value;
   const equipoF=document.getElementById('dash-equipo')?.value;
   const turnoF=document.getElementById('dash-turno')?.value;
-  const bachF=parseInt(document.getElementById('dash-bach')?.value)||0;
   const prodF=document.getElementById('dash-producto')?.value;
 
   let bachs=DB.get('bachadas',[]).filter(b=>b.estado==='cerrado');
@@ -2110,7 +2185,6 @@ function renderDashboard(){
   if(to){bachs=bachs.filter(b=>b.fecha<=to);evs=evs.filter(e=>e.fechaIni<=to);}
   if(equipoF){bachs=bachs.filter(b=>b.equipo===equipoF);evs=evs.filter(e=>e.equipo===equipoF);}
   if(turnoF)bachs=bachs.filter(b=>b.turno===turnoF);
-  if(bachF)bachs=bachs.filter(b=>parseInt(b.bach)===bachF);
   if(prodF)bachs=bachs.filter(b=>b.producto===prodF);
 
   // producción
@@ -2647,11 +2721,12 @@ function renderTimeline() {
       
       let endAbs;
       if(b.fin) {
-        // Si hay fechaFin explícita, úsala; sino asumir mismo día (o siguiente si cruza medianoche)
+        // Si hay fechaFin explícita, úsala; sino asumir mismo día
         const fechaFin = b.fechaFin || b.fecha;
         endAbs = toAbsHours(fechaFin, b.fin);
-        // Sin fechaFin pero fin < inicio = cruce medianoche
-        if(endAbs !== null && endAbs < startAbs && !b.fechaFin) {
+        // Detección robusta de cruce de medianoche:
+        // Si endAbs queda ANTES de startAbs, siempre interpretar como cruce de día
+        if(endAbs !== null && endAbs < startAbs) {
           endAbs += 24;
         }
       } else if(b.tcong) {
@@ -2660,6 +2735,8 @@ function renderTimeline() {
         return; // sin fin ni tcong, ignorar
       }
       if(endAbs === null) return;
+      // Sanity check: duración irrealmente larga (> 24h para una bachada) = dato corrupto, ignorar
+      if((endAbs - startAbs) > 24) return;
 
       // ¿Interseca con la ventana visible? La ventana es [rangeStart, rangeEnd] en horas desde medianoche
       if(endAbs <= rangeStart || startAbs >= rangeEnd) return;
@@ -2670,13 +2747,26 @@ function renderTimeline() {
 
       const durReal = endAbs - startAbs;
       const desv = durReal > REF.tcong ? (durReal - REF.tcong).toFixed(2) : null;
+      // Marcar si el segmento está recortado (pertenece a día anterior o siguiente)
+      const truncIni = startAbs < rangeStart;
+      const truncFin = endAbs > rangeEnd;
+      let labelStr = 'Bach #'+b.bach;
+      if(truncIni) labelStr = '⬅ ' + labelStr; // viene del día anterior
+      if(truncFin) labelStr = labelStr + ' ➡'; // continúa el día siguiente
+      // Si está totalmente fuera del día principal (no es del día actual), agregar info
+      if(b.fecha !== fecha && !truncIni && !truncFin) {
+        // Solo si la bachada NO es del día principal y NO cruza al día principal
+        // probablemente sea un error de filtro, omitir
+        return;
+      }
       segs.push({
-        label: 'Bach #'+b.bach,
+        label: labelStr,
         startH: segStart, endH: segEnd,
         realStart: startAbs, realEnd: endAbs,
         type:'bachada', color:'#00c8ff', borderColor:'#0088cc', desv,
-        desc: b.producto+' ('+b.aros+' aros, '+((b.peso||0).toFixed(0))+'kg)',
-        equipo: equipo
+        desc: b.producto+' ('+b.aros+' aros, '+((b.peso||0).toFixed(0))+'kg)' + (truncIni||truncFin?' · barra recortada':''),
+        equipo: equipo,
+        bachFecha: b.fecha
       });
     });
 
@@ -2692,6 +2782,8 @@ function renderTimeline() {
       if(e.fin) {
         const fechaFin = e.fechaFin || e.fechaIni;
         endAbs = toAbsHours(fechaFin, e.fin);
+        // Cruce de medianoche: solo aplicar si fechaFin no fue especificada explícitamente
+        // (porque eventos como fin_proceso pueden durar varios días con fechaFin distinta)
         if(endAbs !== null && endAbs < startAbs && !e.fechaFin) {
           endAbs += 24;
         }
@@ -2701,6 +2793,9 @@ function renderTimeline() {
         return;
       }
       if(endAbs === null) return;
+      // Sanity check: para fin_proceso permite hasta 96h (4 días); resto máximo 48h
+      const maxDur = (e.tipo === 'fin_proceso') ? 96 : 48;
+      if((endAbs - startAbs) > maxDur) return;
 
       if(endAbs <= rangeStart || startAbs >= rangeEnd) return;
       const segStart = Math.max(startAbs, rangeStart);
@@ -2709,13 +2804,19 @@ function renderTimeline() {
 
       const ref = REF[e.tipo] || 0;
       const desv = ref > 0 && (e.durH||0) > ref ? ((e.durH||0)-ref).toFixed(2) : null;
+      const truncIni = startAbs < rangeStart;
+      const truncFin = endAbs > rangeEnd;
+      let labelStr = e.tipoLabel || e.tipo;
+      if(truncIni) labelStr = '⬅ ' + labelStr;
+      if(truncFin) labelStr = labelStr + ' ➡';
       segs.push({
-        label: e.tipoLabel || e.tipo,
+        label: labelStr,
         startH: segStart, endH: segEnd,
         realStart: startAbs, realEnd: endAbs,
         type: e.tipo, color: colorMap[e.tipo]||'#888', borderColor: colorMap[e.tipo]||'#888',
-        desv, desc: e.desc || e.accion || '',
-        equipo: equipo
+        desv, desc: (e.desc || e.accion || '') + (truncIni||truncFin?' · barra recortada':''),
+        equipo: equipo,
+        evFecha: e.fechaIni
       });
     });
 

@@ -845,13 +845,14 @@ tr.clickable-row:hover td { background: var(--surface2); }
                 <div class="field"><label>Fecha</label><input type="date" id="tl-fecha" onchange="renderTimeline()"></div>
                 <div class="field"><label>Tipo de Evento</label>
                   <select id="tl-tipo" onchange="renderTimeline()">
-                    <option value="">Todos</option>
-                    <option value="bachada">Bachadas</option>
+                    <option value="">Todos los eventos</option>
+                    <option value="bachada">Bachadas (Congelamiento)</option>
                     <option value="carga_descarga">Carga / Descarga</option>
                     <option value="descongelamiento">Descongelamiento</option>
-                    <option value="sin_produccion">Sin Producción</option>
+                    <option value="sin_produccion">Sin MP</option>
                     <option value="programada">Mant. Programado</option>
-                    <option value="no_programada">Falla / Avería</option><option value="fin_proceso">Fin de Proceso</option>
+                    <option value="no_programada">Falla / Avería</option>
+                    <option value="fin_proceso">Fin de Proceso (no se dibuja)</option>
                   </select>
                 </div>
               </div>
@@ -862,11 +863,13 @@ tr.clickable-row:hover td { background: var(--surface2); }
                 <canvas id="chart-timeline" height="120"></canvas>
               </div>
               <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:14px;font-size:12px;" id="tl-legend">
-                <span style="display:flex;align-items:center;gap:5px;"><span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:#00c8ff88;border:1px solid #00c8ff;"></span>Congelamiento</span>
-                <span style="display:flex;align-items:center;gap:5px;"><span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:#ff950088;border:1px solid #ff9500;"></span>Carga/Descarga</span>
+                <span style="display:flex;align-items:center;gap:5px;"><span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:#00c8ff88;border:1px solid #00c8ff;"></span>Congelamiento (Bachada)</span>
+                <span style="display:flex;align-items:center;gap:5px;"><span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:#ff660088;border:1px solid #ff6600;"></span>Carga/Descarga</span>
                 <span style="display:flex;align-items:center;gap:5px;"><span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:#4a6a8a88;border:1px solid #4a6a8a;"></span>Descongelamiento</span>
-                <span style="display:flex;align-items:center;gap:5px;"><span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:#ff3b5c88;border:1px solid #ff3b5c;"></span>Falla</span>
+                <span style="display:flex;align-items:center;gap:5px;"><span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:#00ffb388;border:1px solid #00ffb3;"></span>Sin MP</span>
                 <span style="display:flex;align-items:center;gap:5px;"><span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:#00e87a88;border:1px solid #00e87a;"></span>Mant. Programado</span>
+                <span style="display:flex;align-items:center;gap:5px;"><span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:#ff3b5c88;border:1px solid #ff3b5c;"></span>Falla / Avería</span>
+                <span style="display:flex;align-items:center;gap:5px;"><span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:transparent;border:1.5px dashed var(--text3);"></span>Fin de Proceso (sin actividad)</span>
               </div>
             </div>
             <div class="card">
@@ -1352,6 +1355,14 @@ function startListeners() {
     const data = snap.docs.map(d => ({...d.data(), _fid: d.id}));
     CACHE.set('bachadas', data);
     filtrarBachadas();
+    // Re-renderizar timeline si está visible
+    if(document.getElementById('dash-page-5')?.classList.contains('active')) {
+      renderTimeline();
+    }
+    // Re-renderizar dashboard si está visible
+    if(document.querySelector('.dash-page.active')) {
+      renderDashboard();
+    }
   }, err => console.warn('bachadas:', err)));
 
   // Eventos
@@ -1359,6 +1370,14 @@ function startListeners() {
     const data = snap.docs.map(d => ({...d.data(), _fid: d.id}));
     CACHE.set('eventos', data);
     renderEventos();
+    // Re-renderizar timeline si está visible
+    if(document.getElementById('dash-page-5')?.classList.contains('active')) {
+      renderTimeline();
+    }
+    // Re-renderizar dashboard si está visible
+    if(document.querySelector('.dash-page.active')) {
+      renderDashboard();
+    }
   }, err => console.warn('eventos:', err)));
 
   // Usuarios
@@ -2657,174 +2676,202 @@ document.addEventListener('keydown', function(e) {
 
 // ======== TIMELINE POR EQUIPO ========
 function renderTimeline() {
+  // ----------------------------------------------------------
+  // CONFIGURACIÓN BASE
+  // ----------------------------------------------------------
   const equipoSel = document.getElementById('tl-equipo')?.value || 'C1';
   const fecha = document.getElementById('tl-fecha')?.value || today();
   const tipoF = document.getElementById('tl-tipo')?.value || '';
   const turnoF = document.getElementById('tl-turno')?.value || 'all';
 
-  const titleEl = document.getElementById('tl-title');
   const equipoLabel = (eq) => eq==='TE' ? 'Túnel Estático' : 'Congelador ' + eq.replace('C','');
 
-  // Lista de equipos: si es ALL, todos C1-C11 + TE
   const equiposLista = equipoSel === 'ALL'
     ? ['C1','C2','C3','C4','C5','C6','C7','C8','C9','C10','C11','TE']
     : [equipoSel];
 
-  if(titleEl) {
-    titleEl.textContent = equipoSel === 'ALL'
-      ? '📅 Línea de Tiempo — Todos los Congeladores · ' + fecha + ' · ' + (turnoF==='dia'?'Turno Día':turnoF==='noche'?'Turno Noche':'Día Completo (08–08h)')
-      : '📅 Línea de Tiempo — ' + equipoLabel(equipoSel) + ' · ' + fecha + ' · ' + (turnoF==='dia'?'Turno Día':turnoF==='noche'?'Turno Noche':'Día Completo (08–08h)');
-  }
-
-  // Rango horario según turno (en horas absolutas desde 0)
-  // Día: 08:00 a 20:00 → eje 0-12 (offset 8h)
-  // Noche: 20:00 a 08:00 → eje 0-12 (offset 20h, cruce día)
-  // All: 08:00 a 08:00 → eje 0-24 (offset 8h, cruce día)
+  // Ventana operativa: SIEMPRE 08:00 a 08:00 del día siguiente (=08h a 32h relativo)
+  // Sub-rangos por turno
   let rangeStart, rangeEnd, axisMin, axisMax;
   if(turnoF === 'dia') {
     rangeStart = 8; rangeEnd = 20; axisMin = 8; axisMax = 20;
   } else if(turnoF === 'noche') {
-    rangeStart = 20; rangeEnd = 32; axisMin = 20; axisMax = 32; // 32 = 08h del día siguiente
+    rangeStart = 20; rangeEnd = 32; axisMin = 20; axisMax = 32;
   } else {
-    rangeStart = 8; rangeEnd = 32; axisMin = 8; axisMax = 32; // Día completo
+    rangeStart = 8; rangeEnd = 32; axisMin = 8; axisMax = 32;
   }
 
-  const REF = { tcong: 6, carga_descarga: 1, descongelamiento: 1.5, programada: 2, no_programada: 0, fin_proceso: 0 };
-  const colorMap = { carga_descarga:'#ff6600', descongelamiento:'#4a6a8a', sin_produccion:'#00ffb3', programada:'#00e87a', no_programada:'#ff3b5c', fin_proceso:'#a855f7' };
+  // Título
+  const titleEl = document.getElementById('tl-title');
+  if(titleEl) {
+    const turnoLbl = turnoF==='dia' ? 'Turno Día (08–20h)'
+                   : turnoF==='noche' ? 'Turno Noche (20–08h)'
+                   : 'Día Operativo (08–08h)';
+    titleEl.textContent = equipoSel === 'ALL'
+      ? '📅 Línea de Tiempo — Todos los Congeladores · ' + fecha + ' · ' + turnoLbl
+      : '📅 Línea de Tiempo — ' + equipoLabel(equipoSel) + ' · ' + fecha + ' · ' + turnoLbl;
+  }
 
-  // ---- Helper: construye segmentos para un equipo en un día (cruza medianoche cuando turno noche o all)
+  // Referencias
+  const REF = { tcong: 6, carga_descarga: 1, descongelamiento: 1.5, programada: 2, no_programada: 0, sin_produccion: 0, fin_proceso: 0 };
+  const colorMap = {
+    carga_descarga:  '#ff6600',   // naranja
+    descongelamiento:'#4a6a8a',   // azul gris
+    sin_produccion:  '#00ffb3',   // teal — "Sin MP"
+    programada:      '#00e87a',   // verde
+    no_programada:   '#ff3b5c',   // rojo
+    fin_proceso:     null         // SIN COLOR — espacio vacío
+  };
+
+  // ----------------------------------------------------------
+  // CONSTRUCCIÓN DE SEGMENTOS POR EQUIPO
+  // ----------------------------------------------------------
   function buildSegments(equipo) {
-    // Convierte fecha+hora a "horas desde la medianoche del día principal (fecha)"
-    // Esto maneja correctamente eventos/bachadas de cualquier día previo o posterior.
-    const baseDate = new Date(fecha + 'T00:00:00');
-    const baseMs = baseDate.getTime();
-    
-    function toAbsHours(fStr, hStr) {
+    // Base = medianoche del día seleccionado (en milisegundos)
+    const baseMs = new Date(fecha + 'T00:00:00').getTime();
+    const toAbs = (fStr, hStr) => {
       if(!fStr || !hStr) return null;
-      const d = new Date(fStr + 'T' + hStr + ':00');
-      return (d.getTime() - baseMs) / 3600000; // horas desde la medianoche del día principal
-    }
+      return (new Date(fStr + 'T' + hStr + ':00').getTime() - baseMs) / 3600000;
+    };
 
-    // Filtrar amplio: cualquier registro del equipo cerrado (luego filtramos por intersección)
+    // Solo registros del equipo y cerrados (los abiertos se mostrarán cuando se cierren)
     const allBachs = DB.get('bachadas',[]).filter(b => b.equipo===equipo && b.estado==='cerrado');
     const allEvs   = DB.get('eventos',[]).filter(e => e.equipo===equipo && e.estado==='cerrado');
 
-    const segs = [];
+    const items = [];
 
-    // ---- Procesar bachadas ----
+    // --- BACHADAS ---
     allBachs.forEach(b => {
-      if(tipoF && tipoF!=='bachada') return;
       if(!b.inicio || !b.fecha) return;
-      
-      const startAbs = toAbsHours(b.fecha, b.inicio);
+      const startAbs = toAbs(b.fecha, b.inicio);
       if(startAbs === null) return;
-      
-      let endAbs;
+
+      let endAbs = null;
       if(b.fin) {
-        // Si hay fechaFin explícita, úsala; sino asumir mismo día
         const fechaFin = b.fechaFin || b.fecha;
-        endAbs = toAbsHours(fechaFin, b.fin);
-        // Detección robusta de cruce de medianoche:
-        // Si endAbs queda ANTES de startAbs, siempre interpretar como cruce de día
-        if(endAbs !== null && endAbs < startAbs) {
-          endAbs += 24;
-        }
+        endAbs = toAbs(fechaFin, b.fin);
+        // Detección robusta de cruce de medianoche
+        if(endAbs !== null && endAbs < startAbs) endAbs += 24;
       } else if(b.tcong) {
         endAbs = startAbs + b.tcong;
-      } else {
-        return; // sin fin ni tcong, ignorar
       }
       if(endAbs === null) return;
-      // Sanity check: duración irrealmente larga (> 24h para una bachada) = dato corrupto, ignorar
+
+      // Sanity: duración irrealmente larga = dato corrupto
       if((endAbs - startAbs) > 24) return;
 
-      // ¿Interseca con la ventana visible? La ventana es [rangeStart, rangeEnd] en horas desde medianoche
-      if(endAbs <= rangeStart || startAbs >= rangeEnd) return;
-
-      const segStart = Math.max(startAbs, rangeStart);
-      const segEnd   = Math.min(endAbs,   rangeEnd);
-      if(segEnd <= segStart) return;
-
-      const durReal = endAbs - startAbs;
-      const desv = durReal > REF.tcong ? (durReal - REF.tcong).toFixed(2) : null;
-      // Marcar si el segmento está recortado (pertenece a día anterior o siguiente)
-      const truncIni = startAbs < rangeStart;
-      const truncFin = endAbs > rangeEnd;
-      let labelStr = 'Bach #'+b.bach;
-      if(truncIni) labelStr = '⬅ ' + labelStr; // viene del día anterior
-      if(truncFin) labelStr = labelStr + ' ➡'; // continúa el día siguiente
-      // Si está totalmente fuera del día principal (no es del día actual), agregar info
-      if(b.fecha !== fecha && !truncIni && !truncFin) {
-        // Solo si la bachada NO es del día principal y NO cruza al día principal
-        // probablemente sea un error de filtro, omitir
-        return;
-      }
-      segs.push({
-        label: labelStr,
-        startH: segStart, endH: segEnd,
-        realStart: startAbs, realEnd: endAbs,
-        type:'bachada', color:'#00c8ff', borderColor:'#0088cc', desv,
-        desc: b.producto+' ('+b.aros+' aros, '+((b.peso||0).toFixed(0))+'kg)' + (truncIni||truncFin?' · barra recortada':''),
-        equipo: equipo,
-        bachFecha: b.fecha
+      items.push({
+        kind: 'bachada',
+        startAbs, endAbs,
+        label: 'Bach #' + b.bach,
+        rawTipo: 'bachada',
+        bachNum: b.bach,
+        meta: { producto: b.producto, aros: b.aros, peso: b.peso, fecha: b.fecha }
       });
     });
 
-    // ---- Procesar eventos ----
+    // --- EVENTOS ---
     allEvs.forEach(e => {
-      if(tipoF && tipoF!==e.tipo) return;
       if(!e.inicio || !e.fechaIni) return;
-      
-      const startAbs = toAbsHours(e.fechaIni, e.inicio);
+      const startAbs = toAbs(e.fechaIni, e.inicio);
       if(startAbs === null) return;
-      
-      let endAbs;
+
+      let endAbs = null;
       if(e.fin) {
         const fechaFin = e.fechaFin || e.fechaIni;
-        endAbs = toAbsHours(fechaFin, e.fin);
-        // Cruce de medianoche: solo aplicar si fechaFin no fue especificada explícitamente
-        // (porque eventos como fin_proceso pueden durar varios días con fechaFin distinta)
-        if(endAbs !== null && endAbs < startAbs && !e.fechaFin) {
-          endAbs += 24;
-        }
+        endAbs = toAbs(fechaFin, e.fin);
+        // Solo aplicar cruce automático si fechaFin no fue declarada explícita
+        if(endAbs !== null && endAbs < startAbs && !e.fechaFin) endAbs += 24;
       } else if(e.durH) {
         endAbs = startAbs + e.durH;
-      } else {
-        return;
       }
       if(endAbs === null) return;
-      // Sanity check: para fin_proceso permite hasta 96h (4 días); resto máximo 48h
+
+      // Sanity check según tipo
       const maxDur = (e.tipo === 'fin_proceso') ? 96 : 48;
       if((endAbs - startAbs) > maxDur) return;
 
-      if(endAbs <= rangeStart || startAbs >= rangeEnd) return;
-      const segStart = Math.max(startAbs, rangeStart);
-      const segEnd   = Math.min(endAbs,   rangeEnd);
-      if(segEnd <= segStart) return;
-
-      const ref = REF[e.tipo] || 0;
-      const desv = ref > 0 && (e.durH||0) > ref ? ((e.durH||0)-ref).toFixed(2) : null;
-      const truncIni = startAbs < rangeStart;
-      const truncFin = endAbs > rangeEnd;
-      let labelStr = e.tipoLabel || e.tipo;
-      if(truncIni) labelStr = '⬅ ' + labelStr;
-      if(truncFin) labelStr = labelStr + ' ➡';
-      segs.push({
-        label: labelStr,
-        startH: segStart, endH: segEnd,
-        realStart: startAbs, realEnd: endAbs,
-        type: e.tipo, color: colorMap[e.tipo]||'#888', borderColor: colorMap[e.tipo]||'#888',
-        desv, desc: (e.desc || e.accion || '') + (truncIni||truncFin?' · barra recortada':''),
-        equipo: equipo,
-        evFecha: e.fechaIni
+      items.push({
+        kind: 'evento',
+        startAbs, endAbs,
+        label: e.tipoLabel || e.tipo,
+        rawTipo: e.tipo,
+        meta: { desc: e.desc, accion: e.accion, tecnico: e.tecnico }
       });
     });
 
-    segs.sort((a,b) => a.startH - b.startH);
+    // Filtrar por ventana visible (intersección)
+    let visibles = items.filter(it => it.endAbs > rangeStart && it.startAbs < rangeEnd);
+
+    // Filtro por tipo
+    if(tipoF) {
+      visibles = visibles.filter(it => {
+        if(tipoF === 'bachada') return it.kind === 'bachada';
+        return it.rawTipo === tipoF;
+      });
+    }
+
+    // Ordenar cronológicamente
+    visibles.sort((a,b) => a.startAbs - b.startAbs);
+
+    // ----------------------------------------------------------
+    // CONSTRUIR SEGMENTOS VISUALES
+    // Cada item se transforma en un segmento dibujable.
+    // fin_proceso → NO se dibuja (es espacio vacío). Pero igualmente lo registramos para análisis.
+    // ----------------------------------------------------------
+    const segs = [];
+    visibles.forEach(it => {
+      const segStart = Math.max(it.startAbs, rangeStart);
+      const segEnd   = Math.min(it.endAbs,   rangeEnd);
+      if(segEnd <= segStart) return;
+
+      // FIN DE PROCESO → no se dibuja, queda como espacio vacío en la línea
+      if(it.rawTipo === 'fin_proceso') return;
+
+      // Marcadores de truncamiento
+      const truncIni = it.startAbs < rangeStart;
+      const truncFin = it.endAbs > rangeEnd;
+      let labelStr = it.label;
+      if(truncIni) labelStr = '⬅ ' + labelStr;
+      if(truncFin) labelStr = labelStr + ' ➡';
+
+      const color = colorMap[it.rawTipo] || (it.kind==='bachada' ? '#00c8ff' : '#888');
+      const borderColor = it.kind==='bachada' ? '#0088cc' : color;
+
+      // Desviación (solo para bachadas y eventos con REF > 0)
+      let desv = null;
+      const durReal = it.endAbs - it.startAbs;
+      if(it.kind === 'bachada' && durReal > REF.tcong) {
+        desv = (durReal - REF.tcong).toFixed(2);
+      } else if(it.kind === 'evento' && REF[it.rawTipo] > 0 && durReal > REF[it.rawTipo]) {
+        desv = (durReal - REF[it.rawTipo]).toFixed(2);
+      }
+
+      // Descripción para tooltip
+      let desc = '';
+      if(it.kind === 'bachada' && it.meta) {
+        desc = (it.meta.producto||'') + ' (' + (it.meta.aros||0) + ' aros, ' + ((it.meta.peso||0).toFixed(0)) + 'kg)';
+      } else if(it.kind === 'evento' && it.meta) {
+        desc = it.meta.desc || it.meta.accion || '';
+      }
+      if(truncIni || truncFin) desc += ' · barra recortada';
+
+      segs.push({
+        label: labelStr,
+        startH: segStart, endH: segEnd,
+        realStart: it.startAbs, realEnd: it.endAbs,
+        type: it.rawTipo, color, borderColor, desv, desc,
+        equipo: equipo,
+        kind: it.kind
+      });
+    });
+
     return segs;
   }
 
-  // Destruir charts previos del timeline (todos los que tengan prefijo "timeline-")
+  // ----------------------------------------------------------
+  // DESTRUIR CHARTS PREVIOS DEL TIMELINE
+  // ----------------------------------------------------------
   Object.keys(charts).forEach(k => {
     if(k.startsWith('timeline')) {
       try { charts[k].destroy(); } catch(e) {}
@@ -2832,82 +2879,89 @@ function renderTimeline() {
     }
   });
 
-  // Reconstruir container
   const container = document.getElementById('tl-charts-container');
   if(!container) return;
 
+  // ----------------------------------------------------------
+  // VISTA "TODOS LOS CONGELADORES" — Grid 2 columnas
+  // ----------------------------------------------------------
   if(equipoSel === 'ALL') {
-    // Grid de 2 columnas en desktop, 1 en móvil
     container.innerHTML = '<div id="tl-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(450px,1fr));gap:14px;"></div>';
     const grid = document.getElementById('tl-grid');
-    let totalSegments = 0;
-    equiposLista.forEach((eq, idx) => {
+    let totalSegs = 0;
+
+    equiposLista.forEach(eq => {
       const segs = buildSegments(eq);
       if(!segs.length) return;
-      totalSegments += segs.length;
+      totalSegs += segs.length;
+
       const block = document.createElement('div');
       block.style.cssText = 'background:var(--surface2);border-radius:10px;padding:12px 14px;border:1px solid var(--border);min-width:0;';
-      block.innerHTML = `
-        <div style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--accent);margin-bottom:8px;">${equipoLabel(eq)}</div>
-        <div style="position:relative;"><canvas id="timeline-${eq}" height="${Math.max(80, segs.length*26)}"></canvas></div>
-      `;
+      block.innerHTML = '<div style="font-family:\'Syne\',sans-serif;font-size:13px;font-weight:700;color:var(--accent);margin-bottom:8px;">' + equipoLabel(eq) + '</div>'
+                     + '<div style="position:relative;"><canvas id="timeline-' + eq + '" height="' + Math.max(80, segs.length*26) + '"></canvas></div>';
       grid.appendChild(block);
-      const canvas = document.getElementById('timeline-'+eq);
-      drawChart(canvas, segs, 'timeline-'+eq);
+
+      drawChart(document.getElementById('timeline-' + eq), segs, 'timeline-' + eq);
     });
-    if(totalSegments === 0) {
+
+    if(totalSegs === 0) {
       container.innerHTML = '<div style="text-align:center;color:var(--text3);padding:40px;">Sin datos para el día y turno seleccionados en ningún equipo</div>';
     }
+
     const tbody = document.getElementById('tbody-timeline');
     if(tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:16px;">Selecciona un equipo específico para ver detalle</td></tr>';
-  } else {
-    // Un solo equipo
-    container.innerHTML = '<canvas id="chart-timeline" height="120"></canvas>';
-    const segs = buildSegments(equipoSel);
-    const canvas = document.getElementById('chart-timeline');
-    drawChart(canvas, segs, 'timeline');
+    return;
+  }
 
-    // Tabla detalle solo para equipo único
-    const tbody = document.getElementById('tbody-timeline');
-    if(tbody) {
-      if(!segs.length) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:20px;">Sin datos para el equipo, día y turno seleccionados</td></tr>';
-      } else {
-        tbody.innerHTML = segs.map(s => {
-          const dur = (s.realEnd - s.realStart).toFixed(2);
-          const desvCell = s.desv
-            ? `<span class="badge badge-red">+${s.desv}h</span>`
-            : `<span class="badge badge-green">OK</span>`;
-          return `<tr>
-            <td><span class="badge" style="background:${s.color}22;color:${s.color};border:1px solid ${s.color}44;">${s.label}</span></td>
-            <td class="font-mono">${toHHMM(s.realStart)}</td>
-            <td class="font-mono">${toHHMM(s.realEnd)}</td>
-            <td class="font-mono">${dur}h</td>
-            <td>${desvCell}</td>
-            <td style="max-width:200px;white-space:normal;font-size:11.5px;">${s.desc||'—'}</td>
-          </tr>`;
-        }).join('');
-      }
+  // ----------------------------------------------------------
+  // VISTA EQUIPO INDIVIDUAL
+  // ----------------------------------------------------------
+  container.innerHTML = '<canvas id="chart-timeline" height="120"></canvas>';
+  const segs = buildSegments(equipoSel);
+  drawChart(document.getElementById('chart-timeline'), segs, 'timeline');
+
+  // Tabla detalle
+  const tbody = document.getElementById('tbody-timeline');
+  if(tbody) {
+    if(!segs.length) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:20px;">Sin datos para el equipo, día y turno seleccionados</td></tr>';
+    } else {
+      tbody.innerHTML = segs.map(s => {
+        const dur = (s.realEnd - s.realStart).toFixed(2);
+        const desvCell = s.desv
+          ? '<span class="badge badge-red">+' + s.desv + 'h</span>'
+          : '<span class="badge badge-green">OK</span>';
+        return '<tr>'
+             + '<td><span class="badge" style="background:' + s.color + '22;color:' + s.color + ';border:1px solid ' + s.color + '44;">' + s.label + '</span></td>'
+             + '<td class="font-mono">' + toHHMM(s.realStart) + '</td>'
+             + '<td class="font-mono">' + toHHMM(s.realEnd) + '</td>'
+             + '<td class="font-mono">' + dur + 'h</td>'
+             + '<td>' + desvCell + '</td>'
+             + '<td style="max-width:200px;white-space:normal;font-size:11.5px;">' + (s.desc||'—') + '</td>'
+             + '</tr>';
+      }).join('');
     }
   }
 
-  // ---- Helper interno: dibujar chart
+  // ----------------------------------------------------------
+  // DRAW CHART (helper)
+  // ----------------------------------------------------------
   function drawChart(canvas, segments, chartKey) {
     if(!canvas) return;
     if(!segments.length) {
       const ctx = canvas.getContext('2d');
-      ctx.clearRect(0,0,canvas.width,canvas.height);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
       return;
     }
     const labels = segments.map(s => s.label);
     const data = segments.map(s => [s.startH, s.endH]);
-    const bgColors = segments.map(s => s.color+'cc');
+    const bgColors = segments.map(s => s.color + 'cc');
     const borderColors = segments.map(s => s.desv ? '#ff3b5c' : s.borderColor);
     const borderW = segments.map(s => s.desv ? 3 : 1);
 
     charts[chartKey] = new Chart(canvas, {
       type: 'bar',
-      data: { labels, datasets: [{ label:'Eventos', data, backgroundColor:bgColors, borderColor:borderColors, borderWidth:borderW, borderRadius:4 }] },
+      data: { labels, datasets: [{ label:'Eventos', data, backgroundColor: bgColors, borderColor: borderColors, borderWidth: borderW, borderRadius: 4 }] },
       options: {
         indexAxis: 'y',
         responsive: true,
@@ -2919,9 +2973,9 @@ function renderTimeline() {
               label: function(ctx) {
                 const s = segments[ctx.dataIndex];
                 const dur = (s.realEnd - s.realStart).toFixed(2);
-                let txt = [`Inicio: ${toHHMM(s.realStart)}  Fin: ${toHHMM(s.realEnd)}  Duración: ${dur}h`];
-                if(s.desv) txt.push(`⚠️ Desviación: +${s.desv}h sobre el promedio`);
-                if(s.desc) txt.push(`Obs: ${s.desc}`);
+                let txt = ['Inicio: ' + toHHMM(s.realStart) + '  Fin: ' + toHHMM(s.realEnd) + '  Duración: ' + dur + 'h'];
+                if(s.desv) txt.push('⚠️ Desviación: +' + s.desv + 'h sobre el promedio');
+                if(s.desc) txt.push('Obs: ' + s.desc);
                 return txt;
               }
             }
@@ -2932,7 +2986,7 @@ function renderTimeline() {
             min: axisMin, max: axisMax,
             grid: { color: '#1e3352' },
             ticks: { color: '#8aaac8', font: { size: 10 }, stepSize: 2, callback: v => toHHMM(v) },
-            title: { display: true, text: `Hora del día (${toHHMM(axisMin)} → ${toHHMM(axisMax)})`, color: '#8aaac8', font: { size: 11 } }
+            title: { display: true, text: 'Hora del día (' + toHHMM(axisMin) + ' → ' + toHHMM(axisMax) + ')', color: '#8aaac8', font: { size: 11 } }
           },
           y: {
             grid: { color: '#1e3352' },

@@ -2727,47 +2727,60 @@ function renderTimeline() {
   // CONSTRUCCIÓN DE SEGMENTOS POR EQUIPO
   // ----------------------------------------------------------
   function buildSegments(equipo) {
-    // ----------------------------------------------------------
-    // LÓGICA DE DÍA OPERATIVO
-    // ----------------------------------------------------------
-    // El día operativo va de 08:00 del día seleccionado a 08:00 del día siguiente.
-    // El campo `fecha` en BD representa el DÍA OPERATIVO, no la fecha calendario.
-    // Si una hora < 08:00, pertenece al día calendario siguiente al operativo.
+    // ============================================================
+    // LÓGICA DE DÍA OPERATIVO BASADA EN TIMESTAMPS REALES
+    // ============================================================
+    // Cada bachada/evento se representa por su intervalo real [startTs, endTs] en ms.
+    // El día operativo seleccionado define una ventana de tiempo:
+    //   opStart = fecha (08:00 AM)
+    //   opEnd   = fecha + 24h (08:00 AM del día siguiente)
+    // La intersección entre ese intervalo y la ventana operativa nos da el segmento visible.
     //
-    // Eje de visualización: horas desde la medianoche del día calendario seleccionado.
-    //   - 08:00 del día operativo = posición 8
-    //   - 23:59 del día operativo = posición 23.98
-    //   - 00:00 del día siguiente calendario = posición 24 (sigue siendo el operativo)
-    //   - 07:59 del día siguiente calendario = posición 31.98
-    //   - 08:00 del día siguiente calendario = posición 32 (fin del operativo)
-    //
-    // FÓRMULA: posición = hora numérica + (hora < 8 ? 24 : 0)
-    //
-    // Filtro: SOLO registros cuyo campo `fecha` == día operativo seleccionado
-    // (Esto agrupa correctamente bachadas/eventos que cruzan medianoche.)
-    // ----------------------------------------------------------
+    // VENTAJAS:
+    //  - Maneja bachadas que cruzan medianoche (siempre estuvo OK)
+    //  - Maneja bachadas que cruzan al SIGUIENTE día operativo (08:00 AM)
+    //  - Si un evento empezó en el operativo anterior y termina en el actual, se muestra recortado
+    //  - Si un evento empieza en el actual y termina en el siguiente operativo, se muestra recortado
+    //  - Sin lógicas artificiales de "rellenar hasta las 08:00"
+    // ============================================================
 
-    const OP_DAY = fecha; // Día operativo seleccionado (formato YYYY-MM-DD)
+    const OP_DAY = fecha; // YYYY-MM-DD del día operativo seleccionado
 
-    // Convierte (fechaOperativa, hora) → posición en horas desde la medianoche del día seleccionado
-    // Si la hora es < 08:00, suma 24h (pertenece a las horas 24-32 del día operativo)
-    function opHourPos(fOp, hStr) {
-      if(!fOp || !hStr) return null;
-      if(fOp !== OP_DAY) return null; // No es del día operativo actual
-      const [hh, mm] = hStr.split(':').map(Number);
-      let pos = hh + mm/60;
-      if(pos < 8) pos += 24; // Pertenece a la madrugada del día operativo (horas 24-32)
-      return pos;
+    // opBaseMs: medianoche del día calendario seleccionado (en ms)
+    const opBaseMs = new Date(OP_DAY + 'T00:00:00').getTime();
+    // Ventana operativa absoluta (en ms)
+    const opStartMs = opBaseMs + 8 * 3600000;       // 08:00 AM del día seleccionado
+    const opEndMs   = opStartMs + 24 * 3600000;     // 08:00 AM del día siguiente
+
+    // Convierte timestamp ms → posición en eje (horas desde medianoche del día seleccionado)
+    // El eje va de 8 (08:00 AM día actual) a 32 (08:00 AM día siguiente)
+    const tsToAxisH = (ms) => (ms - opBaseMs) / 3600000;
+
+    // Construye un timestamp real desde fecha YYYY-MM-DD + hora HH:MM
+    function buildTs(fStr, hStr) {
+      if(!fStr || !hStr) return null;
+      const t = new Date(fStr + 'T' + hStr + ':00').getTime();
+      return isNaN(t) ? null : t;
     }
 
     // ============================================================
-    // FILTRADO: solo registros cuyo campo `fecha` coincide con el día operativo
+    // CONSTRUIR INTERVALOS [startTs, endTs] REALES PARA BACHADAS Y EVENTOS
     // ============================================================
+    // Filtramos AMPLIO: tomamos registros del día operativo anterior, actual y siguiente,
+    // para capturar eventos que crucen las fronteras del día operativo seleccionado.
+    const opDate = new Date(OP_DAY + 'T00:00:00');
+    const opPrev = new Date(opDate); opPrev.setDate(opDate.getDate() - 1);
+    const opNext = new Date(opDate); opNext.setDate(opDate.getDate() + 1);
+    const fmt = d => d.toISOString().split('T')[0];
+    const D_PREV = fmt(opPrev);
+    const D_NEXT = fmt(opNext);
+    const FECHAS_CANDIDATAS = [D_PREV, OP_DAY, D_NEXT];
+
     const allBachs = DB.get('bachadas',[]).filter(b =>
-      b.equipo===equipo && b.estado==='cerrado' && b.fecha===OP_DAY
+      b.equipo===equipo && b.estado==='cerrado' && FECHAS_CANDIDATAS.includes(b.fecha)
     );
     const allEvs = DB.get('eventos',[]).filter(e =>
-      e.equipo===equipo && e.estado==='cerrado' && e.fechaIni===OP_DAY
+      e.equipo===equipo && e.estado==='cerrado' && FECHAS_CANDIDATAS.includes(e.fechaIni)
     );
 
     const items = [];
@@ -2775,56 +2788,29 @@ function renderTimeline() {
     // ---- BACHADAS ----
     allBachs.forEach(b => {
       if(!b.inicio) return;
-      const startAbs = opHourPos(b.fecha, b.inicio);
-      if(startAbs === null) return;
+      const startTs = buildTs(b.fecha, b.inicio);
+      if(startTs === null) return;
 
-      let endAbs = null;
+      let endTs = null;
       if(b.fin) {
-        // Para el fin: si tiene fechaFin, podría ser día calendario distinto pero MISMO operativo
-        // La regla: si fechaFin === fecha O fechaFin es el día calendario siguiente al operativo
-        //   con hora < 08:00 → sigue siendo el mismo operativo
-        // Calculamos endAbs como opHourPos del operativo + hora
-        // Si fechaFin == OP_DAY → usar opHourPos
-        // Si fechaFin == OP_DAY+1 día Y fin < 08:00 → posición = fin + 24
-        const [eh, em] = b.fin.split(':').map(Number);
-        let endHour = eh + em/60;
-
-        if(!b.fechaFin || b.fechaFin === OP_DAY) {
-          // Fin en el mismo día operativo
-          if(endHour < 8) endHour += 24;
-          endAbs = endHour;
-        } else {
-          // fechaFin diferente — verificar si es el día calendario siguiente con hora <8
-          const opDate = new Date(OP_DAY + 'T00:00:00');
-          const opNext = new Date(opDate); opNext.setDate(opDate.getDate() + 1);
-          const opNextStr = opNext.toISOString().split('T')[0];
-          if(b.fechaFin === opNextStr && endHour < 8) {
-            endAbs = endHour + 24;
-          } else if(b.fechaFin === opNextStr && endHour >= 8) {
-            // Fin a las 08:00 o más del día siguiente — ya es otro operativo, recortar
-            endAbs = 32; // fin del operativo
-          } else {
-            // fechaFin lejana — dato inconsistente
-            return;
-          }
-        }
-        // Si endAbs quedó <= startAbs aplicar cruce explícito (defensa)
-        if(endAbs <= startAbs) endAbs = startAbs + (b.tcong || 6);
+        const fechaFin = b.fechaFin || b.fecha;
+        endTs = buildTs(fechaFin, b.fin);
+        // Si endTs ≤ startTs, asumir cruce de medianoche (sumar 24h)
+        if(endTs !== null && endTs <= startTs) endTs += 24 * 3600000;
       } else if(b.tcong) {
-        endAbs = startAbs + b.tcong;
+        endTs = startTs + b.tcong * 3600000;
       }
-      if(endAbs === null) return;
+      if(endTs === null) return;
 
       // Sanity: duración irreal
-      if((endAbs - startAbs) > 24) return;
+      if((endTs - startTs) > 24 * 3600000) return;
 
       items.push({
         kind: 'bachada',
-        startAbs, endAbs,
+        startTs, endTs,
         label: 'Bach #' + b.bach,
         rawTipo: 'bachada',
         bachNum: b.bach,
-        turno: b.turno,
         meta: { producto: b.producto, aros: b.aros, peso: b.peso, fecha: b.fecha, turno: b.turno }
       });
     });
@@ -2832,70 +2818,79 @@ function renderTimeline() {
     // ---- EVENTOS ----
     allEvs.forEach(e => {
       if(!e.inicio) return;
-      const startAbs = opHourPos(e.fechaIni, e.inicio);
-      if(startAbs === null) return;
+      const startTs = buildTs(e.fechaIni, e.inicio);
+      if(startTs === null) return;
 
-      let endAbs = null;
+      let endTs = null;
       if(e.fin) {
-        const [eh, em] = e.fin.split(':').map(Number);
-        let endHour = eh + em/60;
-
-        if(!e.fechaFin || e.fechaFin === OP_DAY) {
-          if(endHour < 8) endHour += 24;
-          endAbs = endHour;
-        } else {
-          const opDate = new Date(OP_DAY + 'T00:00:00');
-          const opNext = new Date(opDate); opNext.setDate(opDate.getDate() + 1);
-          const opNextStr = opNext.toISOString().split('T')[0];
-          if(e.fechaFin === opNextStr && endHour < 8) {
-            endAbs = endHour + 24;
-          } else if(e.fechaFin === opNextStr && endHour >= 8) {
-            // Evento que termina ya en otro día operativo — recortar al límite
-            endAbs = 32;
-          } else {
-            // fechaFin > opNextStr: evento de larga duración (típico fin_proceso)
-            // Recortar visualmente al límite del operativo
-            endAbs = 32;
-          }
-        }
-        if(endAbs <= startAbs) endAbs = startAbs + (e.durH || 1);
+        const fechaFin = e.fechaFin || e.fechaIni;
+        endTs = buildTs(fechaFin, e.fin);
+        // Solo aplicar cruce automático si fechaFin no se declaró explícita
+        if(endTs !== null && endTs <= startTs && !e.fechaFin) endTs += 24 * 3600000;
       } else if(e.durH) {
-        endAbs = startAbs + e.durH;
+        endTs = startTs + e.durH * 3600000;
       }
-      if(endAbs === null) return;
+      if(endTs === null) return;
 
-      // Sanity por tipo
-      const maxDur = (e.tipo === 'fin_proceso') ? 96 : 48;
-      if((endAbs - startAbs) > maxDur && e.tipo !== 'fin_proceso') return;
+      // Sanity: para fin_proceso permite hasta 96h; otros máx 48h
+      const maxMs = (e.tipo === 'fin_proceso' ? 96 : 48) * 3600000;
+      if((endTs - startTs) > maxMs) return;
 
       items.push({
         kind: 'evento',
-        startAbs, endAbs,
+        startTs, endTs,
         label: e.tipoLabel || e.tipo,
         rawTipo: e.tipo,
         meta: { desc: e.desc, accion: e.accion, tecnico: e.tecnico }
       });
     });
 
-    // Filtrar por ventana visible (intersección con rangeStart..rangeEnd)
-    let visibles = items.filter(it => it.endAbs > rangeStart && it.startAbs < rangeEnd);
+    // ============================================================
+    // INTERSECCIÓN CON LA VENTANA OPERATIVA SELECCIONADA
+    // ============================================================
+    // Cada item se recorta a [opStartMs, opEndMs]
+    // Si su intersección es vacía, se descarta
+    // Si está parcialmente recortado, se marca con flechas
+    let intersected = [];
+    items.forEach(it => {
+      // Calcular intersección con la ventana operativa
+      const interStart = Math.max(it.startTs, opStartMs);
+      const interEnd   = Math.min(it.endTs,   opEndMs);
+      if(interEnd <= interStart) return; // sin intersección con este día operativo
+
+      intersected.push({
+        ...it,
+        startAbs: tsToAxisH(interStart),   // posición visible (8 a 32)
+        endAbs:   tsToAxisH(interEnd),
+        realStartTs: it.startTs,
+        realEndTs:   it.endTs,
+        realStartAbs: tsToAxisH(it.startTs), // puede estar fuera del rango visible
+        realEndAbs:   tsToAxisH(it.endTs),
+        truncIni: it.startTs < opStartMs, // empezó en el operativo anterior
+        truncFin: it.endTs   > opEndMs    // termina en el operativo siguiente
+      });
+    });
 
     // Filtro por tipo
     if(tipoF) {
-      visibles = visibles.filter(it => {
+      intersected = intersected.filter(it => {
         if(tipoF === 'bachada') return it.kind === 'bachada';
         return it.rawTipo === tipoF;
       });
     }
 
-    // Ordenar cronológicamente
-    visibles.sort((a,b) => a.startAbs - b.startAbs);
+    // Aplicar filtro de turno sobre el rango del eje
+    // Día (08-20) = 8..20, Noche (20-08) = 20..32, All = 8..32
+    intersected = intersected.filter(it => it.endAbs > rangeStart && it.startAbs < rangeEnd);
 
-    // ----------------------------------------------------------
-    // SEGMENTOS VISUALES
-    // ----------------------------------------------------------
+    // Ordenar cronológicamente
+    intersected.sort((a,b) => a.startAbs - b.startAbs);
+
+    // ============================================================
+    // CONSTRUIR SEGMENTOS VISUALES
+    // ============================================================
     const segs = [];
-    visibles.forEach(it => {
+    intersected.forEach(it => {
       const segStart = Math.max(it.startAbs, rangeStart);
       const segEnd   = Math.min(it.endAbs,   rangeEnd);
       if(segEnd <= segStart) return;
@@ -2903,36 +2898,42 @@ function renderTimeline() {
       // FIN DE PROCESO → NO se dibuja (espacio vacío)
       if(it.rawTipo === 'fin_proceso') return;
 
-      const truncIni = it.startAbs < rangeStart;
-      const truncFin = it.endAbs > rangeEnd;
+      // Marcadores de fragmentación entre días operativos
       let labelStr = it.label;
-      if(truncIni) labelStr = '⬅ ' + labelStr;
-      if(truncFin) labelStr = labelStr + ' ➡';
+      if(it.truncIni) labelStr = '⬅ ' + labelStr;
+      if(it.truncFin) labelStr = labelStr + ' ➡';
 
       const color = colorMap[it.rawTipo] || (it.kind==='bachada' ? '#00c8ff' : '#888');
       const borderColor = it.kind==='bachada' ? '#0088cc' : color;
 
+      // Desviación calculada sobre la DURACIÓN REAL (no la visible)
       let desv = null;
-      const durReal = it.endAbs - it.startAbs;
-      if(it.kind === 'bachada' && durReal > REF.tcong) {
-        desv = (durReal - REF.tcong).toFixed(2);
-      } else if(it.kind === 'evento' && REF[it.rawTipo] > 0 && durReal > REF[it.rawTipo]) {
-        desv = (durReal - REF[it.rawTipo]).toFixed(2);
+      const durRealH = (it.realEndTs - it.realStartTs) / 3600000;
+      if(it.kind === 'bachada' && durRealH > REF.tcong) {
+        desv = (durRealH - REF.tcong).toFixed(2);
+      } else if(it.kind === 'evento' && REF[it.rawTipo] > 0 && durRealH > REF[it.rawTipo]) {
+        desv = (durRealH - REF[it.rawTipo]).toFixed(2);
       }
 
       let desc = '';
       if(it.kind === 'bachada' && it.meta) {
         desc = (it.meta.producto||'') + ' (' + (it.meta.aros||0) + ' aros, ' + ((it.meta.peso||0).toFixed(0)) + 'kg)';
-        if(it.turno) desc += ' · Turno ' + it.turno;
+        if(it.meta.turno) desc += ' · Turno ' + it.meta.turno;
       } else if(it.kind === 'evento' && it.meta) {
         desc = it.meta.desc || it.meta.accion || '';
       }
-      if(truncIni || truncFin) desc += ' · barra recortada';
+      if(it.truncIni && it.truncFin) {
+        desc += ' · atraviesa día operativo';
+      } else if(it.truncIni) {
+        desc += ' · inicia en op. anterior';
+      } else if(it.truncFin) {
+        desc += ' · continúa en op. siguiente';
+      }
 
       segs.push({
         label: labelStr,
         startH: segStart, endH: segEnd,
-        realStart: it.startAbs, realEnd: it.endAbs,
+        realStart: it.realStartAbs, realEnd: it.realEndAbs,
         type: it.rawTipo, color, borderColor, desv, desc,
         equipo: equipo,
         kind: it.kind

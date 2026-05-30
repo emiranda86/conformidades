@@ -1961,20 +1961,31 @@ function openBachadaModal(id){
 }
 
 function onEquipoChange(){
-  const eq=document.getElementById('b-equipo').value;
+  const eq = document.getElementById('b-equipo').value;
   calcPeso();
-  if(eq&&editingBachadaId===null){
-    const bachs=DB.get('bachadas',[]).filter(b=>b.equipo===eq);
-    const last=bachs.length?Math.max(...bachs.map(b=>b.bach)):0;
-    const sugerido=last+1;
-    document.getElementById('b-bach').value=sugerido;
-    document.getElementById('b-bach-note').textContent='Último bach registrado: '+(last||'ninguno');
-    document.getElementById('b-alert').innerHTML='';
-    // Verificar si hay descongelamiento registrado después de la última bach 4
+  if(eq && editingBachadaId === null) {
     // ============================================================
-    // SISTEMA DE ALERTAS INTELIGENTES — Bachadas consecutivas sin descongelamiento
+    // FUENTE ÚNICA DE VERDAD para el número sugerido de bachada
     // ============================================================
+    // Usamos calcularEstadoBachadas() — misma lógica que en Eventos
     const estado = calcularEstadoBachadas(eq);
+    const sugerido = estado.proximaBach;
+
+    document.getElementById('b-bach').value = sugerido;
+
+    // Nota informativa
+    const noteEl = document.getElementById('b-bach-note');
+    if(noteEl) {
+      if(estado.consecutivas === 0) {
+        noteEl.textContent = 'Nueva secuencia. Empezando desde Bach #1.';
+      } else {
+        noteEl.textContent = 'Llevas ' + estado.consecutivas + ' bachada' + (estado.consecutivas!==1?'s':'') + ' consecutiva' + (estado.consecutivas!==1?'s':'') + ' (límite: ' + estado.limite + ').';
+      }
+    }
+
+    document.getElementById('b-alert').innerHTML = '';
+
+    // Mostrar alerta inteligente según el estado
     mostrarAlertaBachada(estado, sugerido, eq, 'b-alert');
   }
 }
@@ -2160,47 +2171,103 @@ async function saveBachada(){
 // Calcula el estado actual de bachadas consecutivas sin descongelamiento
 // para un equipo específico. Recorre el historial cronológicamente.
 function calcularEstadoBachadas(equipo) {
-  if(!equipo) return { consecutivas: 0, limite: 4, esTunel: false, ultimaDescongFecha: null, ultimaDescongTs: null };
+  // ============================================================
+  // LÓGICA UNIFICADA DE SECUENCIA DE BACHADAS
+  // ============================================================
+  // Esta función es la FUENTE ÚNICA DE VERDAD para:
+  //   - Número sugerido para la próxima bachada (Nueva Bachada y Eventos)
+  //   - Conteo de bachadas consecutivas sin reinicio (alertas/alarmas)
+  //   - Límite por tipo de equipo
+  //
+  // REGLAS OFICIALES:
+  //   1. Carga/Descarga → CONTINÚA la secuencia
+  //   2. Cualquier OTRO evento → REINICIA la secuencia a 0
+  //      (Descongelamiento, Falla, Sin MP, Mant. Programado, Fin de Proceso, etc.)
+  //
+  // LÍMITES POR EQUIPO:
+  //   - Congeladores (C1..C11): límite = 4 (advertencia al ir a la 4ª)
+  //   - Túneles (TE):           límite = 3 (advertencia al ir a la 3ª)
+  // ============================================================
+
+  if(!equipo) return { consecutivas: 0, limite: 4, esTunel: false, proximaBach: 1, ultimoResetTs: null };
 
   const esTunel = equipo === 'TE' || (equipo+'').toUpperCase().startsWith('TE') || equipo.includes('únel') || equipo.toLowerCase().includes('tunel');
-  const limite = esTunel ? 2 : 4;
+  const limite = esTunel ? 3 : 4;
 
-  // Tomar TODOS los registros del equipo y ordenarlos cronológicamente por timestamp real
-  const allBachs = DB.get('bachadas',[]).filter(b => b.equipo===equipo && b.estado==='cerrado');
-  const allEvs   = DB.get('eventos',[]).filter(e => e.equipo===equipo && e.tipo==='descongelamiento' && e.estado==='cerrado');
+  // Tomar TODOS los registros del equipo (cerrados)
+  const allBachs = DB.get('bachadas', []).filter(b => b.equipo===equipo && b.estado==='cerrado');
+  // Considerar TODOS los tipos de eventos (no solo descongelamiento)
+  const allEvs   = DB.get('eventos', []).filter(e => e.equipo===equipo && e.estado==='cerrado');
 
-  // Función que convierte un registro a timestamp real (usando fecha + inicio)
-  function toTs(r) {
-    const f = r.fecha || r.fechaIni;
-    const h = r.inicio;
-    if(!f || !h) return 0;
-    // Si hora < 08:00, pertenece a la madrugada del día operativo (sumar 24h al timestamp)
-    const [hh, mm] = h.split(':').map(Number);
-    const baseMs = new Date(f + 'T00:00:00').getTime();
-    let pos = hh + mm/60;
-    if(pos < 8) pos += 24; // hora pertenece a la madrugada del día operativo
-    return baseMs + pos * 3600000;
+  // Función conversora oficial (alineada con la del Timeline)
+  // Convierte (fecha_operativa_BD, hora_BD) → timestamp REAL en ms
+  function opRecordToRealTs(fStr, hStr) {
+    if(!fStr || !hStr) return 0;
+    const [hh, mm] = hStr.split(':').map(Number);
+    if(isNaN(hh) || isNaN(mm)) return 0;
+    const base = new Date(fStr + 'T00:00:00').getTime();
+    if(isNaN(base)) return 0;
+    const hourPos = hh + mm/60;
+    // Hora < 08:00 → ocurrió físicamente en el día calendario siguiente al operativo
+    if(hourPos < 8) return base + 24*3600000 + hourPos*3600000;
+    return base + hourPos * 3600000;
   }
 
   // Construir línea cronológica unificada
   const eventos = [];
-  allBachs.forEach(b => eventos.push({ tipo: 'bachada', ts: toTs(b), bach: parseInt(b.bach) || 0, ref: b }));
-  allEvs.forEach(e => eventos.push({ tipo: 'descong', ts: toTs(e), ref: e }));
-  eventos.sort((a,b) => a.ts - b.ts);
 
-  // Contar bachadas consecutivas desde el último descongelamiento (cronológicamente)
+  // Bachadas: ts = inicio
+  allBachs.forEach(b => {
+    eventos.push({
+      categoria: 'bachada',
+      ts: opRecordToRealTs(b.fecha, b.inicio),
+      bachNum: parseInt(b.bach) || 0,
+      ref: b
+    });
+  });
+
+  // Eventos: el ts importante para reset es la HORA DE FIN (cuando el evento terminó)
+  // porque la siguiente bachada arranca DESPUÉS del evento
+  allEvs.forEach(e => {
+    const tsIni = opRecordToRealTs(e.fechaIni, e.inicio);
+    const tsFin = e.fin ? opRecordToRealTs(e.fechaFin || e.fechaIni, e.fin) : tsIni;
+    eventos.push({
+      categoria: 'evento',
+      tipo: e.tipo,
+      ts: tsFin,    // usar fin para que ocurra DESPUÉS de la bachada que lo precedió
+      tsIni,
+      ref: e
+    });
+  });
+
+  eventos.sort((a, b) => a.ts - b.ts);
+
+  // Procesar cronológicamente
+  // - Bachada → incrementa contador
+  // - Carga/Descarga → mantiene el contador
+  // - Cualquier OTRO evento → reinicia a 0
   let consecutivas = 0;
-  let ultimaDescongTs = null;
+  let ultimoResetTs = null;
   for(const ev of eventos) {
-    if(ev.tipo === 'descong') {
-      consecutivas = 0;
-      ultimaDescongTs = ev.ts;
-    } else if(ev.tipo === 'bachada') {
+    if(ev.categoria === 'bachada') {
       consecutivas++;
+    } else if(ev.categoria === 'evento') {
+      if(ev.tipo === 'carga_descarga') {
+        // Carga/Descarga: continúa la secuencia (no toca contador)
+        // Solo conecta una bachada con la siguiente
+      } else {
+        // Cualquier otro evento (descongelamiento, falla, sin_produccion,
+        // programada, fin_proceso, etc.) → REINICIA
+        consecutivas = 0;
+        ultimoResetTs = ev.ts;
+      }
     }
   }
 
-  return { consecutivas, limite, esTunel, ultimaDescongTs };
+  // La próxima bachada sugerida es consecutivas + 1
+  const proximaBach = consecutivas + 1;
+
+  return { consecutivas, limite, esTunel, proximaBach, ultimoResetTs };
 }
 
 // Muestra alerta visual según el estado de bachadas
@@ -2259,7 +2326,7 @@ function mostrarAlertaBachada(estado, bachSugerido, equipo, alertElId) {
           <strong>${eqNombre}</strong> ya completó <strong style="color:#ff3b5c;font-size:14px;">${consecutivas} bachada${consecutivas!==1?'s':''} consecutivas</strong> sin descongelamiento
           (límite recomendado: <strong>${limite}</strong> · exceso: <strong>+${exceso}</strong>).<br>
           <span style="color:#ff3b5c;font-weight:600;">Se recomienda realizar descongelamiento INMEDIATAMENTE</span> para evitar pérdida de eficiencia y posibles fallas del equipo.<br>
-          <span style="font-size:11.5px;color:var(--text2);margin-top:4px;display:inline-block;">Puedes continuar la operación, pero el sistema mantendrá esta alerta hasta registrar un descongelamiento.</span>
+          <span style="font-size:11.5px;color:var(--text2);margin-top:4px;display:inline-block;">Puedes continuar la operación. La alerta se mantendrá hasta registrar un descongelamiento u otro evento distinto a Carga/Descarga, que reinicia la secuencia.</span>
         </div>
       </div>
     </div>`;
@@ -4188,48 +4255,71 @@ function mostrarAlertaPostBachada(estado, equipo) {
   const tipoSeleccionado = document.getElementById('pb-tipo')?.value || '';
   const eqNombre = equipo === 'TE' ? 'Túnel Estático' : 'Congelador ' + (equipo+'').replace('C','');
 
-  // No hay alerta si todavía no llegó al límite
+  // Cualquier tipo distinto a carga_descarga reinicia el contador
+  const esReinicio = tipoSeleccionado && tipoSeleccionado !== 'carga_descarga';
+
+  // No mostrar alerta si aún no se alcanzó el límite
   if(consecutivas < limite) {
-    alertEl.innerHTML = '';
+    // Caso especial: si la próxima sería bach >= limite Y elige carga_descarga,
+    // dar un pequeño aviso de que tras esta secuencia debe descongelar
+    if(consecutivas === limite - 1 && tipoSeleccionado === 'carga_descarga') {
+      alertEl.innerHTML = `
+        <div style="background:#ff950018;border:1px solid #ff9500;border-radius:10px;padding:10px 14px;margin-bottom:10px;display:flex;gap:10px;align-items:center;">
+          <span style="font-size:18px;">💡</span>
+          <div style="font-size:12px;color:#e8f4ff;line-height:1.45;">
+            Con esta Carga/Descarga estás por iniciar la <strong>${consecutivas + 1}ª bachada consecutiva</strong>. Después de la ${limite}ª se recomienda descongelar.
+          </div>
+        </div>`;
+    } else if(esReinicio) {
+      alertEl.innerHTML = `
+        <div style="background:#185fa518;border:1px solid #00c8ff44;border-radius:10px;padding:10px 14px;margin-bottom:10px;display:flex;gap:10px;align-items:center;">
+          <span style="font-size:18px;">🔄</span>
+          <div style="font-size:12px;color:#e8f4ff;line-height:1.45;">
+            Al registrar <strong>${tipoSeleccionado === 'descongelamiento' ? 'Descongelamiento' : 'este evento'}</strong>, el contador de bachadas consecutivas se reiniciará. La próxima bachada arrancará como <strong>#1</strong>.
+          </div>
+        </div>`;
+    } else {
+      alertEl.innerHTML = '';
+    }
     return;
   }
 
-  // Caso 1: consecutivas == limite → ADVERTENCIA PREVENTIVA
-  //   (acaba de cerrar la bach 4ta consecutiva)
+  // consecutivas >= limite — atención requerida
+  // ADVERTENCIA PREVENTIVA cuando consecutivas == limite
   if(consecutivas === limite) {
-    if(tipoSeleccionado === 'descongelamiento'){
-      // El operador hizo lo correcto: muestra confirmación verde tranquila
+    if(esReinicio) {
+      // El operador eligió correctamente un evento que reinicia
+      const labelEvento = tipoSeleccionado === 'descongelamiento' ? 'descongelamiento' : 'este evento';
       alertEl.innerHTML = `
         <div style="background:#00e87a18;border:1px solid #00e87a;border-radius:10px;padding:10px 14px;margin-bottom:10px;display:flex;gap:10px;align-items:center;">
           <span style="font-size:18px;">✅</span>
-          <div style="font-size:12.5px;color:#00e87a;line-height:1.4;"><strong>Excelente.</strong> Al registrar este descongelamiento, el contador volverá a 0 y la siguiente bachada arrancará como #1.</div>
+          <div style="font-size:12.5px;color:#00e87a;line-height:1.45;"><strong>Excelente.</strong> Al registrar ${labelEvento} el contador se reinicia. La siguiente bachada será <strong>#1</strong>.</div>
         </div>`;
     } else {
-      // ADVERTENCIA: ya hizo "limite" bachadas, debería elegir descongelamiento
+      // Eligió carga_descarga → entrará en zona de advertencia
       alertEl.innerHTML = `
         <div style="background:#ff950018;border:2px solid #ff9500;border-radius:10px;padding:12px 14px;margin-bottom:10px;display:flex;gap:10px;align-items:flex-start;">
           <span style="font-size:22px;">⚠️</span>
           <div style="flex:1;font-size:12.5px;color:#e8f4ff;line-height:1.5;">
             <div style="font-weight:700;color:#ff9500;margin-bottom:3px;">ADVERTENCIA PREVENTIVA</div>
-            <strong>${eqNombre}</strong> ya completó <strong>${consecutivas} bachadas</strong> consecutivas (límite: ${limite}).
-            <br>Se recomienda seleccionar <strong>"Descongelamiento"</strong> en lugar de Carga/Descarga para mantener la eficiencia del equipo.
+            <strong>${eqNombre}</strong> ya completó <strong>${consecutivas} bachadas</strong> consecutivas (límite: ${limite}).<br>
+            Se recomienda seleccionar <strong>"Descongelamiento"</strong> en lugar de Carga/Descarga para mantener la eficiencia del equipo.
           </div>
         </div>`;
     }
     return;
   }
 
-  // Caso 2: consecutivas > limite → ALARMA CRÍTICA
+  // consecutivas > limite → ALARMA CRÍTICA
   const exceso = consecutivas - limite;
-  if(tipoSeleccionado === 'descongelamiento'){
-    // Aún en exceso pero ahora elige descongelar bien
+  if(esReinicio) {
+    const labelEvento = tipoSeleccionado === 'descongelamiento' ? 'descongelamiento' : 'este evento';
     alertEl.innerHTML = `
       <div style="background:#00e87a18;border:1px solid #00e87a;border-radius:10px;padding:10px 14px;margin-bottom:10px;display:flex;gap:10px;align-items:center;">
         <span style="font-size:18px;">✅</span>
-        <div style="font-size:12.5px;color:#00e87a;line-height:1.4;"><strong>Decisión correcta.</strong> Al registrar este descongelamiento se reinicia el contador. Llevaba <strong>${consecutivas} bachadas</strong> consecutivas (exceso: +${exceso}).</div>
+        <div style="font-size:12.5px;color:#00e87a;line-height:1.45;"><strong>Decisión correcta.</strong> Al registrar ${labelEvento} se reinicia el contador. Llevabas <strong>${consecutivas} bachadas</strong> consecutivas (exceso: +${exceso}). Próxima bachada: <strong>#1</strong>.</div>
       </div>`;
   } else {
-    // Mantener alarma crítica
     alertEl.innerHTML = `
       <div class="alarma-critica" style="background:linear-gradient(135deg,#ff3b5c22,#ff3b5c0d);border:2px solid #ff3b5c;border-radius:10px;padding:12px 14px;margin-bottom:10px;display:flex;gap:10px;align-items:flex-start;box-shadow:0 0 16px #ff3b5c44;animation:pulsoAlarma 1.5s ease-in-out infinite;">
         <span style="font-size:22px;animation:agitarIcono 0.8s ease-in-out infinite;">🚨</span>
@@ -4237,7 +4327,7 @@ function mostrarAlertaPostBachada(estado, equipo) {
           <div style="font-weight:800;color:#ff3b5c;margin-bottom:3px;letter-spacing:.04em;text-transform:uppercase;">URGENTE — Descongelamiento Inmediato</div>
           <strong>${eqNombre}</strong> ya superó el límite por <strong style="color:#ff3b5c;">+${exceso} bachada${exceso!==1?'s':''}</strong>
           (${consecutivas} consecutivas · límite: ${limite}).<br>
-          Se recomienda fuertemente cambiar la selección a <strong>"Descongelamiento"</strong>. El sistema permite continuar, pero la alerta persistirá hasta que registres un descongelamiento.
+          Cambia la selección a <strong>"Descongelamiento"</strong> o cualquier evento distinto a Carga/Descarga para reiniciar la secuencia.
         </div>
       </div>`;
   }

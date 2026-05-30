@@ -1664,7 +1664,7 @@ async function initFirebaseDefaults() {
   }
 }
 
-let currentUser=null,charts={},editingBachadaId=null,editingEventoId=null;
+let currentUser=null,charts={},editingBachadaId=null,editingEventoId=null,editingEventoFid=null,editingBachadaFid=null;
 
 // ======== Apply user UI (shared) ========
 function applyUserUI(user) {
@@ -1886,7 +1886,18 @@ function showAlert(cid,msg,type){
   setTimeout(()=>el.innerHTML='',5000);
 }
 
-function closeModal(id){document.getElementById(id).classList.remove('open');}
+function closeModal(id){
+  document.getElementById(id).classList.remove('open');
+  // Resetear estado de edición al cerrar modales relevantes para prevenir duplicados
+  if(id === 'modal-bachada') {
+    editingBachadaId = null;
+    editingBachadaFid = null;
+  }
+  if(id === 'modal-evento') {
+    editingEventoId = null;
+    editingEventoFid = null;
+  }
+}
 
 function populateSelects(){
   const tecs=DB.get('tecnicos',[]);
@@ -1903,12 +1914,22 @@ function populateSelects(){
 function openBachadaModal(id){
   if(!canEdit()){alert('Sin permiso.');return;}
   populateSelects();
-  editingBachadaId=id;
-  const isEdit=id!==null;
+  // Resetear AMBAS variables al inicio
+  editingBachadaId = null;
+  editingBachadaFid = null;
+  const isEdit = id !== null && id !== undefined;
+  if(isEdit) editingBachadaId = id;
 
   if(isEdit){
-    const b=DB.get('bachadas',[]).find(x=>x.id===id);
-    if(!b)return;
+    const b=DB.get('bachadas',[]).find(x=>x.id===id||x._fid===id||String(x.id)===String(id));
+    if(!b){
+      console.error('Bachada no encontrada con id:', id);
+      alert('Error: no se pudo cargar la bachada para editar.');
+      return;
+    }
+    // Guardar referencia al _fid de Firestore
+    editingBachadaId = b._fid || b.id || id;
+    editingBachadaFid = b._fid;
     document.getElementById('b-modal-title').textContent='✏️ Editar Bachada — '+b.equipo+' Bach #'+b.bach;
     document.getElementById('b-modal-sub').textContent=b.estado==='pendiente'?'Completa la hora de fin y temperatura para cerrar la bachada.':'Edita los datos de esta bachada.';
     document.getElementById('b-equipo').value=b.equipo;
@@ -2030,11 +2051,50 @@ async function saveBachada(){
 
   const docData={equipo:eq,bach,producto,aros,peso,factor,fecha,turno,inicio,fin:fin||null,tcong:tcong||null,temp:temp||null,obs,tecnico,estado,ts:new Date().toISOString()};
   try{
-    if(editingBachadaId!==null){
-      const existing=DB.get('bachadas',[]).find(b=>b.id===editingBachadaId||b._fid===editingBachadaId);
-      const fid=existing?._fid||editingBachadaId;
-      await COL.bachadas().doc(String(fid)).update(docData);
+    // ============================================================
+    // LÓGICA ANTI-DUPLICADO: UPDATE vs INSERT para bachadas
+    // ============================================================
+    const enModoEdicionBach = (editingBachadaId !== null && editingBachadaId !== undefined);
+    if(enModoEdicionBach){
+      // MODO EDICIÓN: buscar y actualizar usando _fid de Firestore
+      const existing = DB.get('bachadas',[]).find(b =>
+        (editingBachadaFid && b._fid === editingBachadaFid) ||
+        b._fid === editingBachadaId ||
+        b.id === editingBachadaId ||
+        String(b.id) === String(editingBachadaId)
+      );
+      if(!existing){
+        document.getElementById('b-alert').innerHTML = '<div class="alert alert-error">No se encontró la bachada original en la base de datos. Se canceló el guardado para evitar duplicar. Recarga la página.</div>';
+        return;
+      }
+      const fid = existing._fid || editingBachadaFid;
+      if(!fid){
+        document.getElementById('b-alert').innerHTML = '<div class="alert alert-error">Error: identificador Firestore inválido. Se canceló el guardado para evitar duplicado.</div>';
+        console.error('No _fid disponible. editingBachadaId:', editingBachadaId, 'editingBachadaFid:', editingBachadaFid, 'existing:', existing);
+        return;
+      }
+      // Conservar ID y ts ORIGINALES (nunca pisar)
+      docData.id = existing.id;
+      if(existing.ts) docData.ts = existing.ts;
+      if(existing.createdAt) docData.createdAt = existing.createdAt;
+      docData.modifiedAt = new Date().toISOString();
+      docData.modifiedBy = (currentUser && currentUser.email) || 'unknown';
+      // UPDATE PURO de Firestore (no crea documento si no existe)
+      await COL.bachadas().doc(fid).update(docData);
+      console.log('✅ Bachada actualizada:', fid, '(id', existing.id, ')');
     } else {
+      // Modo NUEVO — validar no haya duplicado idéntico antes de crear
+      const dupBach = DB.get('bachadas',[]).find(b =>
+        b.equipo === docData.equipo &&
+        parseInt(b.bach) === parseInt(docData.bach) &&
+        b.fecha === docData.fecha &&
+        b.inicio === docData.inicio
+      );
+      if(dupBach){
+        document.getElementById('b-alert').innerHTML = '<div class="alert alert-error">Ya existe una bachada con los mismos datos (equipo, número, fecha, hora inicio). No se duplicó.</div>';
+        console.warn('Bachada duplicada bloqueada:', dupBach);
+        return;
+      }
       docData.id=Date.now();
       // ANTES DE GUARDAR LA NUEVA BACHADA: cerrar evento abierto previo del mismo equipo
       // usando la hora de inicio de esta bachada como hora fin del evento
@@ -2304,12 +2364,23 @@ async function delBachada(id){if(!canAdmin()||!confirm('¿Eliminar?'))return;try
 function openEventoModal(id){
   if(!canEdit()){alert('Sin permiso.');return;}
   populateSelects();
-  editingEventoId=id;
-  const isEdit=id!==null;
+  // Resetear AMBAS variables al principio para garantizar estado limpio
+  editingEventoId = null;
+  editingEventoFid = null;
+  const isEdit = id !== null && id !== undefined;
+  if(isEdit) editingEventoId = id;
 
   if(isEdit){
-    const ev=DB.get('eventos',[]).find(x=>x.id===id);
-    if(!ev)return;
+    // Buscar por id numérico O por _fid de Firestore
+    const ev=DB.get('eventos',[]).find(x=>x.id===id || x._fid===id || String(x.id)===String(id));
+    if(!ev){
+      console.error('Evento no encontrado con id:', id);
+      alert('Error: no se pudo cargar el evento para editar.');
+      return;
+    }
+    // Guardar referencia al _fid para que saveEvento pueda actualizar correctamente
+    editingEventoId = ev._fid || ev.id || id;
+    editingEventoFid = ev._fid;  // Guardar explícitamente el Firestore ID
     document.getElementById('e-modal-title').textContent='✏️ Editar Evento — '+ev.equipo;
     document.getElementById('e-modal-sub').textContent=ev.estado==='abierto'?'Completa la sección de Cierre cuando el equipo quede operativo.':'Edita los datos del evento.';
     document.getElementById('e-equipo').value=ev.equipo;
@@ -2415,19 +2486,78 @@ async function saveEvento(){
   const durH=fin?calcTimeDiffHours(fechaIni,inicio,fechaFin||fechaIni,fin):null;
   const estado=fin?'cerrado':'abierto';
 
-  const docData={equipo,tipo,tipoLabel:tiposLabel[tipo],fechaIni,turno,inicio,tecnico,desc,componente,causa,repuestos,fechaFin:fechaFin||null,fin:fin||null,durH:durH||null,accion,tecnicoRep,estado,ts:new Date().toISOString()};
+  const docData={equipo,tipo,tipoLabel:tiposLabel[tipo],fechaIni,turno,inicio,tecnico,desc,componente,causa,repuestos,fechaFin:fechaFin||null,fin:fin||null,durH:durH||null,accion,tecnicoRep,estado,updatedAt:new Date().toISOString()};
   try{
-    if(editingEventoId!==null){
-      const existing=DB.get('eventos',[]).find(e=>e.id===editingEventoId||e._fid===editingEventoId);
-      const fid=existing?._fid||String(editingEventoId);
+    // ============================================================
+    // LÓGICA ANTI-DUPLICADO: UPDATE vs INSERT
+    // ============================================================
+    // Modo edición: existe editingEventoId Y editingEventoFid (Firestore document ID)
+    const enModoEdicion = (editingEventoId !== null && editingEventoId !== undefined);
+
+    if(enModoEdicion){
+      // ----------------- MODO EDICIÓN (UPDATE) -----------------
+      // Buscar el evento existente — múltiples criterios de match
+      const existing = DB.get('eventos',[]).find(e =>
+        (editingEventoFid && e._fid === editingEventoFid) ||
+        e._fid === editingEventoId ||
+        e.id === editingEventoId ||
+        String(e.id) === String(editingEventoId)
+      );
+      if(!existing){
+        document.getElementById('e-alert').innerHTML = '<div class="alert alert-error">No se encontró el evento original en la base de datos. Recarga la página e intenta de nuevo. Se ha CANCELADO el guardado para evitar duplicar.</div>';
+        return;
+      }
+      // OBLIGATORIO: debe existir _fid de Firestore para hacer update
+      const fid = existing._fid || editingEventoFid;
+      if(!fid){
+        // SIN _fid → NO podemos hacer update → cancelamos para NO duplicar
+        document.getElementById('e-alert').innerHTML = '<div class="alert alert-error">Error: identificador Firestore inválido. Se canceló el guardado para evitar duplicado. Recarga la página.</div>';
+        console.error('No _fid disponible. editingEventoId:', editingEventoId, 'editingEventoFid:', editingEventoFid, 'existing:', existing);
+        return;
+      }
+      // Conservar id, timestamp y fecha de creación original (NUNCA pisar)
+      docData.id = existing.id;
+      if(existing.ts) docData.ts = existing.ts;
+      if(existing.createdAt) docData.createdAt = existing.createdAt;
+      // Agregar metadata de modificación (no destruye nada)
+      docData.modifiedAt = new Date().toISOString();
+      docData.modifiedBy = (currentUser && currentUser.email) || 'unknown';
+      // UPDATE PURO (no INSERT — Firestore .update() no crea documento si no existe)
       await COL.eventos().doc(fid).update(docData);
+      console.log('✅ Evento actualizado:', fid, '(id', existing.id, ')');
     } else {
-      docData.id=Date.now();
+      // ----------------- MODO NUEVO (INSERT) -----------------
+      // Sanity: validar que NO existe un evento idéntico (mismo equipo + fecha + hora + tipo)
+      // Esto previene duplicados accidentales por doble click u otros bugs.
+      const duplicado = DB.get('eventos',[]).find(e =>
+        e.equipo === docData.equipo &&
+        e.tipo === docData.tipo &&
+        e.fechaIni === docData.fechaIni &&
+        e.inicio === docData.inicio &&
+        (e.fin || null) === (docData.fin || null) &&
+        (e.fechaFin || null) === (docData.fechaFin || null)
+      );
+      if(duplicado){
+        document.getElementById('e-alert').innerHTML = '<div class="alert alert-error">Ya existe un evento con los mismos datos (equipo, tipo, fecha, hora). No se duplicó.</div>';
+        console.warn('Duplicado detectado y bloqueado:', duplicado);
+        return;
+      }
+      docData.id = Date.now();
+      docData.ts = new Date().toISOString();
+      docData.createdAt = docData.ts;
+      docData.createdBy = (currentUser && currentUser.email) || 'unknown';
       await COL.eventos().add(docData);
+      console.log('✅ Evento nuevo creado, id:', docData.id);
     }
     closeModal('modal-evento');
+    // Limpiar variables de edición para evitar contaminación de la siguiente operación
+    editingEventoId = null;
+    editingEventoFid = null;
     showAlert('alert-eventos',estado==='cerrado'?'✅ Evento cerrado. Equipo registrado como operativo.':'Evento abierto registrado. Edita cuando el equipo quede operativo.',estado==='cerrado'?'success':'warn');
-  } catch(err){console.error(err);document.getElementById('e-alert').innerHTML='<div class="alert alert-error">Error al guardar. Verifica conexión.</div>';}
+  } catch(err){
+    console.error('Error en saveEvento:', err);
+    document.getElementById('e-alert').innerHTML='<div class="alert alert-error">Error al guardar: ' + (err.message || 'Verifica conexión.') + '</div>';
+  }
   } catch(err) {
     console.error('Error general en saveEvento:', err);
     const ae = document.getElementById('e-alert');
@@ -3068,46 +3198,58 @@ function renderTimeline() {
   // ----------------------------------------------------------
   function buildSegments(equipo) {
     // ============================================================
-    // LÓGICA DE DÍA OPERATIVO BASADA EN TIMESTAMPS REALES
+    // ALGORITMO DE DÍA OPERATIVO — VERSIÓN DEFINITIVA
     // ============================================================
-    // Cada bachada/evento se representa por su intervalo real [startTs, endTs] en ms.
-    // El día operativo seleccionado define una ventana de tiempo:
-    //   opStart = fecha (08:00 AM)
-    //   opEnd   = fecha + 24h (08:00 AM del día siguiente)
-    // La intersección entre ese intervalo y la ventana operativa nos da el segmento visible.
+    // CONVENCIÓN DEL SISTEMA:
+    //   El campo `fecha` en BD representa el DÍA OPERATIVO, no la fecha calendario.
+    //   El día operativo D va de 08:00 calendario D hasta 08:00 calendario D+1.
+    //
+    // REGLA PARA UBICAR UN REGISTRO EN EL CALENDARIO REAL:
+    //   - Si la hora (HH:MM) >= 08:00 → ocurrió en el día calendario D (=fecha BD)
+    //   - Si la hora (HH:MM) <  08:00 → ocurrió en el día calendario D+1 (=fecha BD + 1 día)
+    //   Esto es porque las horas 00:00–07:59 del operativo D son físicamente la
+    //   madrugada del día calendario D+1 (es decir, ya pasada la medianoche).
+    //
+    // EJE VISUAL DEL TIMELINE:
+    //   Posición = horas desde 00:00 del día calendario del día operativo seleccionado.
+    //   - 8  = 08:00 del calendario D = inicio del operativo D
+    //   - 32 = 08:00 del calendario D+1 = fin del operativo D
     //
     // VENTAJAS:
-    //  - Maneja bachadas que cruzan medianoche (siempre estuvo OK)
-    //  - Maneja bachadas que cruzan al SIGUIENTE día operativo (08:00 AM)
-    //  - Si un evento empezó en el operativo anterior y termina en el actual, se muestra recortado
-    //  - Si un evento empieza en el actual y termina en el siguiente operativo, se muestra recortado
-    //  - Sin lógicas artificiales de "rellenar hasta las 08:00"
+    //   - Maneja correctamente bachadas que cruzan medianoche dentro del mismo operativo
+    //   - Maneja correctamente bachadas que cruzan el límite del operativo (08:00)
+    //   - Fragmenta automáticamente registros que pertenecen a dos operativos
+    //   - Funciona para TODOS los tipos de eventos
     // ============================================================
 
-    const OP_DAY = fecha; // YYYY-MM-DD del día operativo seleccionado
-
-    // opBaseMs: medianoche del día calendario seleccionado (en ms)
+    const OP_DAY = fecha;
     const opBaseMs = new Date(OP_DAY + 'T00:00:00').getTime();
-    // Ventana operativa absoluta (en ms)
-    const opStartMs = opBaseMs + 8 * 3600000;       // 08:00 AM del día seleccionado
-    const opEndMs   = opStartMs + 24 * 3600000;     // 08:00 AM del día siguiente
+    const opStartMs = opBaseMs + 8 * 3600000;       // 08:00 AM día calendario D
+    const opEndMs   = opStartMs + 24 * 3600000;     // 08:00 AM día calendario D+1
+    const ONE_DAY_MS = 24 * 3600000;
 
-    // Convierte timestamp ms → posición en eje (horas desde medianoche del día seleccionado)
-    // El eje va de 8 (08:00 AM día actual) a 32 (08:00 AM día siguiente)
-    const tsToAxisH = (ms) => (ms - opBaseMs) / 3600000;
-
-    // Construye un timestamp real desde fecha YYYY-MM-DD + hora HH:MM
-    function buildTs(fStr, hStr) {
+    // CORE: convertir (fecha_operativa_bd, hora_bd) → timestamp REAL en ms
+    function opRecordToRealTs(fStr, hStr) {
       if(!fStr || !hStr) return null;
-      const t = new Date(fStr + 'T' + hStr + ':00').getTime();
-      return isNaN(t) ? null : t;
+      const [hh, mm] = hStr.split(':').map(Number);
+      if(isNaN(hh) || isNaN(mm)) return null;
+      const base = new Date(fStr + 'T00:00:00').getTime();
+      if(isNaN(base)) return null;
+      const hourPos = hh + mm/60;
+      // Si la hora es < 08:00, el evento ocurrió físicamente en el día calendario SIGUIENTE
+      // al día operativo declarado.
+      if(hourPos < 8) {
+        return base + ONE_DAY_MS + hourPos * 3600000;
+      } else {
+        return base + hourPos * 3600000;
+      }
     }
 
+    const tsToAxisH = (ms) => (ms - opBaseMs) / 3600000;
+
     // ============================================================
-    // CONSTRUIR INTERVALOS [startTs, endTs] REALES PARA BACHADAS Y EVENTOS
+    // FILTRADO: buscar registros del día operativo anterior, actual y siguiente
     // ============================================================
-    // Filtramos AMPLIO: tomamos registros del día operativo anterior, actual y siguiente,
-    // para capturar eventos que crucen las fronteras del día operativo seleccionado.
     const opDate = new Date(OP_DAY + 'T00:00:00');
     const opPrev = new Date(opDate); opPrev.setDate(opDate.getDate() - 1);
     const opNext = new Date(opDate); opNext.setDate(opDate.getDate() + 1);
@@ -3128,22 +3270,26 @@ function renderTimeline() {
     // ---- BACHADAS ----
     allBachs.forEach(b => {
       if(!b.inicio) return;
-      const startTs = buildTs(b.fecha, b.inicio);
+      const startTs = opRecordToRealTs(b.fecha, b.inicio);
       if(startTs === null) return;
 
       let endTs = null;
       if(b.fin) {
-        const fechaFin = b.fechaFin || b.fecha;
-        endTs = buildTs(fechaFin, b.fin);
-        // Si endTs ≤ startTs, asumir cruce de medianoche (sumar 24h)
-        if(endTs !== null && endTs <= startTs) endTs += 24 * 3600000;
+        // Si fechaFin existe es porque cruzó al día calendario siguiente (operativo siguiente o continuó)
+        const fechaFinRef = b.fechaFin || b.fecha;
+        endTs = opRecordToRealTs(fechaFinRef, b.fin);
+        // Si el endTs queda <= startTs, asumir cruce no detectado y sumar 24h
+        if(endTs !== null && endTs <= startTs) {
+          endTs += ONE_DAY_MS;
+        }
       } else if(b.tcong) {
         endTs = startTs + b.tcong * 3600000;
       }
       if(endTs === null) return;
 
-      // Sanity: duración irreal
-      if((endTs - startTs) > 24 * 3600000) return;
+      // Sanity: bachada > 24h es dato inconsistente
+      if((endTs - startTs) > ONE_DAY_MS) return;
+      if((endTs - startTs) <= 0) return;
 
       items.push({
         kind: 'bachada',
@@ -3158,23 +3304,25 @@ function renderTimeline() {
     // ---- EVENTOS ----
     allEvs.forEach(e => {
       if(!e.inicio) return;
-      const startTs = buildTs(e.fechaIni, e.inicio);
+      const startTs = opRecordToRealTs(e.fechaIni, e.inicio);
       if(startTs === null) return;
 
       let endTs = null;
       if(e.fin) {
-        const fechaFin = e.fechaFin || e.fechaIni;
-        endTs = buildTs(fechaFin, e.fin);
-        // Solo aplicar cruce automático si fechaFin no se declaró explícita
-        if(endTs !== null && endTs <= startTs && !e.fechaFin) endTs += 24 * 3600000;
+        const fechaFinRef = e.fechaFin || e.fechaIni;
+        endTs = opRecordToRealTs(fechaFinRef, e.fin);
+        if(endTs !== null && endTs <= startTs && !e.fechaFin) {
+          endTs += ONE_DAY_MS;
+        }
       } else if(e.durH) {
         endTs = startTs + e.durH * 3600000;
       }
       if(endTs === null) return;
 
-      // Sanity: para fin_proceso permite hasta 96h; otros máx 48h
+      // Sanity: fin_proceso permite 96h, resto 48h
       const maxMs = (e.tipo === 'fin_proceso' ? 96 : 48) * 3600000;
       if((endTs - startTs) > maxMs) return;
+      if((endTs - startTs) <= 0) return;
 
       items.push({
         kind: 'evento',
@@ -3186,28 +3334,24 @@ function renderTimeline() {
     });
 
     // ============================================================
-    // INTERSECCIÓN CON LA VENTANA OPERATIVA SELECCIONADA
+    // INTERSECCIÓN con la ventana operativa [opStartMs, opEndMs]
     // ============================================================
-    // Cada item se recorta a [opStartMs, opEndMs]
-    // Si su intersección es vacía, se descarta
-    // Si está parcialmente recortado, se marca con flechas
     let intersected = [];
     items.forEach(it => {
-      // Calcular intersección con la ventana operativa
       const interStart = Math.max(it.startTs, opStartMs);
-      const interEnd   = Math.min(it.endTs,   opEndMs);
-      if(interEnd <= interStart) return; // sin intersección con este día operativo
+      const interEnd   = Math.min(it.endTs, opEndMs);
+      if(interEnd <= interStart) return; // no intersecta con este operativo
 
       intersected.push({
         ...it,
-        startAbs: tsToAxisH(interStart),   // posición visible (8 a 32)
+        startAbs: tsToAxisH(interStart),
         endAbs:   tsToAxisH(interEnd),
         realStartTs: it.startTs,
         realEndTs:   it.endTs,
-        realStartAbs: tsToAxisH(it.startTs), // puede estar fuera del rango visible
+        realStartAbs: tsToAxisH(it.startTs),
         realEndAbs:   tsToAxisH(it.endTs),
-        truncIni: it.startTs < opStartMs, // empezó en el operativo anterior
-        truncFin: it.endTs   > opEndMs    // termina en el operativo siguiente
+        truncIni: it.startTs < opStartMs,
+        truncFin: it.endTs   > opEndMs
       });
     });
 
@@ -3219,15 +3363,14 @@ function renderTimeline() {
       });
     }
 
-    // Aplicar filtro de turno sobre el rango del eje
-    // Día (08-20) = 8..20, Noche (20-08) = 20..32, All = 8..32
+    // Filtro de turno sobre la ventana visible
     intersected = intersected.filter(it => it.endAbs > rangeStart && it.startAbs < rangeEnd);
 
-    // Ordenar cronológicamente
+    // Orden cronológico
     intersected.sort((a,b) => a.startAbs - b.startAbs);
 
     // ============================================================
-    // CONSTRUIR SEGMENTOS VISUALES
+    // SEGMENTOS VISUALES
     // ============================================================
     const segs = [];
     intersected.forEach(it => {
@@ -3235,10 +3378,9 @@ function renderTimeline() {
       const segEnd   = Math.min(it.endAbs,   rangeEnd);
       if(segEnd <= segStart) return;
 
-      // FIN DE PROCESO → NO se dibuja (espacio vacío)
+      // fin_proceso → NO se dibuja (espacio vacío)
       if(it.rawTipo === 'fin_proceso') return;
 
-      // Marcadores de fragmentación entre días operativos
       let labelStr = it.label;
       if(it.truncIni) labelStr = '⬅ ' + labelStr;
       if(it.truncFin) labelStr = labelStr + ' ➡';
@@ -3246,7 +3388,6 @@ function renderTimeline() {
       const color = colorMap[it.rawTipo] || (it.kind==='bachada' ? '#00c8ff' : '#888');
       const borderColor = it.kind==='bachada' ? '#0088cc' : color;
 
-      // Desviación calculada sobre la DURACIÓN REAL (no la visible)
       let desv = null;
       const durRealH = (it.realEndTs - it.realStartTs) / 3600000;
       if(it.kind === 'bachada' && durRealH > REF.tcong) {
@@ -3262,13 +3403,9 @@ function renderTimeline() {
       } else if(it.kind === 'evento' && it.meta) {
         desc = it.meta.desc || it.meta.accion || '';
       }
-      if(it.truncIni && it.truncFin) {
-        desc += ' · atraviesa día operativo';
-      } else if(it.truncIni) {
-        desc += ' · inicia en op. anterior';
-      } else if(it.truncFin) {
-        desc += ' · continúa en op. siguiente';
-      }
+      if(it.truncIni && it.truncFin) desc += ' · atraviesa día operativo';
+      else if(it.truncIni) desc += ' · inicia en op. anterior';
+      else if(it.truncFin) desc += ' · continúa en op. siguiente';
 
       segs.push({
         label: labelStr,

@@ -424,34 +424,180 @@ tr.clickable-row:hover td { background: var(--surface2); }
 .status-cerrado-badge { background: #00e87a22; color: var(--success); }
 .status-pendiente-badge { background: #ff950022; color: var(--warn); }
 
-/* ===== ESTILO POWER BI ===== */
+/* ===== ESTILO POWER BI INDUSTRIAL ===== */
 .pbi-section { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 18px; margin-bottom: 16px; }
-.pbi-header-bar { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; background: linear-gradient(135deg, #0d1c2e, #132237); border: 1px solid var(--border2); border-radius: 12px; margin-bottom: 16px; }
-.pbi-header-title { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 10px; }
-.pbi-header-icon { width: 34px; height: 34px; border-radius: 9px; background: var(--accent); color: var(--bg); display: flex; align-items: center; justify-content: center; font-size: 16px; }
-.pbi-header-sub { font-size: 11px; color: var(--text2); margin-top: 2px; }
-.pbi-kpi { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; position: relative; overflow: hidden; transition: transform .15s, box-shadow .15s; }
-.pbi-kpi:hover { transform: translateY(-2px); box-shadow: 0 8px 20px #00000044; }
-.pbi-kpi::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; }
-.pbi-kpi.c-blue::before { background: #00c8ff; }
-.pbi-kpi.c-green::before { background: #00e87a; }
-.pbi-kpi.c-warn::before { background: #ff9500; }
-.pbi-kpi.c-red::before { background: #ff3b5c; }
-.pbi-kpi.c-teal::before { background: #00ffb3; }
+
+/* Header bar ejecutivo */
+.pbi-header-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 18px;
+  background: linear-gradient(135deg, #0d1c2e, #132237);
+  border: 1px solid var(--border2); border-radius: 12px;
+  margin-bottom: 18px;
+  flex-wrap: wrap; gap: 12px;
+}
+.pbi-header-title {
+  font-family: 'Syne', sans-serif; font-size: 17px; font-weight: 700;
+  color: var(--text); display: flex; align-items: center; gap: 12px;
+  letter-spacing: 0.01em;
+}
+.pbi-header-icon {
+  width: 38px; height: 38px; border-radius: 10px;
+  background: var(--accent); color: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+}
+.pbi-header-sub { font-size: 11px; color: var(--text2); margin-top: 3px; }
+.pbi-header-side { text-align: right; }
+.pbi-header-side-label { font-size: 10px; color: var(--text3); letter-spacing: 0.08em; text-transform: uppercase; }
+.pbi-header-side-value { font-family: 'DM Mono', monospace; font-size: 13px; color: var(--accent); font-weight: 600; }
+
+/* Sección con título pequeño tipo agrupador */
+.pbi-section-title {
+  font-size: 11px; font-weight: 700;
+  color: var(--text2);
+  letter-spacing: 0.12em; text-transform: uppercase;
+  margin: 0 0 10px 0;
+}
+
+/* Tarjetas KPI ejecutivas */
+.pbi-kpi {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0 10px 10px 0;
+  padding: 14px 16px;
+  position: relative; overflow: hidden;
+  transition: transform .15s, box-shadow .2s, border-color .2s;
+}
+.pbi-kpi:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 22px #00000055;
+  border-color: var(--border2);
+}
+.pbi-kpi::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+}
+.pbi-kpi.c-blue::before   { background: #00c8ff; }
+.pbi-kpi.c-green::before  { background: #00e87a; }
+.pbi-kpi.c-warn::before   { background: #ff9500; }
+.pbi-kpi.c-red::before    { background: #ff3b5c; }
+.pbi-kpi.c-teal::before   { background: #00ffb3; }
 .pbi-kpi.c-purple::before { background: #a855f7; }
-.pbi-kpi-icon { position: absolute; right: 12px; top: 12px; font-size: 20px; opacity: 0.25; }
-.pbi-kpi-label { font-size: 10px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; margin-bottom: 6px; }
-.pbi-kpi-value { font-family: 'Syne', sans-serif; font-size: 26px; font-weight: 800; color: var(--text); line-height: 1; }
-.pbi-kpi-sub { font-size: 11px; color: var(--text3); margin-top: 4px; }
-.pbi-kpi-trend { font-size: 11px; margin-top: 5px; display: flex; align-items: center; gap: 4px; font-weight: 600; }
-.pbi-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
-.pbi-card-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
-.pbi-card-title { font-size: 12px; font-weight: 700; color: var(--text); letter-spacing: 0.03em; display: flex; align-items: center; gap: 7px; }
-.pbi-card-badge { font-size: 10px; color: var(--text3); background: var(--surface2); padding: 3px 9px; border-radius: 20px; }
-.pbi-filter-bar { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; margin-bottom: 16px; }
-.pbi-filter-bar .field { min-width: 120px; flex: 1; }
-.pbi-filter-bar .field label { font-size: 10px; font-weight: 600; color: var(--text2); letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 5px; display: block; }
-@media(max-width:768px){ .pbi-filter-bar .field { min-width: 100%; } }
+.pbi-kpi-icon {
+  position: absolute; right: 12px; top: 12px;
+  font-size: 22px; opacity: 0.22;
+}
+.pbi-kpi-label {
+  font-size: 10px; color: var(--text2);
+  text-transform: uppercase; letter-spacing: 0.08em;
+  font-weight: 600; margin-bottom: 6px;
+}
+.pbi-kpi-value {
+  font-family: 'Syne', sans-serif;
+  font-size: 24px; font-weight: 800;
+  color: var(--text); line-height: 1;
+  letter-spacing: -0.01em;
+}
+.pbi-kpi-value-unit {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px; font-weight: 500;
+  color: var(--text3); margin-left: 2px;
+}
+.pbi-kpi-sub {
+  font-size: 11px; color: var(--text3);
+  margin-top: 5px;
+}
+.pbi-kpi-trend {
+  font-size: 11px; margin-top: 5px;
+  display: inline-flex; align-items: center; gap: 4px;
+  font-weight: 600;
+}
+.pbi-kpi-trend.up { color: #00e87a; }
+.pbi-kpi-trend.down { color: #ff3b5c; }
+.pbi-kpi-trend.neutral { color: var(--text3); }
+
+/* Tarjetas para gráficos */
+.pbi-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px 18px;
+}
+.pbi-card-head {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  margin-bottom: 14px;
+  gap: 12px;
+}
+.pbi-card-title {
+  font-size: 13px; font-weight: 600;
+  color: var(--text);
+  letter-spacing: 0.02em;
+  display: flex; align-items: center; gap: 8px;
+}
+.pbi-card-subtitle {
+  font-size: 10px; color: var(--text3);
+  letter-spacing: 0.08em; text-transform: uppercase;
+  margin-bottom: 2px;
+}
+.pbi-card-badge {
+  font-size: 10px; color: var(--text3);
+  background: var(--surface2);
+  padding: 4px 10px; border-radius: 20px;
+  font-weight: 500; white-space: nowrap;
+}
+
+/* Barra de filtros estilo slicer */
+.pbi-filter-bar {
+  display: flex; gap: 10px; flex-wrap: wrap;
+  align-items: flex-end;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 18px;
+}
+.pbi-filter-bar .field { min-width: 130px; flex: 1; }
+.pbi-filter-bar .field label {
+  font-size: 9px; font-weight: 600;
+  color: var(--text2);
+  letter-spacing: 0.1em; text-transform: uppercase;
+  margin-bottom: 5px; display: block;
+}
+
+/* Leyenda inline para tarjetas con donut */
+.pbi-donut-legend {
+  flex: 1; font-size: 12px;
+}
+.pbi-donut-legend > div {
+  display: flex; align-items: center; gap: 8px;
+  padding: 4px 0; color: var(--text);
+}
+.pbi-donut-legend > div span:first-child {
+  width: 9px; height: 9px; border-radius: 2px;
+  display: inline-block;
+}
+.pbi-donut-legend > div span:nth-child(2) { flex: 1; }
+.pbi-donut-legend > div span:nth-child(3) {
+  color: var(--text2);
+  font-family: 'DM Mono', monospace; font-size: 11px;
+}
+
+/* Chips de resumen del header */
+.pbi-chip {
+  font-size: 10px; padding: 5px 11px; border-radius: 20px;
+  border: 1px solid; font-weight: 500;
+  display: inline-flex; align-items: center; gap: 4px;
+}
+.pbi-chip.c-blue   { color: var(--accent); background: #00c8ff15; border-color: #00c8ff44; }
+.pbi-chip.c-green  { color: #00e87a; background: #00e87a18; border-color: #00e87a44; }
+.pbi-chip.c-warn   { color: #ff9500; background: #ff950018; border-color: #ff950044; }
+.pbi-chip.c-gray   { color: var(--text2); background: var(--surface2); border-color: var(--border); }
+
+@media (max-width: 768px) {
+  .pbi-filter-bar .field { min-width: 100%; }
+  .pbi-header-bar { padding: 12px 14px; }
+  .pbi-header-title { font-size: 15px; }
+}
 
 @keyframes pulsoAlarma {
   0%, 100% { box-shadow: 0 0 20px #ff3b5c44, 0 0 0 0 #ff3b5c33; }
@@ -718,73 +864,141 @@ tr.clickable-row:hover td { background: var(--surface2); }
             <div class="pbi-header-bar">
               <div>
                 <div class="pbi-header-title"><span class="pbi-header-icon">📦</span> Panel de Producción</div>
-                <div class="pbi-header-sub">Indicadores de congelamiento y rendimiento operativo</div>
+                <div class="pbi-header-sub">Indicadores ejecutivos de congelamiento y rendimiento operativo</div>
               </div>
-              <div class="pbi-card-badge" id="pbi-prod-periodo">Período seleccionado</div>
+              <div class="pbi-header-side">
+                <div class="pbi-header-side-label">Período</div>
+                <div class="pbi-header-side-value" id="pbi-prod-periodo">—</div>
+              </div>
             </div>
 
-            <div style="font-size:11px;font-weight:700;color:var(--text2);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px;">📦 Producción y Tiempos</div>
+            <div class="pbi-section-title">📦 Producción y tiempos</div>
             <div class="grid-5 mb-6">
-              <div class="pbi-kpi c-blue"><div class="pbi-kpi-icon">📦</div><div class="pbi-kpi-label">Producción Total</div><div class="pbi-kpi-value" id="kpi-prod">0</div><div class="pbi-kpi-sub">kg congelados</div></div>
-              <div class="pbi-kpi c-green"><div class="pbi-kpi-icon">✅</div><div class="pbi-kpi-label">Bachadas OK</div><div class="pbi-kpi-value" id="kpi-bach">0</div><div class="pbi-kpi-sub">completadas</div></div>
-              <div class="pbi-kpi c-warn"><div class="pbi-kpi-icon">⏱</div><div class="pbi-kpi-label">T. Congelamiento Prom.</div><div class="pbi-kpi-value" id="kpi-tcong">--</div><div class="pbi-kpi-sub">horas / bachada</div></div>
-              <div class="pbi-kpi c-teal"><div class="pbi-kpi-icon">🔄</div><div class="pbi-kpi-label">T. Carga/Descarga Prom.</div><div class="pbi-kpi-value" id="kpi-tcd">--</div><div class="pbi-kpi-sub">horas · sólo congeladores</div></div>
-              <div class="pbi-kpi c-red"><div class="pbi-kpi-icon">🛑</div><div class="pbi-kpi-label">T. Parada Total</div><div class="pbi-kpi-value" id="kpi-tparada">--</div><div class="pbi-kpi-sub">horas perdidas</div></div>
+              <div class="pbi-kpi c-blue">
+                <div class="pbi-kpi-icon">📦</div>
+                <div class="pbi-kpi-label">Producción total</div>
+                <div class="pbi-kpi-value" id="kpi-prod">0<span class="pbi-kpi-value-unit" id="kpi-prod-unit">t</span></div>
+                <div class="pbi-kpi-sub">toneladas congeladas</div>
+              </div>
+              <div class="pbi-kpi c-green">
+                <div class="pbi-kpi-icon">✅</div>
+                <div class="pbi-kpi-label">Bachadas OK</div>
+                <div class="pbi-kpi-value" id="kpi-bach">0</div>
+                <div class="pbi-kpi-sub">completadas</div>
+              </div>
+              <div class="pbi-kpi c-warn">
+                <div class="pbi-kpi-icon">⏱</div>
+                <div class="pbi-kpi-label">T. Congelamiento prom.</div>
+                <div class="pbi-kpi-value" id="kpi-tcong">--</div>
+                <div class="pbi-kpi-sub">horas / bachada</div>
+              </div>
+              <div class="pbi-kpi c-teal">
+                <div class="pbi-kpi-icon">🔄</div>
+                <div class="pbi-kpi-label">T. Carga/Descarga prom.</div>
+                <div class="pbi-kpi-value" id="kpi-tcd">--</div>
+                <div class="pbi-kpi-sub">horas · sólo congeladores</div>
+              </div>
+              <div class="pbi-kpi c-red">
+                <div class="pbi-kpi-icon">🛑</div>
+                <div class="pbi-kpi-label">T. Parada total</div>
+                <div class="pbi-kpi-value" id="kpi-tparada">--</div>
+                <div class="pbi-kpi-sub">horas perdidas</div>
+              </div>
             </div>
 
-            <div style="font-size:11px;font-weight:700;color:var(--text2);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px;">🔧 Confiabilidad de Equipos</div>
+            <div class="pbi-section-title">🔧 Confiabilidad de equipos</div>
             <div class="grid-5 mb-6">
-              <div class="pbi-kpi c-blue"><div class="pbi-kpi-icon">🔧</div><div class="pbi-kpi-label">MTBF</div><div class="pbi-kpi-value" id="kpi-mtbf">--</div><div class="pbi-kpi-sub">horas entre fallas</div></div>
-              <div class="pbi-kpi c-warn"><div class="pbi-kpi-icon">🛠</div><div class="pbi-kpi-label">MTTR</div><div class="pbi-kpi-value" id="kpi-mttr">--</div><div class="pbi-kpi-sub">horas por reparación</div></div>
-              <div class="pbi-kpi c-green"><div class="pbi-kpi-icon">🟢</div><div class="pbi-kpi-label">Disponibilidad</div><div class="pbi-kpi-value" id="kpi-disp">--</div><div class="pbi-kpi-sub">% tiempo operativo</div></div>
-              <div class="pbi-kpi c-teal"><div class="pbi-kpi-icon">📊</div><div class="pbi-kpi-label">Confiabilidad</div><div class="pbi-kpi-value" id="kpi-conf">--</div><div class="pbi-kpi-sub">% sin fallas</div></div>
-              <div class="pbi-kpi c-purple"><div class="pbi-kpi-icon">🎯</div><div class="pbi-kpi-label">OEE</div><div class="pbi-kpi-value" id="kpi-oee">--</div><div class="pbi-kpi-sub">eficiencia global</div></div>
+              <div class="pbi-kpi c-blue">
+                <div class="pbi-kpi-icon">🔧</div>
+                <div class="pbi-kpi-label">MTBF</div>
+                <div class="pbi-kpi-value" id="kpi-mtbf">--</div>
+                <div class="pbi-kpi-sub">horas entre fallas</div>
+              </div>
+              <div class="pbi-kpi c-warn">
+                <div class="pbi-kpi-icon">🛠</div>
+                <div class="pbi-kpi-label">MTTR</div>
+                <div class="pbi-kpi-value" id="kpi-mttr">--</div>
+                <div class="pbi-kpi-sub">horas por reparación</div>
+              </div>
+              <div class="pbi-kpi c-green">
+                <div class="pbi-kpi-icon">🟢</div>
+                <div class="pbi-kpi-label">Disponibilidad</div>
+                <div class="pbi-kpi-value" id="kpi-disp">--</div>
+                <div class="pbi-kpi-sub">% tiempo operativo</div>
+              </div>
+              <div class="pbi-kpi c-teal">
+                <div class="pbi-kpi-icon">📊</div>
+                <div class="pbi-kpi-label">Confiabilidad</div>
+                <div class="pbi-kpi-value" id="kpi-conf">--</div>
+                <div class="pbi-kpi-sub">% sin fallas</div>
+              </div>
+              <div class="pbi-kpi c-purple">
+                <div class="pbi-kpi-icon">🎯</div>
+                <div class="pbi-kpi-label">OEE</div>
+                <div class="pbi-kpi-value" id="kpi-oee">--</div>
+                <div class="pbi-kpi-sub">eficiencia global</div>
+              </div>
             </div>
 
-            <div style="font-size:11px;font-weight:700;color:var(--text2);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px;">⚠️ Eventos del Período</div>
+            <div class="pbi-section-title">⚠️ Eventos del período</div>
             <div class="grid-3 mb-6">
-              <div class="pbi-kpi c-red"><div class="pbi-kpi-icon">🚨</div><div class="pbi-kpi-label">Fallas / Averías</div><div class="pbi-kpi-value" id="kpi-fallas">0</div><div class="pbi-kpi-sub">no programadas</div></div>
-              <div class="pbi-kpi c-green"><div class="pbi-kpi-icon">🔧</div><div class="pbi-kpi-label">Mant. Programados</div><div class="pbi-kpi-value" id="kpi-prog">0</div><div class="pbi-kpi-sub">en período</div></div>
-              <div class="pbi-kpi c-blue"><div class="pbi-kpi-icon">❄️</div><div class="pbi-kpi-label">Descongelamientos</div><div class="pbi-kpi-value" id="kpi-desc">0</div><div class="pbi-kpi-sub">en período</div></div>
+              <div class="pbi-kpi c-red">
+                <div class="pbi-kpi-icon">🚨</div>
+                <div class="pbi-kpi-label">Fallas / Averías</div>
+                <div class="pbi-kpi-value" id="kpi-fallas">0</div>
+                <div class="pbi-kpi-sub">no programadas</div>
+              </div>
+              <div class="pbi-kpi c-green">
+                <div class="pbi-kpi-icon">🔧</div>
+                <div class="pbi-kpi-label">Mant. Programados</div>
+                <div class="pbi-kpi-value" id="kpi-prog">0</div>
+                <div class="pbi-kpi-sub">en período</div>
+              </div>
+              <div class="pbi-kpi c-blue">
+                <div class="pbi-kpi-icon">❄️</div>
+                <div class="pbi-kpi-label">Descongelamientos</div>
+                <div class="pbi-kpi-value" id="kpi-desc">0</div>
+                <div class="pbi-kpi-sub">en período</div>
+              </div>
             </div>
 
           </div><!-- end dash-page-1 -->
           <div class="dash-page" id="dash-page-2">
           <div class="pbi-header-bar">
             <div>
-              <div class="pbi-header-title"><span class="pbi-header-icon">📈</span> Análisis Gráfico</div>
-              <div class="pbi-header-sub">Visualización de producción, paradas y confiabilidad</div>
+              <div class="pbi-header-title"><span class="pbi-header-icon">📈</span> Análisis gráfico</div>
+              <div class="pbi-header-sub">Visualización ejecutiva de producción, paradas y confiabilidad</div>
             </div>
             <div class="pbi-card-badge">Datos del período seleccionado</div>
           </div>
 
           <div class="grid-2 mb-4">
             <div class="pbi-card">
-              <div class="pbi-card-head"><div class="pbi-card-title">📦 Producción por Equipo</div><div class="pbi-card-badge">kg</div></div>
+              <div class="pbi-card-head"><div class="pbi-card-title">📦 Producción por equipo</div><div class="pbi-card-badge">toneladas</div></div>
               <div style="position:relative;height:230px;"><canvas id="chart-prod"></canvas></div>
             </div>
             <div class="pbi-card">
-              <div class="pbi-card-head"><div class="pbi-card-title">🛑 Horas de Parada por Tipo</div><div class="pbi-card-badge">horas</div></div>
+              <div class="pbi-card-head"><div class="pbi-card-title">🛑 Horas de parada por tipo</div><div class="pbi-card-badge">horas</div></div>
               <div style="position:relative;height:230px;"><canvas id="chart-tipos"></canvas></div>
             </div>
           </div>
           <div class="grid-2 mb-4">
             <div class="pbi-card">
-              <div class="pbi-card-head"><div class="pbi-card-title">⏱ T. Congelamiento Promedio por Equipo</div><div class="pbi-card-badge">horas</div></div>
+              <div class="pbi-card-head"><div class="pbi-card-title">⏱ T. congelamiento promedio por equipo</div><div class="pbi-card-badge">horas</div></div>
               <div style="position:relative;height:230px;"><canvas id="chart-tcong"></canvas></div>
             </div>
             <div class="pbi-card">
-              <div class="pbi-card-head"><div class="pbi-card-title">🔧 MTBF / MTTR por Equipo</div><div class="pbi-card-badge">horas</div></div>
+              <div class="pbi-card-head"><div class="pbi-card-title">🔧 MTBF / MTTR por equipo</div><div class="pbi-card-badge">horas</div></div>
               <div style="position:relative;height:230px;"><canvas id="chart-mant"></canvas></div>
             </div>
           </div>
           <div class="grid-2 mb-4">
             <div class="pbi-card">
-              <div class="pbi-card-head"><div class="pbi-card-title">📅 Producción Diaria (tendencia)</div><div class="pbi-card-badge">kg/día</div></div>
+              <div class="pbi-card-head"><div class="pbi-card-title">📅 Producción diaria · tendencia</div><div class="pbi-card-badge">t / día</div></div>
               <div style="position:relative;height:230px;"><canvas id="chart-prod-dia"></canvas></div>
             </div>
             <div class="pbi-card">
-              <div class="pbi-card-head"><div class="pbi-card-title">🥧 Distribución de Producción por Producto</div><div class="pbi-card-badge">%</div></div>
+              <div class="pbi-card-head"><div class="pbi-card-title">🥧 Distribución por producto</div><div class="pbi-card-badge">%</div></div>
               <div style="position:relative;height:230px;"><canvas id="chart-productos"></canvas></div>
             </div>
           </div>
@@ -793,7 +1007,7 @@ tr.clickable-row:hover td { background: var(--surface2); }
           <div class="dash-page" id="dash-page-3">
           <div class="pbi-header-bar">
             <div>
-              <div class="pbi-header-title"><span class="pbi-header-icon">🔧</span> Panel de Mantenimiento</div>
+              <div class="pbi-header-title"><span class="pbi-header-icon">🔧</span> Panel de mantenimiento</div>
               <div class="pbi-header-sub">Confiabilidad, disponibilidad e indicadores por equipo</div>
             </div>
             <div class="pbi-card-badge">Tabla detallada</div>
@@ -801,14 +1015,14 @@ tr.clickable-row:hover td { background: var(--surface2); }
 
           <div class="pbi-card mb-4">
             <div class="pbi-card-head">
-              <div class="pbi-card-title">📊 Indicadores de Mantenimiento por Equipo</div>
+              <div class="pbi-card-title">📊 Indicadores de mantenimiento por equipo</div>
               <div class="pbi-card-badge">Click en encabezado para ordenar</div>
             </div>
             <div class="table-wrap">
               <table>
                 <thead><tr>
                   <th>Equipo</th><th>Fallas</th><th>T.Fallas (h)</th><th>MTBF (h)</th><th>MTTR (h)</th>
-                  <th>Disponib. %</th><th>Confiab. %</th><th>Prog.</th><th>Descong.</th><th>Bachadas</th><th>Prod. (kg)</th>
+                  <th>Disponib. %</th><th>Confiab. %</th><th>Prog.</th><th>Descong.</th><th>Bachadas</th><th>Prod. (t)</th>
                 </tr></thead>
                 <tbody id="tbody-kpis-eq"></tbody>
               </table>
@@ -817,11 +1031,11 @@ tr.clickable-row:hover td { background: var(--surface2); }
 
           <div class="grid-2 mb-4">
             <div class="pbi-card">
-              <div class="pbi-card-head"><div class="pbi-card-title">🟢 Disponibilidad por Equipo</div><div class="pbi-card-badge">%</div></div>
+              <div class="pbi-card-head"><div class="pbi-card-title">🟢 Disponibilidad por equipo</div><div class="pbi-card-badge">%</div></div>
               <div style="position:relative;height:240px;"><canvas id="chart-disp-eq"></canvas></div>
             </div>
             <div class="pbi-card">
-              <div class="pbi-card-head"><div class="pbi-card-title">🚨 Fallas por Equipo</div><div class="pbi-card-badge">cantidad</div></div>
+              <div class="pbi-card-head"><div class="pbi-card-title">🚨 Fallas por equipo</div><div class="pbi-card-badge">cantidad</div></div>
               <div style="position:relative;height:240px;"><canvas id="chart-fallas-eq"></canvas></div>
             </div>
           </div>
@@ -2301,6 +2515,15 @@ function renderDashboard(){
   const turnoF=document.getElementById('dash-turno')?.value;
   const prodF=document.getElementById('dash-producto')?.value;
 
+  // Actualizar etiqueta de período en el encabezado ejecutivo
+  const periodoEl = document.getElementById('pbi-prod-periodo');
+  if(periodoEl) {
+    if(from && to) periodoEl.textContent = from + '  →  ' + to;
+    else if(from) periodoEl.textContent = 'Desde ' + from;
+    else if(to) periodoEl.textContent = 'Hasta ' + to;
+    else periodoEl.textContent = 'Todo el histórico';
+  }
+
   let bachs=DB.get('bachadas',[]).filter(b=>b.estado==='cerrado');
   let evs=DB.get('eventos',[]).filter(e=>e.estado==='cerrado');
 
@@ -2321,7 +2544,12 @@ function renderDashboard(){
   const avgCD=evCD.length?evCD.reduce((s,e)=>s+(e.durH||0),0)/evCD.length:null;
   const totalPar=evs.reduce((s,e)=>s+(e.durH||0),0);
 
-  setText('kpi-prod',totalProd.toLocaleString('es-PE',{maximumFractionDigits:0}));
+  // Producción en toneladas con 1 decimal
+  const prodToneladas = totalProd / 1000;
+  const elProd = document.getElementById('kpi-prod');
+  if(elProd) {
+    elProd.innerHTML = prodToneladas.toLocaleString('es-PE', {maximumFractionDigits: 1, minimumFractionDigits: 1}) + '<span class="pbi-kpi-value-unit">t</span>';
+  }
   setText('kpi-bach',bachs.length);
   setText('kpi-tcong',avgTcong!==null?hoursToStr(avgTcong):'--');
   setText('kpi-tcd',avgCD!==null?hoursToStr(avgCD):'--');
@@ -2361,8 +2589,10 @@ function renderDashboard(){
 
   // CHARTS
   const equipos=['C1','C2','C3','C4','C5','C6','C7','C8','C9','C10','C11','TE'];
-  const prodEq=equipos.map(eq=>bachs.filter(b=>b.equipo===eq).reduce((s,b)=>s+(b.peso||0),0));
-  renderBar('chart-prod',equipos,prodEq,'Producción (kg)','#00c8ff');
+  // Producción por equipo en TONELADAS (convertir kg→t con 1 decimal)
+  const prodEqKg=equipos.map(eq=>bachs.filter(b=>b.equipo===eq).reduce((s,b)=>s+(b.peso||0),0));
+  const prodEq = prodEqKg.map(v => parseFloat((v/1000).toFixed(1)));
+  renderBar('chart-prod',equipos,prodEq,'Producción (t)','#00c8ff');
 
   const tiposL=['carga_descarga','descongelamiento','programada','no_programada'];
   const tiposNames=['Carga/Descarga','Descongelamiento','Prog.','Falla'];
@@ -2384,14 +2614,15 @@ function renderDashboard(){
   });
   renderMultiBar('chart-mant',equipos,[{label:'MTBF (h)',data:mtbfEq,color:'#00c8ff'},{label:'MTTR (h)',data:mttrEq,color:'#ff3b5c'}]);
 
-  // NUEVO: Producción diaria (tendencia)
+  // Producción diaria en toneladas (tendencia)
   const fechasMap = {};
   bachs.filter(b=>b.estado==='cerrado').forEach(b=>{
     const f = b.fecha || '';
     if(f) fechasMap[f] = (fechasMap[f]||0) + (b.peso||0);
   });
   const fechasOrd = Object.keys(fechasMap).sort();
-  renderLine('chart-prod-dia', fechasOrd.map(f=>f.slice(5)), fechasOrd.map(f=>Math.round(fechasMap[f])), 'Producción (kg)', '#00c8ff');
+  // Convertir kg → toneladas con 1 decimal
+  renderLine('chart-prod-dia', fechasOrd.map(f=>f.slice(5)), fechasOrd.map(f=>parseFloat((fechasMap[f]/1000).toFixed(1))), 'Producción (t)', '#00c8ff');
 
   // NUEVO: Distribución por producto (doughnut)
   const prodMap = {};
@@ -2418,6 +2649,7 @@ function renderDashboard(){
       const dsp=Math.min(100,((periodHours-tF)/periodHours)*100);
       const conf=ef.length?Math.min(100,(1-ef.length/(eb.length+ef.length))*100):eb.length>0?100:null;
       const prod=eb.reduce((s,b)=>s+(b.peso||0),0);
+      const prodTon = (prod/1000).toFixed(2);
       return `<tr>
         <td><span class="badge badge-blue">${eq}</span></td>
         <td><span class="badge badge-red">${ef.length}</span></td>
@@ -2427,7 +2659,7 @@ function renderDashboard(){
         <td><span class="badge ${dsp>=90?'badge-green':dsp>=70?'badge-warn':'badge-red'}">${dsp.toFixed(1)}%</span></td>
         <td><span class="badge ${conf===null?'badge-gray':conf>=95?'badge-green':conf>=80?'badge-warn':'badge-red'}">${conf!==null?conf.toFixed(1)+'%':'—'}</span></td>
         <td>${ep}</td><td>${ed}</td><td>${eb.length}</td>
-        <td class="font-mono">${prod.toFixed(1)}</td>
+        <td class="font-mono">${prodTon}</td>
       </tr>`;
     }).join('');
     if(!tbody.innerHTML.trim())tbody.innerHTML='<tr><td colspan="11" style="text-align:center;color:var(--text3);padding:20px;">Sin datos suficientes para calcular indicadores</td></tr>';

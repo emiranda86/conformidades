@@ -2261,29 +2261,39 @@ function calcularEstadoBachadas(equipo) {
   eventos.sort((a, b) => a.ts - b.ts);
 
   // Procesar cronológicamente
-  // - Bachada → incrementa contador
-  // - Carga/Descarga → mantiene el contador
+  // FUENTE DE VERDAD: el número de bachada REALMENTE guardado (b.bach), no un conteo de registros.
+  // - Bachada → el contador toma el valor de su número real (b.bach)
+  // - Carga/Descarga → mantiene el contador (continúa la secuencia)
   // - Cualquier OTRO evento → reinicia a 0
-  let consecutivas = 0;
+  //
+  // Así, si el usuario registra manualmente "Bach #2" sin que exista la #1,
+  // el sistema respeta ese número 2 como su posición real en la secuencia.
+  let consecutivas = 0;       // posición en la secuencia (basada en b.bach real)
   let ultimoResetTs = null;
+  let huboReset = false;       // si hubo un reset, la siguiente bachada empieza en 1
   for(const ev of eventos) {
     if(ev.categoria === 'bachada') {
-      consecutivas++;
+      // Usar el número REAL guardado de la bachada como posición de la secuencia
+      // (si por algún motivo es 0 o inválido, usar consecutivas+1 como fallback)
+      const numReal = ev.bachNum > 0 ? ev.bachNum : (consecutivas + 1);
+      consecutivas = numReal;
+      huboReset = false;
     } else if(ev.categoria === 'evento') {
       if(ev.tipo === 'carga_descarga') {
         // Carga/Descarga: continúa la secuencia (no toca contador)
-        // Solo conecta una bachada con la siguiente
       } else {
-        // Cualquier otro evento (descongelamiento, falla, sin_produccion,
-        // programada, fin_proceso, etc.) → REINICIA
+        // Cualquier otro evento → REINICIA
         consecutivas = 0;
         ultimoResetTs = ev.ts;
+        huboReset = true;
       }
     }
   }
 
-  // La próxima bachada sugerida es consecutivas + 1
-  const proximaBach = consecutivas + 1;
+  // La próxima bachada sugerida:
+  // - Si la última acción fue un reset (evento != C/D) → empezar en 1
+  // - Si no → continuar desde la última bachada + 1
+  const proximaBach = huboReset ? 1 : (consecutivas + 1);
 
   return { consecutivas, limite, esTunel, proximaBach, ultimoResetTs };
 }

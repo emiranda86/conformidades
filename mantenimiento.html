@@ -2388,15 +2388,22 @@ function renderBachadasData(bachs){
 
   // ORDENAR: fecha DESC → turno (Día=0 antes Noche=1) → hora inicio ASC
   bachs = bachs.slice().sort((a,b) => {
-    // 1. Fecha descendente
-    if((b.fecha||'') !== (a.fecha||'')) return (b.fecha||'').localeCompare(a.fecha||'');
-    // 2. Turno: Día primero, Noche después
-    const turnoOrd = {'Día':0, 'Noche':1};
-    const ta = turnoOrd[a.turno] ?? 0;
-    const tb = turnoOrd[b.turno] ?? 0;
-    if(ta !== tb) return ta - tb;
-    // 3. Hora de inicio ascendente dentro del mismo turno
-    return (a.inicio||'00:00').localeCompare(b.inicio||'00:00');
+    // ============================================================
+    // ORDENAMIENTO CRONOLÓGICO INVERSO (bitácora)
+    // ============================================================
+    // Orden estricto descendente por fecha + hora REAL del registro.
+    // El turno NO afecta el orden (es solo informativo).
+    // El equipo, número de bachada y día operativo TAMPOCO afectan.
+    //
+    // Construimos un timestamp comparable: fecha + inicio.
+    // Usamos la fecha calendario real + hora de inicio para comparar.
+    const tsA = (a.fecha||'0000-00-00') + 'T' + (a.inicio||'00:00');
+    const tsB = (b.fecha||'0000-00-00') + 'T' + (b.inicio||'00:00');
+    if(tsB !== tsA) return tsB.localeCompare(tsA); // descendente
+    // Empate exacto de fecha+hora → desempatar por timestamp de creación (ts) descendente
+    const creA = a.ts || '';
+    const creB = b.ts || '';
+    return creB.localeCompare(creA);
   });
   tbody.innerHTML=bachs.map(b=>`
     <tr class="clickable-row" id="fila-b-${b.id}" onclick="verDetalleBachada(${b.id},event)">

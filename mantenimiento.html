@@ -2151,7 +2151,25 @@ async function saveBachada(){
     closeModal('modal-bachada');
     if(estado==='cerrado'){
       // Mostrar modal post-bachada para registrar evento siguiente
-      abrirPostBachada(eq, bach, producto, fin, fecha, turno, tecnico);
+      // Calcular la fecha calendario REAL donde físicamente terminó la bachada
+      // (puede ser el día siguiente si inicio<8 o si cruza medianoche)
+      let fechaCalFin = fecha;
+      try {
+        const [hi, mi] = inicio.split(':').map(Number);
+        const [hf, mf] = fin.split(':').map(Number);
+        const inicioPos = hi + mi/60;
+        const finPos = hf + mf/60;
+        // Fecha calendario de inicio: si inicio<8 está en día calendario fecha+1
+        const baseDate = new Date(fecha + 'T00:00:00');
+        const inicioRealDate = new Date(baseDate);
+        if(inicioPos < 8) inicioRealDate.setDate(inicioRealDate.getDate() + 1);
+        // Fecha calendario de fin: si finPos < inicioPos (cruce medianoche), día siguiente del inicio
+        // Si no cruce, mismo día calendario que el inicio
+        const finRealDate = new Date(inicioRealDate);
+        if(finPos < inicioPos) finRealDate.setDate(finRealDate.getDate() + 1);
+        fechaCalFin = finRealDate.toISOString().split('T')[0];
+      } catch(e) { console.warn('No se pudo calcular fechaCalFin:', e); }
+      abrirPostBachada(eq, bach, producto, fin, fecha, turno, tecnico, fechaCalFin);
     } else {
       showAlert('alert-bachadas','Inicio de bachada registrado. Edita cuando termine para completar.','warn');
     }
@@ -4200,11 +4218,64 @@ function onBachNumChange(){
 // ======== POST-BACHADA EVENT ========
 let _pbData = {};
 
-function abrirPostBachada(equipo, bach, producto, horaFin, fecha, turno, tecnico) {
-  _pbData = {equipo, bach, producto, horaFin, fecha, turno};
+function abrirPostBachada(equipo, bach, producto, horaFin, fecha, turno, tecnico, fechaFinBach) {
+  // ============================================================
+  // DETECCIÓN INTELIGENTE DE CAMBIO DE DÍA OPERATIVO
+  // ============================================================
+  // Si la bachada terminó después de las 08:00 AM del día calendario siguiente
+  // al día operativo donde inició, el evento que sigue pertenece al NUEVO día operativo.
+  //
+  // Regla: 
+  //   - opDayInicio: día operativo de la bachada (= campo `fecha`)
+  //   - calDayFin:   día calendario donde físicamente terminó (= fechaFinBach o fecha)
+  //   - horaFin:     hora HH:MM en que terminó la bachada
+  //   
+  //   Si calDayFin > opDayInicio AND horaFin >= 08:00:
+  //      → cambio de día operativo. Nuevo día operativo = calDayFin
+  //   Si calDayFin > opDayInicio AND horaFin < 08:00:
+  //      → cruzó medianoche pero AÚN dentro del mismo día operativo.
+  //   Si calDayFin == opDayInicio:
+  //      → mismo día operativo (caso normal).
+  // ============================================================
+  
+  // Calcular la fecha operativa correcta del evento
+  let fechaEventoOperativa = fecha; // por defecto: misma del día operativo de la bachada
+  let cruzoOperativo = false;
+  
+  if(fechaFinBach && horaFin) {
+    const [hh, mm] = horaFin.split(':').map(Number);
+    // Si fechaFin distinta a fecha de inicio Y hora >= 08:00 → ya entró al siguiente operativo
+    if(fechaFinBach !== fecha && hh >= 8) {
+      fechaEventoOperativa = fechaFinBach;
+      cruzoOperativo = true;
+    }
+    // Si fechaFin == fecha y hora >= 08 → mismo operativo, ok
+    // Si hora < 08 → madrugada del operativo declarado, mismo operativo
+  }
+
+  _pbData = {equipo, bach, producto, horaFin, fecha: fechaEventoOperativa, turno, fechaOriginalBach: fecha, cruzoOperativo};
+
   const eqNombre = equipo==='TE'?'Túnel Estático':'Congelador '+equipo.replace('C','');
   document.getElementById('pb-resumen').textContent = eqNombre+' — Bach #'+bach+' — '+producto;
+  
+  // Setear campos editables (fecha + hora)
+  document.getElementById('pb-fecha').value = fechaEventoOperativa;
   document.getElementById('pb-inicio').value = horaFin || '';
+  
+  // Mostrar/ocultar aviso de cruce de día operativo
+  const avisoEl = document.getElementById('pb-cruce-aviso');
+  if(avisoEl) avisoEl.style.display = cruzoOperativo ? 'block' : 'none';
+  
+  // Actualizar nota de fecha
+  const noteFecha = document.getElementById('pb-fecha-note');
+  if(noteFecha) {
+    if(cruzoOperativo) {
+      noteFecha.innerHTML = '<span style="color:#00c8ff;">✓ Detectado nuevo día operativo (' + fechaEventoOperativa + ')</span>';
+    } else {
+      noteFecha.textContent = 'Día operativo al que pertenece el evento';
+    }
+  }
+
   document.getElementById('pb-desc').value = '';
   document.getElementById('pb-falla').value = '';
   document.getElementById('pb-falla-field').style.display = 'none';
@@ -4214,36 +4285,41 @@ function abrirPostBachada(equipo, bach, producto, horaFin, fecha, turno, tecnico
   const sel = document.getElementById('pb-tecnico');
   sel.innerHTML = '<option value="">Seleccionar...</option>' + tecs.map(t=>`<option value="${t}"${t===tecnico?' selected':''}>${t}</option>`).join('');
 
-  // ============================================================
-  // LÓGICA INTELIGENTE DE SUGERENCIA Y ALERTAS
-  // ============================================================
-  // Recalcular estado consecutivo (esta bachada acaba de cerrarse)
+  // Lógica de alertas (basada en el estado actual del equipo)
   const estado = calcularEstadoBachadas(equipo);
   const limite = estado.limite;
   const consecutivas = estado.consecutivas;
 
-  // Pre-seleccionar tipo según contador consecutivo
-  // Si ya alcanzó o pasó el límite → sugerir descongelamiento
   if(consecutivas >= limite){
     document.getElementById('pb-tipo').value = 'descongelamiento';
   } else {
     document.getElementById('pb-tipo').value = 'carga_descarga';
   }
 
-  // Mostrar alerta visual en el modal post-bachada
   mostrarAlertaPostBachada(estado, equipo);
 
-  // Listener: si cambia el tipo, recalcular alerta
   const tipoSel = document.getElementById('pb-tipo');
   tipoSel.onchange = function() {
-    // El listener original que maneja pb-falla-field
     const tipo = this.value;
     document.getElementById('pb-falla-field').style.display = (tipo === 'no_programada') ? '' : 'none';
-    // Actualizar alerta dinámicamente según selección
     mostrarAlertaPostBachada(estado, equipo);
   };
 
   document.getElementById('modal-post-bachada').classList.add('open');
+}
+
+// Cuando el usuario edita manualmente la fecha del evento, actualizar el aviso
+function onPbFechaChange() {
+  const fechaActual = document.getElementById('pb-fecha').value;
+  const fechaOriginal = _pbData?.fechaOriginalBach;
+  const noteFecha = document.getElementById('pb-fecha-note');
+  if(!noteFecha) return;
+  
+  if(fechaActual !== fechaOriginal) {
+    noteFecha.innerHTML = '<span style="color:#ff9500;">⚠ Día operativo modificado manualmente</span>';
+  } else {
+    noteFecha.textContent = 'Día operativo al que pertenece el evento';
+  }
 }
 
 // Alerta inteligente dentro del modal post-bachada
@@ -4351,15 +4427,20 @@ async function guardarPostBachada() {
   if(_gb){_goh=_gb.innerHTML;_gb.disabled=true;_gb.style.opacity='0.6';_gb.style.cursor='wait';if(!_gb.dataset.noLoadingText)_gb.innerHTML='⏳ Procesando...';}
   try {
   const tipo = document.getElementById('pb-tipo').value;
+  const fechaEvento = document.getElementById('pb-fecha').value; // Fecha operativa editable
   const inicio = document.getElementById('pb-inicio').value;
   const tecnico = document.getElementById('pb-tecnico').value;
   const desc = document.getElementById('pb-desc').value;
   const falla = document.getElementById('pb-falla').value;
 
-  if(!inicio || !tecnico){
-    showToast('Completa al menos la hora de inicio y el técnico.','warn');
+  if(!fechaEvento || !inicio || !tecnico){
+    showToast('Completa la fecha operativa, hora de inicio y el técnico.','warn');
     return;
   }
+
+  // Calcular turno automáticamente según la hora de inicio del evento
+  const [hh, mm] = inicio.split(':').map(Number);
+  const turnoCalc = (hh >= 8 && hh < 20) ? 'Día' : 'Noche';
 
   const tiposLabel = {carga_descarga:'Carga/Descarga',descongelamiento:'Descongel.',sin_produccion:'Sin Producción',programada:'Mant. Prog.',no_programada:'Falla/Avería',fin_proceso:'Fin de Proceso'};
 
@@ -4368,8 +4449,8 @@ async function guardarPostBachada() {
     equipo: _pbData.equipo,
     tipo,
     tipoLabel: tiposLabel[tipo],
-    fechaIni: _pbData.fecha,
-    turno: _pbData.turno,
+    fechaIni: fechaEvento, // USAR la fecha editable (puede ser diferente al día operativo de la bachada)
+    turno: turnoCalc,
     inicio,
     tecnico,
     desc: desc || (tipo==='carga_descarga'?'Carga/descarga post Bach #'+_pbData.bach:''),
@@ -4382,8 +4463,10 @@ async function guardarPostBachada() {
     durH: null,
     accion: null,
     tecnicoRep: tecnico,
-    estado: 'abierto', // se cierra cuando se registra la siguiente carga
-    ts: new Date().toISOString()
+    estado: 'abierto',
+    ts: new Date().toISOString(),
+    createdAt: new Date().toISOString(),
+    createdBy: (currentUser && currentUser.email) || 'unknown'
   };
 
   try {
@@ -4683,10 +4766,21 @@ async function guardarPostBachada() {
     </div>
 
     <div class="form-grid" style="margin-bottom:14px;">
-      <div class="field">
-        <label>Hora Inicio Parada</label>
-        <input type="time" id="pb-inicio" style="background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:10px 14px;border-radius:9px;font-family:'DM Sans',sans-serif;font-size:14px;outline:none;">
-        <div style="font-size:11px;color:var(--text3);margin-top:3px;">Prellenado con la hora fin de la bachada</div>
+      <!-- Fecha operativa y hora del evento (con detección automática de cambio de día) -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
+        <div class="field">
+          <label>Fecha Operativa</label>
+          <input type="date" id="pb-fecha" style="background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:10px 14px;border-radius:9px;font-family:'DM Sans',sans-serif;font-size:14px;outline:none;" onchange="onPbFechaChange()">
+          <div style="font-size:11px;color:var(--text3);margin-top:3px;" id="pb-fecha-note">Día operativo al que pertenece el evento</div>
+        </div>
+        <div class="field">
+          <label>Hora Inicio</label>
+          <input type="time" id="pb-inicio" style="background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:10px 14px;border-radius:9px;font-family:'DM Sans',sans-serif;font-size:14px;outline:none;">
+          <div style="font-size:11px;color:var(--text3);margin-top:3px;">Prellenado con la hora fin de la bachada</div>
+        </div>
+      </div>
+      <div id="pb-cruce-aviso" style="display:none;background:#185fa518;border:1px solid #00c8ff44;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#e8f4ff;">
+        <span style="color:#00c8ff;font-weight:600;">📅 Cambio de día operativo detectado.</span> La bachada terminó después de las 08:00 AM del día siguiente, por lo que este evento se asociará al nuevo día operativo.
       </div>
       <div class="field">
         <label>Técnico</label>

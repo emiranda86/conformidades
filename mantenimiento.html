@@ -50,7 +50,36 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .user-role{font-size:11px;color:var(--text2);}
 
 /* MAIN */
-.main{margin-left:244px;min-height:100vh;}
+.main{margin-left:244px;min-height:100vh;transition:margin-left .25s ease;}
+
+/* ===== SIDEBAR COLAPSABLE (DESKTOP) ===== */
+.sidebar{transition:transform .25s ease;}
+/* Cuando el body tiene la clase, el sidebar se esconde a la izquierda */
+body.sidebar-collapsed .sidebar{transform:translateX(-244px);}
+body.sidebar-collapsed .main{margin-left:0;}
+/* Zona sensible (hotzone) en el borde izquierdo para reactivar al pasar el cursor */
+#sidebar-hotzone{
+  position:fixed;left:0;top:0;bottom:0;width:12px;z-index:99;display:none;
+}
+body.sidebar-collapsed #sidebar-hotzone{display:block;}
+/* Al hacer hover en la hotzone o en el sidebar, se muestra temporalmente */
+body.sidebar-collapsed #sidebar-hotzone:hover ~ .sidebar,
+body.sidebar-collapsed .sidebar:hover{transform:translateX(0);box-shadow:4px 0 24px rgba(0,0,0,.45);}
+/* Indicador visual de la hotzone (barrita sutil) */
+#sidebar-hotzone::after{
+  content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);
+  width:4px;height:48px;background:var(--accent);border-radius:0 4px 4px 0;opacity:.5;transition:opacity .2s;
+}
+#sidebar-hotzone:hover::after{opacity:1;}
+
+/* ===== FILTROS PROPIOS DE LA GRÁFICA DE TENDENCIA ===== */
+.dash-tend-filtros{display:flex;align-items:center;gap:7px;margin:2px 0 10px;flex-wrap:wrap;}
+.dash-tend-flabel{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;font-weight:600;}
+.dash-tend-input{background:var(--bg);border:1px solid var(--border2);color:var(--text);border-radius:6px;padding:4px 8px;font-size:11px;font-family:'DM Mono',monospace;outline:none;}
+.dash-tend-input:focus{border-color:var(--accent);}
+.dash-tend-sep{color:var(--text3);font-size:11px;}
+.dash-tend-reset{background:var(--surface2);border:1px solid var(--border2);color:var(--accent);border-radius:6px;width:26px;height:26px;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;transition:all .15s;}
+.dash-tend-reset:hover{background:var(--accent);color:var(--bg);}
 .topbar{position:sticky;top:0;background:var(--bg);border-bottom:1px solid var(--border);padding:0 28px;height:60px;display:flex;align-items:center;justify-content:space-between;z-index:50;}
 .topbar-title{font-family:'Syne',sans-serif;font-size:17px;font-weight:700;}
 .btn-sm{padding:8px 15px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer;border:none;transition:all .18s;font-family:'DM Sans',sans-serif;}
@@ -399,9 +428,24 @@ tr:hover td{background:var(--surface2);}
   .content { padding: 20px; }
 }
 
-/* Botón menú hamburguesa: oculto en desktop */
+/* Botón menú hamburguesa: visible en desktop para colapsar sidebar */
 @media (min-width: 769px) {
-  #btn-menu { display: none !important; }
+  #btn-menu {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: 8px;
+    width: 36px;
+    height: 36px;
+    cursor: pointer;
+    font-size: 18px;
+    color: var(--text);
+    margin-right: 14px;
+    transition: all .15s;
+  }
+  #btn-menu:hover { background: var(--accent); color: var(--bg); }
   #sidebar-overlay { display: none !important; }
 }
 
@@ -751,11 +795,14 @@ tr.clickable-row:hover td { background: var(--surface2); }
     </div>
   </div>
   <div id="sidebar-overlay" onclick="toggleSidebar()"></div>
+  <div id="sidebar-hotzone" title="Mostrar menú"></div>
 
   <div class="main">
     <div class="topbar">
-      <div id="btn-menu" onclick="toggleSidebar()">☰</div>
-      <div class="topbar-title" id="topbar-title">Panel Principal</div>
+      <div style="display:flex;align-items:center;">
+        <div id="btn-menu" onclick="toggleSidebar()" title="Mostrar / ocultar menú">☰</div>
+        <div class="topbar-title" id="topbar-title">Panel Principal</div>
+      </div>
       <div id="topbar-actions" style="display:flex;gap:10px;align-items:center;">
         <button class="btn-sm btn-accent no-print" id="btn-admin-topbar" onclick="abrirAdmin()">👥 Usuarios</button>
         <button class="btn-sm btn-ghost no-print" onclick="doLogout()" style="font-size:12px;">🚪 Cerrar Sesión</button>
@@ -1005,7 +1052,7 @@ tr.clickable-row:hover td { background: var(--surface2); }
                 </div>
               </div>
 
-              <!-- Superior centro: Producción diaria con meta -->
+              <!-- Superior centro: Producción diaria con meta (filtro de fecha PROPIO) -->
               <div class="pbi-card">
                 <div class="pbi-card-head">
                   <div class="pbi-card-title">📅 Producción diaria · tendencia</div>
@@ -1014,7 +1061,14 @@ tr.clickable-row:hover td { background: var(--surface2); }
                     <span><span class="dash-leg-line" style="background:#ff3b5c;border-top:1px dashed #ff3b5c;"></span>Meta 100t</span>
                   </div>
                 </div>
-                <div style="position:relative;height:250px;"><canvas id="chart-prod-dia"></canvas></div>
+                <div class="dash-tend-filtros">
+                  <span class="dash-tend-flabel">Rango propio:</span>
+                  <input type="date" id="tend-from" class="dash-tend-input" onchange="renderTendenciaProduccion()">
+                  <span class="dash-tend-sep">→</span>
+                  <input type="date" id="tend-to" class="dash-tend-input" onchange="renderTendenciaProduccion()">
+                  <button class="dash-tend-reset" onclick="resetTendenciaFechas()" title="Volver a últimas 2 semanas">↺</button>
+                </div>
+                <div style="position:relative;height:215px;"><canvas id="chart-prod-dia"></canvas></div>
               </div>
 
               <!-- Superior derecha: Bachadas vs Tiempo (barras apiladas Opción B) -->
@@ -2936,15 +2990,9 @@ function renderDashboard(){
   });
   renderMultiBar('chart-mant',equipos,[{label:'MTBF',data:mtbfEq,color:'#00c8ff'},{label:'MTTR',data:mttrEq,color:'#ff3b5c'}],true);
 
-  // Producción diaria en toneladas (tendencia) CON línea de meta fija 100 t/día
-  const fechasMap = {};
-  bachs.filter(b=>b.estado==='cerrado').forEach(b=>{
-    const f = b.fecha || '';
-    if(f) fechasMap[f] = (fechasMap[f]||0) + (b.peso||0);
-  });
-  const fechasOrd = Object.keys(fechasMap).sort();
-  const prodDiariaTon = fechasOrd.map(f=>parseFloat((fechasMap[f]/1000).toFixed(1)));
-  renderLineConMeta('chart-prod-dia', fechasOrd.map(f=>f.slice(5)), prodDiariaTon, 'Producción (t)', '#00c8ff', 100);
+  // Producción diaria (tendencia): se renderiza con su PROPIO filtro de fecha,
+  // independiente del filtro global del dashboard. Ver renderTendenciaProduccion().
+  renderTendenciaProduccion();
 
   // ===== NUEVO: Comparativo Bachadas vs Tiempo (barras apiladas Opción B) =====
   const equiposCD = ['C1','C2','C3','C4','C5','C6','C7','C8','C9','C10','C11','TE'];
@@ -3076,6 +3124,66 @@ function renderLine(id,labels,data,label,color){
   charts[id]=new Chart(c,{type:'line',data:{labels,datasets:[{label,data,borderColor:color,backgroundColor:color+'22',borderWidth:2,tension:.3,fill:true,pointRadius:3,pointBackgroundColor:color}]},
     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
       scales:{x:{grid:{color:'#1e3352'},ticks:{color:'#8aaac8',font:{size:9}}},y:{grid:{color:'#1e3352'},ticks:{color:'#8aaac8',font:{size:9}}}}}});
+}
+
+// ============================================================
+// GRÁFICA DE TENDENCIA CON FILTRO DE FECHA PROPIO E INDEPENDIENTE
+// ============================================================
+// Esta gráfica NO usa los filtros globales del dashboard.
+// Tiene su propio rango de fechas (tend-from / tend-to).
+// Por defecto muestra las últimas 2 semanas (semana anterior + actual).
+
+function initTendenciaFechas() {
+  // Establecer rango por defecto: 14 días hacia atrás desde hoy
+  const fromEl = document.getElementById('tend-from');
+  const toEl = document.getElementById('tend-to');
+  if(!fromEl || !toEl) return;
+  // Solo setear si están vacíos (no pisar selección del usuario)
+  if(!fromEl.value && !toEl.value) {
+    const hoy = new Date();
+    const hace14 = new Date();
+    hace14.setDate(hoy.getDate() - 13); // 14 días incluyendo hoy
+    toEl.value = hoy.toISOString().split('T')[0];
+    fromEl.value = hace14.toISOString().split('T')[0];
+  }
+}
+
+function resetTendenciaFechas() {
+  // Forzar el rango por defecto (últimas 2 semanas) y re-renderizar
+  const fromEl = document.getElementById('tend-from');
+  const toEl = document.getElementById('tend-to');
+  if(!fromEl || !toEl) return;
+  const hoy = new Date();
+  const hace14 = new Date();
+  hace14.setDate(hoy.getDate() - 13);
+  toEl.value = hoy.toISOString().split('T')[0];
+  fromEl.value = hace14.toISOString().split('T')[0];
+  renderTendenciaProduccion();
+}
+
+function renderTendenciaProduccion() {
+  // Asegurar que el rango por defecto esté inicializado
+  initTendenciaFechas();
+  const fromEl = document.getElementById('tend-from');
+  const toEl = document.getElementById('tend-to');
+  const tFrom = fromEl ? fromEl.value : '';
+  const tTo = toEl ? toEl.value : '';
+
+  // Tomar TODAS las bachadas cerradas (sin filtro global), solo filtrar por el rango propio
+  let bachsTend = DB.get('bachadas', []).filter(b => b.estado === 'cerrado');
+  if(tFrom) bachsTend = bachsTend.filter(b => (b.fecha || '') >= tFrom);
+  if(tTo)   bachsTend = bachsTend.filter(b => (b.fecha || '') <= tTo);
+
+  // Agrupar producción por fecha (día operativo)
+  const fechasMap = {};
+  bachsTend.forEach(b => {
+    const f = b.fecha || '';
+    if(f) fechasMap[f] = (fechasMap[f] || 0) + (b.peso || 0);
+  });
+  const fechasOrd = Object.keys(fechasMap).sort();
+  const prodDiariaTon = fechasOrd.map(f => parseFloat((fechasMap[f] / 1000).toFixed(1)));
+
+  renderLineConMeta('chart-prod-dia', fechasOrd.map(f => f.slice(5)), prodDiariaTon, 'Producción (t)', '#00c8ff', 100);
 }
 
 function renderLineConMeta(id,labels,data,label,color,meta){
@@ -4133,8 +4241,26 @@ async function eliminarUserAdmin(fid, nombre) {
 function toggleSidebar() {
   const sidebar = document.querySelector('.sidebar');
   const overlay = document.getElementById('sidebar-overlay');
-  sidebar.classList.toggle('open');
-  overlay.classList.toggle('open');
+  // En móvil: comportamiento original (slide con overlay)
+  if(window.innerWidth <= 768) {
+    sidebar.classList.toggle('open');
+    overlay.classList.toggle('open');
+  } else {
+    // En desktop: colapsar/expandir el sidebar para ganar espacio
+    document.body.classList.toggle('sidebar-collapsed');
+    // Redibujar dashboard tras la transición para que los charts se ajusten
+    setTimeout(() => {
+      if(typeof renderDashboard === 'function' &&
+         document.getElementById('tab-cong-dashboard') &&
+         document.querySelector('.dash-page.active')) {
+        renderDashboard();
+      }
+      if(typeof renderTimeline === 'function' &&
+         document.getElementById('dash-page-3')?.classList.contains('active')) {
+        renderTimeline();
+      }
+    }, 300);
+  }
 }
 
 // Close sidebar when navigating on mobile

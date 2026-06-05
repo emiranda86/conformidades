@@ -599,6 +599,91 @@ tr.clickable-row:hover td { background: var(--surface2); }
   .pbi-header-title { font-size: 15px; }
 }
 
+/* ===== DASHBOARD GENERAL UNIFICADO ===== */
+.dash-zona-superior {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.dash-zona-inferior {
+  display: grid;
+  grid-template-columns: 1fr 1.3fr 0.9fr;
+  gap: 12px;
+}
+.dash-kpis-card { padding: 14px; }
+.dash-kpi-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.dash-mini-kpi {
+  background: var(--surface2, #102136);
+  border-radius: 8px;
+  padding: 9px 10px;
+  border-left: 3px solid #00c8ff;
+  position: relative;
+}
+.dash-mini-kpi.c-blue   { border-left-color: #00c8ff; }
+.dash-mini-kpi.c-green  { border-left-color: #00e87a; }
+.dash-mini-kpi.c-teal   { border-left-color: #00ffb3; }
+.dash-mini-kpi.c-warn   { border-left-color: #ff9500; }
+.dash-mini-kpi.c-purple { border-left-color: #a855f7; }
+.dash-mini-kpi.c-red    { border-left-color: #ff3b5c; }
+.dash-mini-wide { grid-column: 1 / -1; }
+.dash-mini-label {
+  font-size: 9px;
+  color: var(--text2, #8aaac8);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 3px;
+}
+.dash-mini-value {
+  font-family: 'Syne', sans-serif;
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--text, #e8f4ff);
+  line-height: 1.1;
+}
+.dash-mini-unit {
+  font-size: 10px;
+  color: var(--text2, #8aaac8);
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 500;
+  margin-left: 1px;
+}
+.dash-turno-split {
+  display: flex;
+  gap: 14px;
+  margin-top: 2px;
+}
+.dash-turno-item { font-size: 11px; color: var(--text, #e8f4ff); }
+.dash-turno-item .font-mono { font-weight: 600; }
+.dash-turno-dia { color: #ffb04d; }
+.dash-turno-noche { color: #7fb0e0; }
+.dash-legend-inline {
+  display: flex;
+  gap: 10px;
+  font-size: 10px;
+  color: var(--text2, #8aaac8);
+}
+.dash-legend-inline span { display: flex; align-items: center; gap: 4px; }
+.dash-leg-box { width: 9px; height: 9px; border-radius: 2px; display: inline-block; }
+.dash-leg-line { width: 10px; height: 2px; display: inline-block; }
+.dash-dona-label {
+  font-size: 10px;
+  color: var(--text, #e8f4ff);
+  text-align: center;
+  margin-bottom: 6px;
+}
+.dash-dona-sep {
+  border-top: 1px solid var(--border, #1e3352);
+  margin: 12px 0 10px;
+}
+@media (max-width: 1100px) {
+  .dash-zona-superior, .dash-zona-inferior { grid-template-columns: 1fr; }
+}
+
 @keyframes pulsoAlarma {
   0%, 100% { box-shadow: 0 0 20px #ff3b5c44, 0 0 0 0 #ff3b5c33; }
   50% { box-shadow: 0 0 28px #ff3b5c88, 0 0 0 6px #ff3b5c11; }
@@ -863,8 +948,8 @@ tr.clickable-row:hover td { background: var(--surface2); }
           <div class="dash-page active" id="dash-page-1">
             <div class="pbi-header-bar">
               <div>
-                <div class="pbi-header-title"><span class="pbi-header-icon">📦</span> Panel de Producción</div>
-                <div class="pbi-header-sub">Indicadores ejecutivos de congelamiento y rendimiento operativo</div>
+                <div class="pbi-header-title"><span class="pbi-header-icon">❄️</span> Dashboard General</div>
+                <div class="pbi-header-sub">Vista ejecutiva unificada · indicadores y producción de congelamiento</div>
               </div>
               <div class="pbi-header-side">
                 <div class="pbi-header-side-label">Período</div>
@@ -872,139 +957,126 @@ tr.clickable-row:hover td { background: var(--surface2); }
               </div>
             </div>
 
-            <div class="pbi-section-title">📦 Producción y tiempos</div>
-            <div class="grid-5 mb-6">
-              <div class="pbi-kpi c-blue">
-                <div class="pbi-kpi-icon">📦</div>
-                <div class="pbi-kpi-label">Producción total</div>
-                <div class="pbi-kpi-value" id="kpi-prod">0<span class="pbi-kpi-value-unit" id="kpi-prod-unit">t</span></div>
-                <div class="pbi-kpi-sub">toneladas congeladas</div>
+            <!-- ===== ZONA SUPERIOR ===== -->
+            <div class="dash-zona-superior">
+              <!-- Superior izquierda: KPIs -->
+              <div class="pbi-card dash-kpis-card">
+                <div class="pbi-card-head"><div class="pbi-card-title">📊 Indicadores clave</div></div>
+                <div class="dash-kpi-grid">
+                  <div class="dash-mini-kpi c-blue">
+                    <div class="dash-mini-label">Producción día</div>
+                    <div class="dash-mini-value" id="kpi-prod">0<span class="dash-mini-unit">t</span></div>
+                  </div>
+                  <div class="dash-mini-kpi c-teal">
+                    <div class="dash-mini-label">Operativos</div>
+                    <div class="dash-mini-value" id="kpi-operativos">0<span class="dash-mini-unit">/12</span></div>
+                  </div>
+                  <div class="dash-mini-kpi c-purple">
+                    <div class="dash-mini-label">Eficiencia</div>
+                    <div class="dash-mini-value" id="kpi-oee">--</div>
+                  </div>
+                  <div class="dash-mini-kpi c-blue">
+                    <div class="dash-mini-label">Acumulado mes</div>
+                    <div class="dash-mini-value" id="kpi-acum-mes">0<span class="dash-mini-unit">t</span></div>
+                  </div>
+                  <div class="dash-mini-kpi c-green">
+                    <div class="dash-mini-label">Disponibilidad</div>
+                    <div class="dash-mini-value" id="kpi-disp">--</div>
+                  </div>
+                  <div class="dash-mini-kpi c-teal">
+                    <div class="dash-mini-label">Confiabilidad</div>
+                    <div class="dash-mini-value" id="kpi-conf">--</div>
+                  </div>
+                  <div class="dash-mini-kpi c-blue">
+                    <div class="dash-mini-label">MTBF</div>
+                    <div class="dash-mini-value" id="kpi-mtbf">--</div>
+                  </div>
+                  <div class="dash-mini-kpi c-warn">
+                    <div class="dash-mini-label">MTTR</div>
+                    <div class="dash-mini-value" id="kpi-mttr">--</div>
+                  </div>
+                  <div class="dash-mini-kpi c-teal dash-mini-wide">
+                    <div class="dash-mini-label">Producción por turno</div>
+                    <div class="dash-turno-split">
+                      <span class="dash-turno-item"><span class="dash-turno-dia">☀ Día:</span> <span id="kpi-prod-dia" class="font-mono">0 t</span></span>
+                      <span class="dash-turno-item"><span class="dash-turno-noche">🌙 Noche:</span> <span id="kpi-prod-noche" class="font-mono">0 t</span></span>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div class="pbi-kpi c-green">
-                <div class="pbi-kpi-icon">✅</div>
-                <div class="pbi-kpi-label">Bachadas OK</div>
-                <div class="pbi-kpi-value" id="kpi-bach">0</div>
-                <div class="pbi-kpi-sub">completadas</div>
+
+              <!-- Superior centro: Producción diaria con meta -->
+              <div class="pbi-card">
+                <div class="pbi-card-head">
+                  <div class="pbi-card-title">📅 Producción diaria · tendencia</div>
+                  <div class="dash-legend-inline">
+                    <span><span class="dash-leg-line" style="background:#00c8ff;"></span>Real</span>
+                    <span><span class="dash-leg-line" style="background:#ff3b5c;border-top:1px dashed #ff3b5c;"></span>Meta 100t</span>
+                  </div>
+                </div>
+                <div style="position:relative;height:250px;"><canvas id="chart-prod-dia"></canvas></div>
               </div>
-              <div class="pbi-kpi c-warn">
-                <div class="pbi-kpi-icon">⏱</div>
-                <div class="pbi-kpi-label">T. Congelamiento prom.</div>
-                <div class="pbi-kpi-value" id="kpi-tcong">--</div>
-                <div class="pbi-kpi-sub">horas / bachada</div>
-              </div>
-              <div class="pbi-kpi c-teal">
-                <div class="pbi-kpi-icon">🔄</div>
-                <div class="pbi-kpi-label">T. Carga/Descarga prom.</div>
-                <div class="pbi-kpi-value" id="kpi-tcd">--</div>
-                <div class="pbi-kpi-sub">horas · sólo congeladores</div>
-              </div>
-              <div class="pbi-kpi c-red">
-                <div class="pbi-kpi-icon">🛑</div>
-                <div class="pbi-kpi-label">T. Parada total</div>
-                <div class="pbi-kpi-value" id="kpi-tparada">--</div>
-                <div class="pbi-kpi-sub">horas perdidas</div>
+
+              <!-- Superior derecha: Bachadas vs Tiempo (barras apiladas Opción B) -->
+              <div class="pbi-card">
+                <div class="pbi-card-head">
+                  <div class="pbi-card-title">📊 Bachadas vs tiempo cong.</div>
+                  <div class="dash-legend-inline">
+                    <span><span class="dash-leg-box" style="background:#1e3a5f;"></span>Bachadas</span>
+                    <span><span class="dash-leg-box" style="background:#7fd4e8;"></span>T. prom.</span>
+                  </div>
+                </div>
+                <div style="position:relative;height:250px;"><canvas id="chart-bach-tiempo"></canvas></div>
               </div>
             </div>
 
-            <div class="pbi-section-title">🔧 Confiabilidad de equipos</div>
-            <div class="grid-5 mb-6">
-              <div class="pbi-kpi c-blue">
-                <div class="pbi-kpi-icon">🔧</div>
-                <div class="pbi-kpi-label">MTBF</div>
-                <div class="pbi-kpi-value" id="kpi-mtbf">--</div>
-                <div class="pbi-kpi-sub">horas entre fallas</div>
+            <!-- ===== ZONA INFERIOR ===== -->
+            <div class="dash-zona-inferior">
+              <!-- Inferior izquierda: 2 donas -->
+              <div class="pbi-card">
+                <div class="pbi-card-head"><div class="pbi-card-title">🍩 Distribuciones</div></div>
+                <div class="dash-dona-label">Horas de parada por tipo</div>
+                <div style="position:relative;height:150px;"><canvas id="chart-tipos"></canvas></div>
+                <div class="dash-dona-sep"></div>
+                <div class="dash-dona-label">Distribución por producto</div>
+                <div style="position:relative;height:150px;"><canvas id="chart-productos"></canvas></div>
               </div>
-              <div class="pbi-kpi c-warn">
-                <div class="pbi-kpi-icon">🛠</div>
-                <div class="pbi-kpi-label">MTTR</div>
-                <div class="pbi-kpi-value" id="kpi-mttr">--</div>
-                <div class="pbi-kpi-sub">horas por reparación</div>
-              </div>
-              <div class="pbi-kpi c-green">
-                <div class="pbi-kpi-icon">🟢</div>
-                <div class="pbi-kpi-label">Disponibilidad</div>
-                <div class="pbi-kpi-value" id="kpi-disp">--</div>
-                <div class="pbi-kpi-sub">% tiempo operativo</div>
-              </div>
-              <div class="pbi-kpi c-teal">
-                <div class="pbi-kpi-icon">📊</div>
-                <div class="pbi-kpi-label">Confiabilidad</div>
-                <div class="pbi-kpi-value" id="kpi-conf">--</div>
-                <div class="pbi-kpi-sub">% sin fallas</div>
-              </div>
-              <div class="pbi-kpi c-purple">
-                <div class="pbi-kpi-icon">🎯</div>
-                <div class="pbi-kpi-label">OEE</div>
-                <div class="pbi-kpi-value" id="kpi-oee">--</div>
-                <div class="pbi-kpi-sub">eficiencia global</div>
-              </div>
-            </div>
 
-            <div class="pbi-section-title">⚠️ Eventos del período</div>
-            <div class="grid-3 mb-6">
-              <div class="pbi-kpi c-red">
-                <div class="pbi-kpi-icon">🚨</div>
-                <div class="pbi-kpi-label">Fallas / Averías</div>
-                <div class="pbi-kpi-value" id="kpi-fallas">0</div>
-                <div class="pbi-kpi-sub">no programadas</div>
+              <!-- Inferior centro: Tabla operativa -->
+              <div class="pbi-card" style="padding:0;overflow:hidden;">
+                <div class="pbi-card-head" style="padding:14px 16px;margin-bottom:0;border-bottom:1px solid var(--border);">
+                  <div class="pbi-card-title">📋 Tabla operativa de bachadas</div>
+                  <div class="pbi-card-badge" id="dash-tabla-count">cronológico inverso</div>
+                </div>
+                <div style="overflow-x:auto;max-height:420px;overflow-y:auto;">
+                  <table class="data-table" style="font-size:12px;">
+                    <thead>
+                      <tr>
+                        <th>Fecha</th><th>Turno</th><th>Cong.</th><th>Bach</th>
+                        <th style="text-align:right;">Ton</th><th style="text-align:right;">T.Cong</th>
+                        <th>Inicio</th><th>Fin</th><th>Estado</th>
+                      </tr>
+                    </thead>
+                    <tbody id="dash-tabla-bachadas"></tbody>
+                  </table>
+                </div>
               </div>
-              <div class="pbi-kpi c-green">
-                <div class="pbi-kpi-icon">🔧</div>
-                <div class="pbi-kpi-label">Mant. Programados</div>
-                <div class="pbi-kpi-value" id="kpi-prog">0</div>
-                <div class="pbi-kpi-sub">en período</div>
-              </div>
-              <div class="pbi-kpi c-blue">
-                <div class="pbi-kpi-icon">❄️</div>
-                <div class="pbi-kpi-label">Descongelamientos</div>
-                <div class="pbi-kpi-value" id="kpi-desc">0</div>
-                <div class="pbi-kpi-sub">en período</div>
+
+              <!-- Inferior derecha: MTBF/MTTR -->
+              <div class="pbi-card">
+                <div class="pbi-card-head">
+                  <div class="pbi-card-title">🔧 MTBF / MTTR por equipo</div>
+                  <div class="dash-legend-inline">
+                    <span><span class="dash-leg-box" style="background:#00c8ff;"></span>MTBF</span>
+                    <span><span class="dash-leg-box" style="background:#ff3b5c;"></span>MTTR</span>
+                  </div>
+                </div>
+                <div style="position:relative;height:330px;"><canvas id="chart-mant"></canvas></div>
               </div>
             </div>
 
           </div><!-- end dash-page-1 -->
           <div class="dash-page" id="dash-page-2">
-          <div class="pbi-header-bar">
-            <div>
-              <div class="pbi-header-title"><span class="pbi-header-icon">📈</span> Análisis gráfico</div>
-              <div class="pbi-header-sub">Visualización ejecutiva de producción, paradas y confiabilidad</div>
-            </div>
-            <div class="pbi-card-badge">Datos del período seleccionado</div>
-          </div>
-
-          <div class="grid-2 mb-4">
-            <div class="pbi-card">
-              <div class="pbi-card-head"><div class="pbi-card-title">📦 Producción por equipo</div><div class="pbi-card-badge">toneladas</div></div>
-              <div style="position:relative;height:230px;"><canvas id="chart-prod"></canvas></div>
-            </div>
-            <div class="pbi-card">
-              <div class="pbi-card-head"><div class="pbi-card-title">🛑 Horas de parada por tipo</div><div class="pbi-card-badge">horas</div></div>
-              <div style="position:relative;height:230px;"><canvas id="chart-tipos"></canvas></div>
-            </div>
-          </div>
-          <div class="grid-2 mb-4">
-            <div class="pbi-card">
-              <div class="pbi-card-head"><div class="pbi-card-title">⏱ T. congelamiento promedio por equipo</div><div class="pbi-card-badge">horas</div></div>
-              <div style="position:relative;height:230px;"><canvas id="chart-tcong"></canvas></div>
-            </div>
-            <div class="pbi-card">
-              <div class="pbi-card-head"><div class="pbi-card-title">🔧 MTBF / MTTR por equipo</div><div class="pbi-card-badge">horas</div></div>
-              <div style="position:relative;height:230px;"><canvas id="chart-mant"></canvas></div>
-            </div>
-          </div>
-          <div class="grid-2 mb-4">
-            <div class="pbi-card">
-              <div class="pbi-card-head"><div class="pbi-card-title">📅 Producción diaria · tendencia</div><div class="pbi-card-badge">t / día</div></div>
-              <div style="position:relative;height:230px;"><canvas id="chart-prod-dia"></canvas></div>
-            </div>
-            <div class="pbi-card">
-              <div class="pbi-card-head"><div class="pbi-card-title">🥧 Distribución por producto</div><div class="pbi-card-badge">%</div></div>
-              <div style="position:relative;height:230px;"><canvas id="chart-productos"></canvas></div>
-            </div>
-          </div>
-
-          </div><!-- end dash-page-2 -->
-          <div class="dash-page" id="dash-page-3">
           <div class="pbi-header-bar">
             <div>
               <div class="pbi-header-title"><span class="pbi-header-icon">🔧</span> Panel de mantenimiento</div>
@@ -1040,12 +1112,12 @@ tr.clickable-row:hover td { background: var(--surface2); }
             </div>
           </div>
 
-          </div><!-- end dash-page-3 -->
-          <div class="dash-page" id="dash-page-4" style="display:none;"></div><!-- prod hidden, data kept -->
+          </div><!-- end dash-page-2 -->
+          
 
           <!-- PAGINATION -->
           <!-- PÁGINA 5: TIMELINE POR EQUIPO -->
-          <div class="dash-page" id="dash-page-5">
+          <div class="dash-page" id="dash-page-3">
             <div class="card mb-6">
               <div class="card-title">🔍 Filtros — Comportamiento por Equipo</div>
               <div class="form-grid">
@@ -1109,10 +1181,9 @@ tr.clickable-row:hover td { background: var(--surface2); }
           </div>
 
           <div class="dash-pagination no-print" id="dash-pagination">
-            <button class="page-btn active-page" onclick="goToPage(1)" id="dp-1">📊 Producción</button>
-            <button class="page-btn" onclick="goToPage(2)" id="dp-2">📈 Gráficos</button>
-            <button class="page-btn" onclick="goToPage(3)" id="dp-3">🔧 Mantenimiento</button>
-            <button class="page-btn" onclick="goToPage(5)" id="dp-5">⏱ Timeline Equipo</button>
+            <button class="page-btn active-page" onclick="goToPage(1)" id="dp-1">❄️ General</button>
+            <button class="page-btn" onclick="goToPage(2)" id="dp-2">🔧 Mantenimiento</button>
+            <button class="page-btn" onclick="goToPage(3)" id="dp-3">⏱ Timeline Equipo</button>
           </div>
 
         </div>
@@ -2787,6 +2858,28 @@ function renderDashboard(){
   setText('kpi-tcd',avgCD!==null?hoursToStr(avgCD):'--');
   setText('kpi-tparada',hoursToStr(totalPar));
 
+  // ===== NUEVOS KPIs del Dashboard General =====
+  // Congeladores operativos (con actividad en el período) sobre el total
+  const equiposTotales = ['C1','C2','C3','C4','C5','C6','C7','C8','C9','C10','C11','TE'];
+  const equiposActivos = new Set(bachs.map(b=>b.equipo).concat(evs.map(e=>e.equipo)));
+  const nOperativos = equiposTotales.filter(eq => equiposActivos.has(eq)).length;
+  const elOper = document.getElementById('kpi-operativos');
+  if(elOper) elOper.innerHTML = nOperativos + '<span class="dash-mini-unit">/' + equiposTotales.length + '</span>';
+
+  // Producción acumulada del MES actual (independiente del filtro de fecha, usa mes en curso)
+  const hoy = new Date();
+  const mesActual = hoy.toISOString().slice(0,7); // YYYY-MM
+  const prodMesKg = DB.get('bachadas',[]).filter(b=>b.estado==='cerrado' && (b.fecha||'').slice(0,7)===mesActual)
+    .reduce((s,b)=>s+(b.peso||0),0);
+  const elAcum = document.getElementById('kpi-acum-mes');
+  if(elAcum) elAcum.innerHTML = (prodMesKg/1000).toLocaleString('es-PE',{maximumFractionDigits:1,minimumFractionDigits:1}) + '<span class="dash-mini-unit">t</span>';
+
+  // Producción por turno (Día / Noche) en toneladas
+  const prodDiaKg = bachs.filter(b=>b.turno==='Día').reduce((s,b)=>s+(b.peso||0),0);
+  const prodNocheKg = bachs.filter(b=>b.turno==='Noche').reduce((s,b)=>s+(b.peso||0),0);
+  setText('kpi-prod-dia', (prodDiaKg/1000).toFixed(1) + ' t');
+  setText('kpi-prod-noche', (prodNocheKg/1000).toFixed(1) + ' t');
+
   // mantenimiento KPIs
   const fallas=evs.filter(e=>e.tipo==='no_programada');
   const nFallas=fallas.length;
@@ -2821,18 +2914,15 @@ function renderDashboard(){
 
   // CHARTS
   const equipos=['C1','C2','C3','C4','C5','C6','C7','C8','C9','C10','C11','TE'];
-  // Producción por equipo en TONELADAS (convertir kg→t con 1 decimal)
-  const prodEqKg=equipos.map(eq=>bachs.filter(b=>b.equipo===eq).reduce((s,b)=>s+(b.peso||0),0));
-  const prodEq = prodEqKg.map(v => parseFloat((v/1000).toFixed(1)));
-  renderBar('chart-prod',equipos,prodEq,'Producción (t)','#00c8ff');
 
-  const tiposL=['carga_descarga','descongelamiento','programada','no_programada'];
-  const tiposNames=['Carga/Descarga','Descongelamiento','Prog.','Falla'];
+  // Dona 1: Horas de parada por tipo (6 tipos completos)
+  const tiposL=['carga_descarga','descongelamiento','sin_produccion','programada','no_programada','fin_proceso'];
+  const tiposNames=['Carga/Descarga','Descongelamiento','Sin Producción','Mant. Programado','Falla/Avería','Fin de Proceso'];
+  const tiposColors=['#ff6600','#4a6a8a','#00ffb3','#00e87a','#ff3b5c','#a855f7'];
   const tiposData=tiposL.map(t=>evs.filter(e=>e.tipo===t).reduce((s,e)=>s+(e.durH||0),0));
-  renderDoughnut('chart-tipos',tiposNames,tiposData,['#4a6a8a','#00c8ff','#ff9500','#ff3b5c'],true);
+  renderDoughnut('chart-tipos',tiposNames,tiposData,tiposColors,true);
 
-  const tcongEq=equipos.map(eq=>{const eb=bachs.filter(b=>b.equipo===eq);return eb.length?eb.reduce((s,b)=>s+(b.tcong||0),0)/eb.length:0;});
-  renderBar('chart-tcong',equipos,tcongEq,'T. Congelamiento prom.','#00ffb3',true);
+
 
   // MTBF/MTTR per equipo
   const mtbfEq=equipos.map(eq=>{
@@ -2846,15 +2936,32 @@ function renderDashboard(){
   });
   renderMultiBar('chart-mant',equipos,[{label:'MTBF',data:mtbfEq,color:'#00c8ff'},{label:'MTTR',data:mttrEq,color:'#ff3b5c'}],true);
 
-  // Producción diaria en toneladas (tendencia)
+  // Producción diaria en toneladas (tendencia) CON línea de meta fija 100 t/día
   const fechasMap = {};
   bachs.filter(b=>b.estado==='cerrado').forEach(b=>{
     const f = b.fecha || '';
     if(f) fechasMap[f] = (fechasMap[f]||0) + (b.peso||0);
   });
   const fechasOrd = Object.keys(fechasMap).sort();
-  // Convertir kg → toneladas con 1 decimal
-  renderLine('chart-prod-dia', fechasOrd.map(f=>f.slice(5)), fechasOrd.map(f=>parseFloat((fechasMap[f]/1000).toFixed(1))), 'Producción (t)', '#00c8ff');
+  const prodDiariaTon = fechasOrd.map(f=>parseFloat((fechasMap[f]/1000).toFixed(1)));
+  renderLineConMeta('chart-prod-dia', fechasOrd.map(f=>f.slice(5)), prodDiariaTon, 'Producción (t)', '#00c8ff', 100);
+
+  // ===== NUEVO: Comparativo Bachadas vs Tiempo (barras apiladas Opción B) =====
+  const equiposCD = ['C1','C2','C3','C4','C5','C6','C7','C8','C9','C10','C11','TE'];
+  const bachPorEq = equiposCD.map(eq => bachs.filter(b=>b.equipo===eq).length);
+  const tiempoPorEq = equiposCD.map(eq => {
+    const eb = bachs.filter(b=>b.equipo===eq);
+    return eb.length ? parseFloat((eb.reduce((s,b)=>s+(b.tcong||0),0)/eb.length).toFixed(2)) : 0;
+  });
+  // Filtrar solo equipos con datos para no saturar
+  const idxConDatos = equiposCD.map((eq,i)=>i).filter(i => bachPorEq[i] > 0);
+  const labelsBT = idxConDatos.map(i => equiposCD[i]);
+  const dataBach = idxConDatos.map(i => bachPorEq[i]);
+  const dataTiempo = idxConDatos.map(i => tiempoPorEq[i]);
+  renderBachadasTiempo('chart-bach-tiempo', labelsBT, dataBach, dataTiempo);
+
+  // ===== NUEVO: Tabla operativa de bachadas (cronológico inverso) =====
+  renderTablaOperativa(bachs);
 
   // NUEVO: Distribución por producto (doughnut)
   const prodMap = {};
@@ -2970,6 +3077,98 @@ function renderLine(id,labels,data,label,color){
     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
       scales:{x:{grid:{color:'#1e3352'},ticks:{color:'#8aaac8',font:{size:9}}},y:{grid:{color:'#1e3352'},ticks:{color:'#8aaac8',font:{size:9}}}}}});
 }
+
+function renderLineConMeta(id,labels,data,label,color,meta){
+  const c=document.getElementById(id);if(!c)return;
+  if(charts[id])charts[id].destroy();
+  const metaData = labels.map(()=>meta);
+  charts[id]=new Chart(c,{type:'line',data:{labels,datasets:[
+    {label,data,borderColor:color,backgroundColor:color+'22',borderWidth:2.5,tension:.35,fill:true,pointRadius:2.5,pointBackgroundColor:color,order:2},
+    {label:'Meta '+meta+'t',data:metaData,borderColor:'#ff3b5c',borderDash:[6,4],borderWidth:1.5,pointRadius:0,fill:false,order:1}
+  ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},
+      tooltip:{callbacks:{label:ctx=>ctx.dataset.label+': '+ctx.parsed.y+' t'}}},
+      scales:{x:{grid:{display:false},ticks:{color:'#8aaac8',font:{size:9}}},
+        y:{grid:{color:'#1e3352'},ticks:{color:'#8aaac8',font:{size:9},callback:v=>v+'t'},suggestedMax:Math.max(meta*1.1, ...data)+5}}}});
+}
+
+function renderBachadasTiempo(id,labels,dataBach,dataTiempo){
+  const c=document.getElementById(id);if(!c)return;
+  if(charts[id])charts[id].destroy();
+  // Plugin para valores: bachadas en el centro (abajo), tiempo encima (arriba)
+  const valuePlugin = {
+    id:'vp_'+id,
+    afterDatasetsDraw(chart){
+      const ctx=chart.ctx;
+      const mB=chart.getDatasetMeta(0);
+      const mT=chart.getDatasetMeta(1);
+      ctx.save();
+      ctx.font="600 10px 'DM Sans', sans-serif";
+      ctx.textAlign='center';
+      mB.data.forEach((bar,i)=>{
+        if(dataBach[i]<=0) return;
+        const yBase=chart.scales.y.getPixelForValue(0);
+        const yCenter=(yBase+bar.y)/2;
+        ctx.fillStyle='#d4ecf5';
+        ctx.fillText(dataBach[i],bar.x,yCenter+4);
+      });
+      mT.data.forEach((bar,i)=>{
+        if(dataTiempo[i]<=0) return;
+        ctx.fillStyle='#7fd4e8';
+        ctx.fillText(hDec2HM(dataTiempo[i]),bar.x,bar.y-5);
+      });
+      ctx.restore();
+    }
+  };
+  charts[id]=new Chart(c,{type:'bar',data:{labels,datasets:[
+    {label:'Bachadas',data:dataBach,backgroundColor:'#1e3a5f',borderColor:'#1e3a5f',borderWidth:1,borderRadius:{bottomLeft:4,bottomRight:4},stack:'s'},
+    {label:'T. prom',data:dataTiempo,backgroundColor:'#7fd4e8',borderColor:'#7fd4e8',borderWidth:1,borderRadius:{topLeft:4,topRight:4},stack:'s'}
+  ]},
+    options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:22}},
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>ctx.dataset.label==='Bachadas'?(ctx.parsed.y+' bachadas'):('T. prom: '+hDec2HM(ctx.parsed.y))}}},
+      scales:{x:{stacked:true,grid:{display:false},ticks:{color:'#e8f4ff',font:{size:10}}},
+        y:{stacked:true,grid:{color:'#1e3352'},ticks:{display:false},border:{display:false}}}},
+    plugins:[valuePlugin]});
+}
+
+function renderTablaOperativa(bachs){
+  const tbody=document.getElementById('dash-tabla-bachadas');
+  if(!tbody)return;
+  // Orden cronológico inverso estricto por fecha+hora
+  const ordenadas=[...bachs].sort((a,b)=>{
+    const tsA=(a.fecha||'0000-00-00')+'T'+(a.inicio||'00:00');
+    const tsB=(b.fecha||'0000-00-00')+'T'+(b.inicio||'00:00');
+    if(tsB!==tsA) return tsB.localeCompare(tsA);
+    return (b.ts||'').localeCompare(a.ts||'');
+  });
+  const countEl=document.getElementById('dash-tabla-count');
+  if(countEl) countEl.textContent = ordenadas.length + ' bachadas';
+  if(!ordenadas.length){
+    tbody.innerHTML='<tr><td colspan="9" style="text-align:center;color:var(--text3);padding:20px;">Sin bachadas en el período</td></tr>';
+    return;
+  }
+  tbody.innerHTML=ordenadas.map(b=>{
+    const ton=((b.peso||0)/1000).toFixed(2);
+    const turnoBadge = b.turno==='Día'
+      ? '<span class="badge badge-warn">Día</span>'
+      : '<span class="badge badge-blue">Noche</span>';
+    const estadoBadge = b.estado==='cerrado'
+      ? '<span style="color:#00e87a;font-size:11px;">● Cerrado</span>'
+      : '<span style="color:#ff9500;font-size:11px;">● Abierto</span>';
+    return `<tr>
+      <td class="font-mono">${b.fecha||'—'}</td>
+      <td>${turnoBadge}</td>
+      <td><span class="badge badge-blue">${b.equipo}</span></td>
+      <td class="font-mono">#${b.bach}</td>
+      <td class="font-mono" style="text-align:right;">${ton}</td>
+      <td class="font-mono" style="text-align:right;">${b.tcong!==null&&b.tcong!==undefined?hoursToStr(b.tcong):'—'}</td>
+      <td class="font-mono">${b.inicio||'—'}</td>
+      <td class="font-mono">${b.fin||'—'}</td>
+      <td>${estadoBadge}</td>
+    </tr>`;
+  }).join('');
+}
+
 
 function renderMultiBar(id,labels,datasets,isTime){
   const c=document.getElementById(id);if(!c)return;
@@ -3197,7 +3396,7 @@ document.getElementById('b-aros').addEventListener('input',calcPeso);
 
 // ======== DASHBOARD FULLSCREEN & PAGINATION ========
 let currentDashPage = 1;
-const totalDashPages = 5;
+const totalDashPages = 3;
 
 function goToPage(n) {
   currentDashPage = n;
@@ -3207,11 +3406,12 @@ function goToPage(n) {
     if (p) p.classList.toggle('active', i === n);
     if (b) b.classList.toggle('active-page', i === n);
   }
-  // Ocultar filtros generales en página 5 (Comportamiento por Equipo) — usa sus propios filtros
+  // Página 1 = General, Página 2 = Mantenimiento, Página 3 = Timeline Equipo
+  // Timeline usa sus propios filtros internos, ocultamos los filtros generales
   const filtGen = document.getElementById('dash-filtros-generales');
-  if (filtGen) filtGen.style.display = n === 5 ? 'none' : '';
-  if (n === 1 || n === 2 || n === 3) { setTimeout(renderDashboard, 50); }
-  if (n === 5) { setTimeout(renderTimeline, 50); }
+  if (filtGen) filtGen.style.display = (n === 3) ? 'none' : '';
+  if (n === 1 || n === 2) { setTimeout(renderDashboard, 50); }
+  if (n === 3) { setTimeout(renderTimeline, 50); }
 }
 
 function toggleFullscreen() {

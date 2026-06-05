@@ -80,6 +80,21 @@ body.sidebar-collapsed .sidebar:hover{transform:translateX(0);box-shadow:4px 0 2
 .dash-tend-sep{color:var(--text3);font-size:11px;}
 .dash-tend-reset{background:var(--surface2);border:1px solid var(--border2);color:var(--accent);border-radius:6px;width:26px;height:26px;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;transition:all .15s;}
 .dash-tend-reset:hover{background:var(--accent);color:var(--bg);}
+
+/* ===== GRID DE TIMELINE: MÁXIMO 2 COLUMNAS (normal y fullscreen) ===== */
+.tl-grid-2col{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:14px;
+}
+/* En pantallas estrechas, una sola columna */
+@media (max-width: 900px){
+  .tl-grid-2col{grid-template-columns:1fr;}
+}
+/* En fullscreen mantener 2 columnas explícitamente */
+#tab-cong-dashboard.fullscreen-mode .tl-grid-2col{
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+}
 .topbar{position:sticky;top:0;background:var(--bg);border-bottom:1px solid var(--border);padding:0 28px;height:60px;display:flex;align-items:center;justify-content:space-between;z-index:50;}
 .topbar-title{font-family:'Syne',sans-serif;font-size:17px;font-weight:700;}
 .btn-sm{padding:8px 15px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer;border:none;transition:all .18s;font-family:'DM Sans',sans-serif;}
@@ -3541,6 +3556,15 @@ function goToPage(n) {
   if (n === 3) { setTimeout(renderTimeline, 50); }
 }
 
+// Redibuja la página actualmente activa (General/Mantenimiento usan renderDashboard, Timeline usa renderTimeline)
+function redibujarPaginaActiva() {
+  if (document.getElementById('dash-page-3')?.classList.contains('active')) {
+    if (typeof renderTimeline === 'function') renderTimeline();
+  } else {
+    if (typeof renderDashboard === 'function') renderDashboard();
+  }
+}
+
 function toggleFullscreen() {
   const dash = document.getElementById('tab-cong-dashboard');
   const btn = document.getElementById('btn-fullscreen');
@@ -3551,7 +3575,7 @@ function toggleFullscreen() {
       // fallback if fullscreen API blocked
       document.body.style.overflow = 'hidden';
     });
-    setTimeout(renderDashboard, 150);
+    setTimeout(redibujarPaginaActiva, 200);
   } else {
     document.exitFullscreen();
   }
@@ -3564,8 +3588,9 @@ document.addEventListener('fullscreenchange', function() {
     dash.classList.remove('fullscreen-mode');
     if(btn) btn.textContent = '⛶ Pantalla Completa';
     document.body.style.overflow = '';
-    setTimeout(renderDashboard, 150);
   }
+  // Redibujar al entrar Y al salir de fullscreen, para ajustar al nuevo ancho
+  setTimeout(redibujarPaginaActiva, 200);
 });
 
 function printDashboard() {
@@ -3885,7 +3910,7 @@ function renderTimeline() {
   // VISTA "TODOS LOS CONGELADORES" — Grid 2 columnas
   // ----------------------------------------------------------
   if(equipoSel === 'ALL') {
-    container.innerHTML = '<div id="tl-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(450px,1fr));gap:14px;"></div>';
+    container.innerHTML = '<div id="tl-grid" class="tl-grid-2col">\u003c/div>';
     const grid = document.getElementById('tl-grid');
     let totalSegs = 0;
 

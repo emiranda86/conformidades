@@ -2010,6 +2010,32 @@ function hoursToStr(h){
   return Math.floor(h)+'h '+Math.round((h%1)*60).toString().padStart(2,'0')+'m';
 }
 
+// ============================================================
+// TIEMPO REAL: horas transcurridas desde (fecha operativa + hora inicio) hasta AHORA
+// ============================================================
+// Usa la convención del día operativo: si la hora < 08:00, el registro ocurrió
+// físicamente en el día calendario siguiente al día operativo declarado.
+// Devuelve horas decimales (>= 0). Se usa para dibujar barras de procesos en curso
+// y para que los KPIs de tiempo reflejen el avance real.
+function tiempoTranscurridoH(fechaOp, horaInicio){
+  if(!fechaOp || !horaInicio) return 0;
+  try {
+    const [hh, mm] = horaInicio.split(':').map(Number);
+    if(isNaN(hh) || isNaN(mm)) return 0;
+    const base = new Date(fechaOp + 'T00:00:00').getTime();
+    if(isNaN(base)) return 0;
+    const hourPos = hh + mm/60;
+    // Si la hora es < 08:00, ocurrió en el día calendario siguiente al operativo
+    const inicioMs = hourPos < 8
+      ? base + 24*3600000 + hourPos*3600000
+      : base + hourPos*3600000;
+    const ahora = Date.now();
+    const diffH = (ahora - inicioMs) / 3600000;
+    return diffH > 0 ? diffH : 0;
+  } catch(e){ return 0; }
+}
+
+
 function setDefaultDates(){
   const t=today();
   const d30=new Date();d30.setDate(d30.getDate()-30);
@@ -2896,8 +2922,11 @@ function renderDashboard(){
     else periodoEl.textContent = 'Todo el histórico';
   }
 
-  let bachs=DB.get('bachadas',[]).filter(b=>b.estado==='cerrado');
-  let evs=DB.get('eventos',[]).filter(e=>e.estado==='cerrado');
+  // TIEMPO REAL: incluir bachadas y eventos en proceso (no solo cerrados).
+  // La producción y los indicadores reflejan el estado actual, no solo lo finalizado.
+  // El peso de una bachada se conoce desde que se carga, así que cuenta de inmediato.
+  let bachs=DB.get('bachadas',[]); // todas (cerradas + en proceso)
+  let evs=DB.get('eventos',[]);    // todos (cerrados + abiertos)
 
   const allProds=[...new Set(DB.get('bachadas',[]).map(b=>b.producto))];
   const sel=document.getElementById('dash-producto');
@@ -2909,12 +2938,24 @@ function renderDashboard(){
   if(turnoF)bachs=bachs.filter(b=>b.turno===turnoF);
   if(prodF)bachs=bachs.filter(b=>b.producto===prodF);
 
-  // producción
+  // producción — el peso cuenta desde que se carga la bachada (esté abierta o cerrada)
   const totalProd=bachs.reduce((s,b)=>s+(b.peso||0),0);
-  const avgTcong=bachs.length?bachs.reduce((s,b)=>s+(b.tcong||0),0)/bachs.length:null;
+
+  // TIEMPO REAL: para registros en proceso, usar el tiempo transcurrido hasta AHORA.
+  // tcongReal(b): si la bachada está cerrada usa su tcong; si está abierta calcula desde inicio hasta ahora.
+  const tcongReal = (b) => {
+    if(b.tcong !== null && b.tcong !== undefined) return b.tcong;
+    return tiempoTranscurridoH(b.fecha, b.inicio); // bachada en proceso
+  };
+  const durHReal = (e) => {
+    if(e.durH !== null && e.durH !== undefined) return e.durH;
+    return tiempoTranscurridoH(e.fechaIni, e.inicio); // evento abierto
+  };
+
+  const avgTcong=bachs.length?bachs.reduce((s,b)=>s+tcongReal(b),0)/bachs.length:null;
   const evCD=evs.filter(e=>e.tipo==='carga_descarga' && e.equipo!=='TE'); // Excluir Túnel Estático (tiempo de C/D muy diferente)
-  const avgCD=evCD.length?evCD.reduce((s,e)=>s+(e.durH||0),0)/evCD.length:null;
-  const totalPar=evs.reduce((s,e)=>s+(e.durH||0),0);
+  const avgCD=evCD.length?evCD.reduce((s,e)=>s+durHReal(e),0)/evCD.length:null;
+  const totalPar=evs.reduce((s,e)=>s+durHReal(e),0);
 
   // Producción en toneladas con 1 decimal
   const prodToneladas = totalProd / 1000;
@@ -2938,7 +2979,7 @@ function renderDashboard(){
   // Producción acumulada del MES actual (independiente del filtro de fecha, usa mes en curso)
   const hoy = new Date();
   const mesActual = hoy.toISOString().slice(0,7); // YYYY-MM
-  const prodMesKg = DB.get('bachadas',[]).filter(b=>b.estado==='cerrado' && (b.fecha||'').slice(0,7)===mesActual)
+  const prodMesKg = DB.get('bachadas',[]).filter(b => (b.fecha||'').slice(0,7)===mesActual)
     .reduce((s,b)=>s+(b.peso||0),0);
   const elAcum = document.getElementById('kpi-acum-mes');
   if(elAcum) elAcum.innerHTML = (prodMesKg/1000).toLocaleString('es-PE',{maximumFractionDigits:1,minimumFractionDigits:1}) + '<span class="dash-mini-unit">t</span>';
@@ -2952,7 +2993,7 @@ function renderDashboard(){
   // mantenimiento KPIs
   const fallas=evs.filter(e=>e.tipo==='no_programada');
   const nFallas=fallas.length;
-  const tFallas=fallas.reduce((s,e)=>s+(e.durH||0),0);
+  const tFallas=fallas.reduce((s,e)=>s+durHReal(e),0);
   const prog=evs.filter(e=>e.tipo==='programada').length;
   const desc=evs.filter(e=>e.tipo==='descongelamiento').length;
 
@@ -2988,7 +3029,7 @@ function renderDashboard(){
   const tiposL=['carga_descarga','descongelamiento','sin_produccion','programada','no_programada','fin_proceso'];
   const tiposNames=['Carga/Descarga','Descongelamiento','Sin Producción','Mant. Programado','Falla/Avería','Fin de Proceso'];
   const tiposColors=['#ff6600','#4a6a8a','#00ffb3','#00e87a','#ff3b5c','#a855f7'];
-  const tiposData=tiposL.map(t=>evs.filter(e=>e.tipo===t).reduce((s,e)=>s+(e.durH||0),0));
+  const tiposData=tiposL.map(t=>evs.filter(e=>e.tipo===t).reduce((s,e)=>s+durHReal(e),0));
   renderDoughnut('chart-tipos',tiposNames,tiposData,tiposColors,true);
 
 
@@ -2996,12 +3037,12 @@ function renderDashboard(){
   // MTBF/MTTR per equipo
   const mtbfEq=equipos.map(eq=>{
     const ef=evs.filter(e=>e.equipo===eq&&e.tipo==='no_programada');
-    const tF=ef.reduce((s,e)=>s+(e.durH||0),0);
+    const tF=ef.reduce((s,e)=>s+durHReal(e),0);
     return ef.length?(periodHours-tF)/ef.length:0;
   });
   const mttrEq=equipos.map(eq=>{
     const ef=evs.filter(e=>e.equipo===eq&&e.tipo==='no_programada');
-    return ef.length?ef.reduce((s,e)=>s+(e.durH||0),0)/ef.length:0;
+    return ef.length?ef.reduce((s,e)=>s+durHReal(e),0)/ef.length:0;
   });
   renderMultiBar('chart-mant',equipos,[{label:'MTBF',data:mtbfEq,color:'#00c8ff'},{label:'MTTR',data:mttrEq,color:'#ff3b5c'}],true);
 
@@ -3014,7 +3055,7 @@ function renderDashboard(){
   const bachPorEq = equiposCD.map(eq => bachs.filter(b=>b.equipo===eq).length);
   const tiempoPorEq = equiposCD.map(eq => {
     const eb = bachs.filter(b=>b.equipo===eq);
-    return eb.length ? parseFloat((eb.reduce((s,b)=>s+(b.tcong||0),0)/eb.length).toFixed(2)) : 0;
+    return eb.length ? parseFloat((eb.reduce((s,b)=>s+tcongReal(b),0)/eb.length).toFixed(2)) : 0;
   });
   // Filtrar solo equipos con datos para no saturar
   const idxConDatos = equiposCD.map((eq,i)=>i).filter(i => bachPorEq[i] > 0);
@@ -3028,7 +3069,7 @@ function renderDashboard(){
 
   // NUEVO: Distribución por producto (doughnut)
   const prodMap = {};
-  bachs.filter(b=>b.estado==='cerrado').forEach(b=>{
+  bachs.forEach(b=>{
     const p = b.producto || 'Sin especificar';
     prodMap[p] = (prodMap[p]||0) + (b.peso||0);
   });
@@ -3045,7 +3086,7 @@ function renderDashboard(){
       const ep=evs.filter(e=>e.equipo===eq&&e.tipo==='programada').length;
       const ed=evs.filter(e=>e.equipo===eq&&e.tipo==='descongelamiento').length;
       if(!eb.length&&!evs.filter(e=>e.equipo===eq).length)return '';
-      const tF=ef.reduce((s,e)=>s+(e.durH||0),0);
+      const tF=ef.reduce((s,e)=>s+durHReal(e),0);
       const mB=ef.length?(periodHours-tF)/ef.length:null;
       const mT=ef.length?tF/ef.length:null;
       const dsp=Math.min(100,((periodHours-tF)/periodHours)*100);
@@ -3074,7 +3115,7 @@ function renderDashboard(){
     const ef=evs.filter(e=>e.equipo===eq&&e.tipo==='no_programada');
     if(!eb.length && !evs.filter(e=>e.equipo===eq).length) return;
     eqConDatos.push(eq);
-    const tF=ef.reduce((s,e)=>s+(e.durH||0),0);
+    const tF=ef.reduce((s,e)=>s+durHReal(e),0);
     const dsp=Math.min(100,((periodHours-tF)/periodHours)*100);
     dispData.push(parseFloat(dsp.toFixed(1)));
     fallasData.push(ef.length);
@@ -3185,7 +3226,8 @@ function renderTendenciaProduccion() {
   const tTo = toEl ? toEl.value : '';
 
   // Tomar TODAS las bachadas cerradas (sin filtro global), solo filtrar por el rango propio
-  let bachsTend = DB.get('bachadas', []).filter(b => b.estado === 'cerrado');
+  // TIEMPO REAL: incluir todas las bachadas (el peso cuenta desde que se carga)
+  let bachsTend = DB.get('bachadas', []);
   if(tFrom) bachsTend = bachsTend.filter(b => (b.fecha || '') >= tFrom);
   if(tTo)   bachsTend = bachsTend.filter(b => (b.fecha || '') <= tTo);
 
@@ -3277,14 +3319,23 @@ function renderTablaOperativa(bachs){
       : '<span class="badge badge-blue">Noche</span>';
     const estadoBadge = b.estado==='cerrado'
       ? '<span style="color:#00e87a;font-size:11px;">● Cerrado</span>'
-      : '<span style="color:#ff9500;font-size:11px;">● Abierto</span>';
+      : '<span style="color:#ff9500;font-size:11px;">● En proceso</span>';
+    // T.Cong: si está cerrada usa su tcong; si está en proceso muestra el tiempo transcurrido en vivo
+    let tcongCell;
+    if(b.tcong!==null && b.tcong!==undefined){
+      tcongCell = hoursToStr(b.tcong);
+    } else if(b.estado!=='cerrado' && b.inicio){
+      tcongCell = '<span style="color:#ff9500;">'+hoursToStr(tiempoTranscurridoH(b.fecha,b.inicio))+' ⏱</span>';
+    } else {
+      tcongCell = '—';
+    }
     return `<tr>
       <td class="font-mono">${b.fecha||'—'}</td>
       <td>${turnoBadge}</td>
       <td><span class="badge badge-blue">${b.equipo}</span></td>
       <td class="font-mono">#${b.bach}</td>
       <td class="font-mono" style="text-align:right;">${ton}</td>
-      <td class="font-mono" style="text-align:right;">${b.tcong!==null&&b.tcong!==undefined?hoursToStr(b.tcong):'—'}</td>
+      <td class="font-mono" style="text-align:right;">${tcongCell}</td>
       <td class="font-mono">${b.inicio||'—'}</td>
       <td class="font-mono">${b.fin||'—'}</td>
       <td>${estadoBadge}</td>
@@ -3565,6 +3616,31 @@ function redibujarPaginaActiva() {
   }
 }
 
+// ============================================================
+// AUTO-REFRESCO EN TIEMPO REAL
+// ============================================================
+// Cada 60 segundos, si el dashboard de congelamiento está visible, redibuja
+// la página activa para que las barras de procesos en curso crezcan y los
+// indicadores reflejen el tiempo transcurrido sin necesidad de recargar.
+let _realtimeInterval = null;
+function startRealtimeRefresh() {
+  if(_realtimeInterval) return;
+  _realtimeInterval = setInterval(() => {
+    const dashTab = document.getElementById('tab-cong-dashboard');
+    // Solo refrescar si la pestaña del dashboard está visible
+    if(dashTab && dashTab.offsetParent !== null) {
+      try { redibujarPaginaActiva(); } catch(e) { console.warn('Auto-refresh:', e); }
+    }
+  }, 60000); // 60 segundos
+}
+// Iniciar al cargar
+if(document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', startRealtimeRefresh);
+} else {
+  startRealtimeRefresh();
+}
+
+
 function toggleFullscreen() {
   const dash = document.getElementById('tab-cong-dashboard');
   const btn = document.getElementById('btn-fullscreen');
@@ -3731,13 +3807,16 @@ function renderTimeline() {
     const D_NEXT = fmt(opNext);
     const FECHAS_CANDIDATAS = [D_PREV, OP_DAY, D_NEXT];
 
+    // TIEMPO REAL: incluir registros en proceso (no solo cerrados).
+    // Las barras de procesos en curso se dibujan hasta el momento actual y crecen con el tiempo.
     const allBachs = DB.get('bachadas',[]).filter(b =>
-      b.equipo===equipo && b.estado==='cerrado' && FECHAS_CANDIDATAS.includes(b.fecha)
+      b.equipo===equipo && FECHAS_CANDIDATAS.includes(b.fecha)
     );
     const allEvs = DB.get('eventos',[]).filter(e =>
-      e.equipo===equipo && e.estado==='cerrado' && FECHAS_CANDIDATAS.includes(e.fechaIni)
+      e.equipo===equipo && FECHAS_CANDIDATAS.includes(e.fechaIni)
     );
 
+    const NOW_MS = Date.now();
     const items = [];
 
     // ---- BACHADAS ----
@@ -3747,6 +3826,7 @@ function renderTimeline() {
       if(startTs === null) return;
 
       let endTs = null;
+      let enProceso = false;
       if(b.fin) {
         // Si fechaFin existe es porque cruzó al día calendario siguiente (operativo siguiente o continuó)
         const fechaFinRef = b.fechaFin || b.fecha;
@@ -3755,6 +3835,10 @@ function renderTimeline() {
         if(endTs !== null && endTs <= startTs) {
           endTs += ONE_DAY_MS;
         }
+      } else if(b.estado!=='cerrado') {
+        // EN PROCESO: la barra crece hasta AHORA
+        endTs = NOW_MS;
+        enProceso = true;
       } else if(b.tcong) {
         endTs = startTs + b.tcong * 3600000;
       }
@@ -3766,8 +3850,8 @@ function renderTimeline() {
 
       items.push({
         kind: 'bachada',
-        startTs, endTs,
-        label: 'Bach #' + b.bach,
+        startTs, endTs, enProceso,
+        label: 'Bach #' + b.bach + (enProceso ? ' ⏱' : ''),
         rawTipo: 'bachada',
         bachNum: b.bach,
         meta: { producto: b.producto, aros: b.aros, peso: b.peso, fecha: b.fecha, turno: b.turno }
@@ -3781,12 +3865,17 @@ function renderTimeline() {
       if(startTs === null) return;
 
       let endTs = null;
+      let enProcesoEv = false;
       if(e.fin) {
         const fechaFinRef = e.fechaFin || e.fechaIni;
         endTs = opRecordToRealTs(fechaFinRef, e.fin);
         if(endTs !== null && endTs <= startTs && !e.fechaFin) {
           endTs += ONE_DAY_MS;
         }
+      } else if(e.estado!=='cerrado') {
+        // EVENTO ABIERTO (carga/descarga, descongelamiento, etc. en curso): crece hasta AHORA
+        endTs = NOW_MS;
+        enProcesoEv = true;
       } else if(e.durH) {
         endTs = startTs + e.durH * 3600000;
       }
@@ -3799,8 +3888,8 @@ function renderTimeline() {
 
       items.push({
         kind: 'evento',
-        startTs, endTs,
-        label: e.tipoLabel || e.tipo,
+        startTs, endTs, enProceso: enProcesoEv,
+        label: (e.tipoLabel || e.tipo) + (enProcesoEv ? ' ⏱' : ''),
         rawTipo: e.tipo,
         meta: { desc: e.desc, accion: e.accion, tecnico: e.tecnico }
       });
@@ -3879,6 +3968,7 @@ function renderTimeline() {
       if(it.truncIni && it.truncFin) desc += ' · atraviesa día operativo';
       else if(it.truncIni) desc += ' · inicia en op. anterior';
       else if(it.truncFin) desc += ' · continúa en op. siguiente';
+      if(it.enProceso) desc += ' · EN PROCESO (en vivo)';
 
       segs.push({
         label: labelStr,
@@ -3886,7 +3976,8 @@ function renderTimeline() {
         realStart: it.realStartAbs, realEnd: it.realEndAbs,
         type: it.rawTipo, color, borderColor, desv, desc,
         equipo: equipo,
-        kind: it.kind
+        kind: it.kind,
+        enProceso: it.enProceso || false
       });
     });
 

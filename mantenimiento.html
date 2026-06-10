@@ -983,7 +983,7 @@ tr.clickable-row:hover td { background: var(--surface2); }
 
         <!-- DASHBOARD -->
         <div class="tab-content" id="tab-cong-dashboard">
-          <div class="card mb-6">
+          <div class="card mb-6" id="dash-filtros-generales">
             <div class="card-title">🔍 Filtros Generales del Dashboard</div>
             <div class="form-grid">
               <div class="field"><label>Desde</label><input type="date" id="dash-from" onchange="renderDashboard()"></div>
@@ -1720,12 +1720,11 @@ function startListeners() {
     const data = snap.docs.map(d => ({...d.data(), _fid: d.id}));
     CACHE.set('bachadas', data);
     filtrarBachadas();
-    // Re-renderizar timeline si está visible
-    if(document.getElementById('dash-page-5')?.classList.contains('active')) {
+    // Re-renderizar timeline si está visible (página 3 = Timeline Equipo)
+    if(document.getElementById('dash-page-3')?.classList.contains('active')) {
       renderTimeline();
-    }
-    // Re-renderizar dashboard si está visible
-    if(document.querySelector('.dash-page.active')) {
+    } else if(document.querySelector('.dash-page.active')) {
+      // Re-renderizar dashboard (General o Mantenimiento) si está visible
       renderDashboard();
     }
   }, err => console.warn('bachadas:', err)));
@@ -1735,12 +1734,11 @@ function startListeners() {
     const data = snap.docs.map(d => ({...d.data(), _fid: d.id}));
     CACHE.set('eventos', data);
     renderEventos();
-    // Re-renderizar timeline si está visible
-    if(document.getElementById('dash-page-5')?.classList.contains('active')) {
+    // Re-renderizar timeline si está visible (página 3 = Timeline Equipo)
+    if(document.getElementById('dash-page-3')?.classList.contains('active')) {
       renderTimeline();
-    }
-    // Re-renderizar dashboard si está visible
-    if(document.querySelector('.dash-page.active')) {
+    } else if(document.querySelector('.dash-page.active')) {
+      // Re-renderizar dashboard (General o Mantenimiento) si está visible
       renderDashboard();
     }
   }, err => console.warn('eventos:', err)));
@@ -1991,7 +1989,14 @@ function showSubTab(prefix,name){
 }
 
 // ======== HELPERS ========
-function today(){return new Date().toISOString().split('T')[0];}
+function today(){
+  // Fecha local (no UTC) para evitar desfase de día en zonas horarias como Perú (UTC-5)
+  const n = new Date();
+  const y = n.getFullYear();
+  const m = String(n.getMonth()+1).padStart(2,'0');
+  const d = String(n.getDate()).padStart(2,'0');
+  return y+'-'+m+'-'+d;
+}
 function nowTime(){const n=new Date();return String(n.getHours()).padStart(2,'0')+':'+String(n.getMinutes()).padStart(2,'0');}
 function canEdit(){return currentUser!=null;}
 function canAdmin(){return currentUser&&currentUser.rol==='admin';}
@@ -2038,10 +2043,15 @@ function tiempoTranscurridoH(fechaOp, horaInicio){
 
 function setDefaultDates(){
   const t=today();
+  // DASHBOARD: por defecto enfocado en el DÍA ACTUAL (Desde = Hasta = hoy)
+  // El usuario puede ampliar el rango después para análisis histórico.
+  ['dash-from'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=t;});
+  ['dash-to'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=t;});
+  // REPORTES: mantienen rango de 30 días para análisis histórico
   const d30=new Date();d30.setDate(d30.getDate()-30);
-  const d30s=d30.toISOString().split('T')[0];
-  ['dash-from','rep-from'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=d30s;});
-  ['dash-to','rep-to'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=t;});
+  const d30s=`${d30.getFullYear()}-${String(d30.getMonth()+1).padStart(2,'0')}-${String(d30.getDate()).padStart(2,'0')}`;
+  const repFrom=document.getElementById('rep-from');if(repFrom)repFrom.value=d30s;
+  const repTo=document.getElementById('rep-to');if(repTo)repTo.value=t;
   const tlf=document.getElementById('tl-fecha');if(tlf)tlf.value=t;
 }
 

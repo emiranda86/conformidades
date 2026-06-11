@@ -1232,10 +1232,16 @@ tr.clickable-row:hover td { background: var(--surface2); }
                 <span style="display:flex;align-items:center;gap:5px;"><span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:#00c8ff88;border:1px solid #00c8ff;"></span>Congelamiento (Bachada)</span>
                 <span style="display:flex;align-items:center;gap:5px;"><span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:#ff660088;border:1px solid #ff6600;"></span>Carga/Descarga</span>
                 <span style="display:flex;align-items:center;gap:5px;"><span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:#4a6a8a88;border:1px solid #4a6a8a;"></span>Descongelamiento</span>
-                <span style="display:flex;align-items:center;gap:5px;"><span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:#00ffb388;border:1px solid #00ffb3;"></span>Sin MP</span>
+                <span style="display:flex;align-items:center;gap:5px;"><span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:#d946ef88;border:1px solid #d946ef;"></span>Sin MP</span>
                 <span style="display:flex;align-items:center;gap:5px;"><span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:#00e87a88;border:1px solid #00e87a;"></span>Mant. Programado</span>
                 <span style="display:flex;align-items:center;gap:5px;"><span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:#ff3b5c88;border:1px solid #ff3b5c;"></span>Falla / Avería</span>
                 <span style="display:flex;align-items:center;gap:5px;"><span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:transparent;border:1.5px dashed var(--text3);"></span>Fin de Proceso (sin actividad)</span>
+              </div>
+              <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);font-size:11px;">
+                <span style="color:var(--text3);font-weight:600;">Bordes de desempeño:</span>
+                <span style="display:flex;align-items:center;gap:5px;color:var(--text2);"><span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:#4a6a8a55;border:3px solid #ff3b5c;"></span>🔴 Excede el máximo</span>
+                <span style="display:flex;align-items:center;gap:5px;color:var(--text2);"><span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:#4a6a8a55;border:3px solid #22d3ee;"></span>🔵 Mejor que el estándar</span>
+                <span style="display:flex;align-items:center;gap:5px;color:var(--text2);"><span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:#4a6a8a55;border:1.5px solid #4a6a8a;"></span>✓ Dentro del rango normal</span>
               </div>
             </div>
             <div class="card">
@@ -3038,7 +3044,7 @@ function renderDashboard(){
   // Dona 1: Horas de parada por tipo (6 tipos completos)
   const tiposL=['carga_descarga','descongelamiento','sin_produccion','programada','no_programada','fin_proceso'];
   const tiposNames=['Carga/Descarga','Descongelamiento','Sin Producción','Mant. Programado','Falla/Avería','Fin de Proceso'];
-  const tiposColors=['#ff6600','#4a6a8a','#00ffb3','#00e87a','#ff3b5c','#a855f7'];
+  const tiposColors=['#ff6600','#4a6a8a','#d946ef','#00e87a','#ff3b5c','#a855f7'];
   const tiposData=tiposL.map(t=>evs.filter(e=>e.tipo===t).reduce((s,e)=>s+durHReal(e),0));
   renderDoughnut('chart-tipos',tiposNames,tiposData,tiposColors,true);
 
@@ -3746,11 +3752,52 @@ function renderTimeline() {
   const colorMap = {
     carga_descarga:  '#ff6600',   // naranja
     descongelamiento:'#4a6a8a',   // azul gris
-    sin_produccion:  '#00ffb3',   // teal — "Sin MP"
-    programada:      '#00e87a',   // verde
+    sin_produccion:  '#d946ef',   // magenta — "Sin MP" (claramente distinto del verde)
+    programada:      '#00e87a',   // verde — Mant. Programado
     no_programada:   '#ff3b5c',   // rojo
     fin_proceso:     null         // SIN COLOR — espacio vacío
   };
+
+  // ============================================================
+  // LÍMITES OPERATIVOS POR TIPO DE PROCESO Y EQUIPO
+  // ============================================================
+  // Devuelve {min, max} en HORAS decimales según el equipo y tipo de proceso.
+  // - Bachada (congelamiento): depende del grupo de congelador
+  // - Carga/Descarga: distinto para congeladores vs túnel
+  // - Descongelamiento: igual para todos
+  function getLimitesOperativos(equipo, tipo) {
+    const esTunel = equipo === 'TE';
+    // Grupo de congelador (1-3 vs 4-11)
+    const numEq = parseInt((equipo||'').replace('C','')) || 0;
+    const esGrupo13 = numEq >= 1 && numEq <= 3;
+
+    if(tipo === 'bachada') {
+      if(esTunel)   return { min: 10,    max: 12   };   // Túnel: 10h – 12h
+      if(esGrupo13) return { min: 2,     max: 2.333 }; // C1-C3: 2:00 – 2:20
+      return { min: 2.75, max: 3 };                     // C4-C11: 2:45 – 3:00
+    }
+    if(tipo === 'carga_descarga') {
+      if(esTunel) return { min: 2.5, max: 3.5 };        // Túnel C/D: 2:30 – 3:30
+      return { min: 0.25, max: 0.5 };                   // Congeladores C/D: 15min – 30min
+    }
+    if(tipo === 'descongelamiento') {
+      return { min: 1.5, max: 2 };                      // Descong: 1:30 – 2:00
+    }
+    // Otros tipos (sin_produccion, programada, no_programada, fin_proceso): sin límite definido
+    return null;
+  }
+
+  // Evalúa el desempeño y devuelve el tipo de borde:
+  //   'red'    → superó el máximo
+  //   'better' → por debajo del mínimo (desempeño superior)
+  //   null     → dentro del rango normal (sin borde especial)
+  function evaluarDesempeno(equipo, tipo, durRealH) {
+    const lim = getLimitesOperativos(equipo, tipo);
+    if(!lim) return null;
+    if(durRealH > lim.max) return 'red';
+    if(durRealH < lim.min) return 'better';
+    return null; // dentro del rango normal
+  }
 
   // ----------------------------------------------------------
   // CONSTRUCCIÓN DE SEGMENTOS POR EQUIPO
@@ -3958,14 +4005,34 @@ function renderTimeline() {
       if(it.truncFin) labelStr = labelStr + ' ➡';
 
       const color = colorMap[it.rawTipo] || (it.kind==='bachada' ? '#00c8ff' : '#888');
-      const borderColor = it.kind==='bachada' ? '#0088cc' : color;
 
-      let desv = null;
+      // ============================================================
+      // EVALUACIÓN DE DESEMPEÑO vs LÍMITES OPERATIVOS
+      // ============================================================
       const durRealH = (it.realEndTs - it.realStartTs) / 3600000;
-      if(it.kind === 'bachada' && durRealH > REF.tcong) {
-        desv = (durRealH - REF.tcong).toFixed(2);
-      } else if(it.kind === 'evento' && REF[it.rawTipo] > 0 && durRealH > REF[it.rawTipo]) {
-        desv = (durRealH - REF[it.rawTipo]).toFixed(2);
+      const tipoEval = it.kind === 'bachada' ? 'bachada' : it.rawTipo;
+      // No evaluar procesos en curso (aún no terminan) ni fin_proceso
+      const evalBorde = it.enProceso ? null : evaluarDesempeno(equipo, tipoEval, durRealH);
+
+      // Color del borde según desempeño:
+      //   rojo  = excedió el máximo
+      //   azul  = mejor que el estándar (por debajo del mínimo)
+      //   normal= borde sutil del propio color
+      let borderColor, borderWidthSeg;
+      if(evalBorde === 'red') {
+        borderColor = '#ff3b5c'; borderWidthSeg = 3;
+      } else if(evalBorde === 'better') {
+        borderColor = '#22d3ee'; borderWidthSeg = 3; // cian brillante = desempeño superior
+      } else {
+        borderColor = it.kind==='bachada' ? '#0088cc' : color;
+        borderWidthSeg = 1.5;
+      }
+
+      // Guardar info de desviación para tooltip
+      let desv = null;
+      const lim = getLimitesOperativos(equipo, tipoEval);
+      if(lim && !it.enProceso) {
+        if(durRealH > lim.max) desv = (durRealH - lim.max).toFixed(2);
       }
 
       let desc = '';
@@ -3984,7 +4051,8 @@ function renderTimeline() {
         label: labelStr,
         startH: segStart, endH: segEnd,
         realStart: it.realStartAbs, realEnd: it.realEndAbs,
-        type: it.rawTipo, color, borderColor, desv, desc,
+        type: it.rawTipo, color, borderColor, borderWidthSeg, desv, desc,
+        desempeno: evalBorde, // 'red' | 'better' | null
         equipo: equipo,
         kind: it.kind,
         enProceso: it.enProceso || false
@@ -4023,10 +4091,10 @@ function renderTimeline() {
       const block = document.createElement('div');
       block.style.cssText = 'background:var(--surface2);border-radius:10px;padding:12px 14px;border:1px solid var(--border);min-width:0;';
       block.innerHTML = '<div style="font-family:\'Syne\',sans-serif;font-size:13px;font-weight:700;color:var(--accent);margin-bottom:8px;">' + equipoLabel(eq) + '</div>'
-                     + '<div style="position:relative;"><canvas id="timeline-' + eq + '" height="' + Math.max(80, segs.length*26) + '"></canvas></div>';
+                     + '<div style="position:relative;height:' + Math.max(120, segs.length*22) + 'px;"><canvas id="timeline-' + eq + '"></canvas></div>';
       grid.appendChild(block);
 
-      drawChart(document.getElementById('timeline-' + eq), segs, 'timeline-' + eq);
+      drawChart(document.getElementById('timeline-' + eq), segs, 'timeline-' + eq, true);
     });
 
     if(totalSegs === 0) {
@@ -4041,9 +4109,9 @@ function renderTimeline() {
   // ----------------------------------------------------------
   // VISTA EQUIPO INDIVIDUAL
   // ----------------------------------------------------------
-  container.innerHTML = '<canvas id="chart-timeline" height="120"></canvas>';
   const segs = buildSegments(equipoSel);
-  drawChart(document.getElementById('chart-timeline'), segs, 'timeline');
+  container.innerHTML = '<div style="position:relative;height:' + Math.max(200, segs.length*30) + 'px;"><canvas id="chart-timeline"></canvas></div>';
+  drawChart(document.getElementById('chart-timeline'), segs, 'timeline', false);
 
   // Tabla detalle
   const tbody = document.getElementById('tbody-timeline');
@@ -4053,9 +4121,16 @@ function renderTimeline() {
     } else {
       tbody.innerHTML = segs.map(s => {
         const dur = hDec2HM(s.realEnd - s.realStart);
-        const desvCell = s.desv
-          ? '<span class="badge badge-red">+' + hDec2HM(parseFloat(s.desv)) + '</span>'
-          : '<span class="badge badge-green">OK</span>';
+        let desvCell;
+        if(s.desempeno === 'red') {
+          desvCell = '<span class="badge badge-red">🔴 Excede' + (s.desv ? ' +' + hDec2HM(parseFloat(s.desv)) : '') + '</span>';
+        } else if(s.desempeno === 'better') {
+          desvCell = '<span class="badge" style="background:#22d3ee22;color:#22d3ee;border:1px solid #22d3ee66;">🔵 Superior</span>';
+        } else if(s.enProceso) {
+          desvCell = '<span class="badge badge-warn">⏱ En proceso</span>';
+        } else {
+          desvCell = '<span class="badge badge-green">✓ Normal</span>';
+        }
         return '<tr>'
              + '<td><span class="badge" style="background:' + s.color + '22;color:' + s.color + ';border:1px solid ' + s.color + '44;">' + s.label + '</span></td>'
              + '<td class="font-mono">' + toHHMM(s.realStart) + '</td>'
@@ -4071,7 +4146,7 @@ function renderTimeline() {
   // ----------------------------------------------------------
   // DRAW CHART (helper)
   // ----------------------------------------------------------
-  function drawChart(canvas, segments, chartKey) {
+  function drawChart(canvas, segments, chartKey, multiEquipo) {
     if(!canvas) return;
     if(!segments.length) {
       const ctx = canvas.getContext('2d');
@@ -4081,16 +4156,36 @@ function renderTimeline() {
     const labels = segments.map(s => s.label);
     const data = segments.map(s => [s.startH, s.endH]);
     const bgColors = segments.map(s => s.color + 'cc');
-    const borderColors = segments.map(s => s.desv ? '#ff3b5c' : s.borderColor);
-    const borderW = segments.map(s => s.desv ? 3 : 1);
+    // Borde según desempeño operativo (rojo=excede, cian=mejor, sutil=normal)
+    const borderColors = segments.map(s => s.borderColor);
+    const borderW = segments.map(s => s.borderWidthSeg || 1.5);
+
+    // ============================================================
+    // GROSOR DINÁMICO DE BARRAS según cantidad de equipos
+    // ============================================================
+    // - Un solo equipo: barras más gruesas (mejor lectura individual)
+    // - Varios equipos: barras más delgadas (evitar saturación)
+    const barThickness = multiEquipo ? 14 : 20;
+    const categoryPct = multiEquipo ? 0.6 : 0.7;
+    const barPct = 0.85;
 
     charts[chartKey] = new Chart(canvas, {
       type: 'bar',
-      data: { labels, datasets: [{ label:'Eventos', data, backgroundColor: bgColors, borderColor: borderColors, borderWidth: borderW, borderRadius: 4 }] },
+      data: { labels, datasets: [{
+        label:'Eventos', data,
+        backgroundColor: bgColors,
+        borderColor: borderColors,
+        borderWidth: borderW,
+        borderRadius: 4,
+        barThickness: barThickness,
+        maxBarThickness: multiEquipo ? 16 : 24,
+        categoryPercentage: categoryPct,
+        barPercentage: barPct
+      }] },
       options: {
         indexAxis: 'y',
         responsive: true,
-        maintainAspectRatio: true,
+        maintainAspectRatio: false,
         plugins: {
           legend: { display: false },
           tooltip: {
@@ -4098,7 +4193,8 @@ function renderTimeline() {
               label: function(ctx) {
                 const s = segments[ctx.dataIndex];
                 let txt = ['Inicio: ' + toHHMM(s.realStart) + '  Fin: ' + toHHMM(s.realEnd), 'Duración: ' + hDec2HM(s.realEnd - s.realStart)];
-                if(s.desv) txt.push('⚠️ Desviación: +' + hDec2HM(parseFloat(s.desv)) + ' sobre el promedio');
+                if(s.desempeno === 'red') txt.push('🔴 Excede el tiempo máximo esperado' + (s.desv ? ' (+' + hDec2HM(parseFloat(s.desv)) + ')' : ''));
+                else if(s.desempeno === 'better') txt.push('🔵 Desempeño superior (bajo el mínimo esperado)');
                 if(s.desc) txt.push('Obs: ' + s.desc);
                 return txt;
               }
@@ -4114,7 +4210,7 @@ function renderTimeline() {
           },
           y: {
             grid: { color: '#1e3352' },
-            ticks: { color: '#e8f4ff', font: { size: 11 } },
+            ticks: { color: '#e8f4ff', font: { size: multiEquipo ? 10 : 11 } },
             title: { display: false }
           }
         }

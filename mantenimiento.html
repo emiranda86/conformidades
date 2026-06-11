@@ -2394,10 +2394,15 @@ function calcularEstadoBachadas(equipo) {
   const esTunel = equipo === 'TE' || (equipo+'').toUpperCase().startsWith('TE') || equipo.includes('únel') || equipo.toLowerCase().includes('tunel');
   const limite = esTunel ? 3 : 4;
 
-  // Tomar TODOS los registros del equipo (cerrados)
-  const allBachs = DB.get('bachadas', []).filter(b => b.equipo===equipo && b.estado==='cerrado');
-  // Considerar TODOS los tipos de eventos (no solo descongelamiento)
-  const allEvs   = DB.get('eventos', []).filter(e => e.equipo===equipo && e.estado==='cerrado');
+  // ============================================================
+  // FUENTE DE DATOS: TODOS los registros (abiertos Y cerrados)
+  // ============================================================
+  // CORRECCIÓN: antes solo se consideraban registros con estado='cerrado',
+  // lo que causaba que una bachada en proceso (aún no cerrada) no contara,
+  // proponiendo un número ya usado o reiniciando a #1 sin motivo.
+  // Ahora se consideran todos los registros para reflejar la secuencia real.
+  const allBachs = DB.get('bachadas', []).filter(b => b.equipo===equipo);
+  const allEvs   = DB.get('eventos', []).filter(e => e.equipo===equipo);
 
   // Función conversora oficial (alineada con la del Timeline)
   // Convierte (fecha_operativa_BD, hora_BD) → timestamp REAL en ms
@@ -2416,8 +2421,9 @@ function calcularEstadoBachadas(equipo) {
   // Construir línea cronológica unificada
   const eventos = [];
 
-  // Bachadas: ts = inicio
+  // Bachadas: ts = inicio (omitir las que no tienen inicio válido)
   allBachs.forEach(b => {
+    if(!b.inicio || !b.fecha) return; // registro incompleto, no participa en la secuencia
     eventos.push({
       categoria: 'bachada',
       ts: opRecordToRealTs(b.fecha, b.inicio),
@@ -2426,9 +2432,10 @@ function calcularEstadoBachadas(equipo) {
     });
   });
 
-  // Eventos: el ts importante para reset es la HORA DE FIN (cuando el evento terminó)
-  // porque la siguiente bachada arranca DESPUÉS del evento
+  // Eventos: el ts importante para reset es la HORA DE FIN (cuando el evento terminó);
+  // si el evento está abierto (sin fin), se usa su inicio.
   allEvs.forEach(e => {
+    if(!e.inicio || !e.fechaIni) return; // evento incompleto, no participa
     const tsIni = opRecordToRealTs(e.fechaIni, e.inicio);
     const tsFin = e.fin ? opRecordToRealTs(e.fechaFin || e.fechaIni, e.fin) : tsIni;
     eventos.push({
@@ -2440,7 +2447,13 @@ function calcularEstadoBachadas(equipo) {
     });
   });
 
-  eventos.sort((a, b) => a.ts - b.ts);
+  eventos.sort((a, b) => {
+    if(a.ts !== b.ts) return a.ts - b.ts;
+    // Desempate: ante el mismo timestamp, la bachada va ANTES que el evento
+    // (un evento de reset que ocurre justo al cerrar una bachada debe procesarse después)
+    if(a.categoria === b.categoria) return 0;
+    return a.categoria === 'bachada' ? -1 : 1;
+  });
 
   // Procesar cronológicamente
   // FUENTE DE VERDAD: el número de bachada REALMENTE guardado (b.bach), no un conteo de registros.

@@ -3773,7 +3773,7 @@ function renderTimeline() {
 
     if(tipo === 'bachada') {
       if(esTunel)   return { min: 10,    max: 12   };   // Túnel: 10h – 12h
-      if(esGrupo13) return { min: 2,     max: 2.333 }; // C1-C3: 2:00 – 2:20
+      if(esGrupo13) return { min: 2,     max: 2.5  }; // C1-C3: 2:00 – 2:30
       return { min: 2.75, max: 3 };                     // C4-C11: 2:45 – 3:00
     }
     if(tipo === 'carga_descarga') {

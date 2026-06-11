@@ -3006,6 +3006,18 @@ function renderDashboard(){
   setText('kpi-prod-dia', (prodDiaKg/1000).toFixed(1) + ' t');
   setText('kpi-prod-noche', (prodNocheKg/1000).toFixed(1) + ' t');
 
+  // ============================================================
+  // HORAS OPERATIVAS REALES POR EQUIPO (helper reutilizable)
+  // ============================================================
+  // Horas reales = período − paradas del equipo (fallas, sin MP, mant prog,
+  // descongelamiento, fin de proceso). Carga/Descarga no descuenta.
+  const _tiposParadaCalc = ['no_programada','sin_produccion','programada','descongelamiento','fin_proceso'];
+  function horasOperativasReales(eq, periodoHoras){
+    const paradas = evs.filter(e => e.equipo===eq && _tiposParadaCalc.includes(e.tipo))
+                       .reduce((s,e)=>s+durHReal(e),0);
+    return Math.max(0, periodoHoras - paradas);
+  }
+
   // mantenimiento KPIs
   const fallas=evs.filter(e=>e.tipo==='no_programada');
   const nFallas=fallas.length;
@@ -3013,18 +3025,45 @@ function renderDashboard(){
   const prog=evs.filter(e=>e.tipo==='programada').length;
   const desc=evs.filter(e=>e.tipo==='descongelamiento').length;
 
-  // Periodo en horas
+  // Periodo en horas (rango de fechas del filtro)
   let periodHours=0;
   if(from&&to){
     const d1=new Date(from),d2=new Date(to);
     periodHours=Math.max(1,(d2-d1)/3600000+24);
   } else periodHours=30*24;
 
-  const nEquipos=equipoF?1:12;
-  const totalOpHours=periodHours*nEquipos;
-  const mtbf=nFallas>0?((totalOpHours-tFallas)/nFallas):totalOpHours;
+  // ============================================================
+  // HORAS OPERATIVAS REALES (no teóricas)
+  // ============================================================
+  // En lugar de asumir "período × 12 equipos al 100%", calculamos por cada
+  // equipo el tiempo que REALMENTE estuvo disponible para operar:
+  //   Horas reales del equipo = período − (paradas registradas de ese equipo)
+  // Paradas que descuentan disponibilidad: TODOS los eventos que detienen el
+  // equipo (fallas, sin MP, mant. programado, descongelamiento, fin de proceso).
+  // Carga/Descarga NO se descuenta: es parte normal del ciclo productivo.
+  const equiposParaCalculo = equipoF ? [equipoF] : ['C1','C2','C3','C4','C5','C6','C7','C8','C9','C10','C11','TE'];
+
+  // Solo cuentan los equipos que tuvieron actividad (bachadas o eventos) en el período.
+  let totalOpHoursReal = 0;
+  equiposParaCalculo.forEach(eq => {
+    const tieneActividad = bachs.some(b=>b.equipo===eq) || evs.some(e=>e.equipo===eq);
+    if(!tieneActividad) return;
+    totalOpHoursReal += horasOperativasReales(eq, periodHours);
+  });
+
+  // Si ningún equipo tuvo actividad, evitar división por cero
+  const totalOpHours = totalOpHoursReal > 0 ? totalOpHoursReal : periodHours;
+
+  // ============================================================
+  // INDICADORES (basados en horas operativas REALES)
+  // ============================================================
+  // MTBF = horas que el equipo estuvo operando entre fallas
+  const mtbf=nFallas>0?(totalOpHours/nFallas):totalOpHours;
+  // MTTR = tiempo medio de reparación (horas de falla / número de fallas)
   const mttr=nFallas>0?(tFallas/nFallas):0;
-  const disponibilidad=totalOpHours>0?Math.min(100,((totalOpHours-tFallas)/totalOpHours)*100):100;
+  // Disponibilidad = horas operativas reales / (horas operativas + horas de falla)
+  const horasProgramadas = totalOpHours + tFallas;
+  const disponibilidad=horasProgramadas>0?Math.min(100,(totalOpHours/horasProgramadas)*100):100;
   const confiabilidad=nFallas>0?Math.min(100,(1-nFallas/(bachs.length+nFallas))*100):bachs.length>0?100:0;
   const rendimiento=avgTcong&&avgTcong>0?Math.min(100,(6/avgTcong)*100):100; // referencia ~6h ideal
   const oee=disponibilidad*rendimiento/100;
@@ -3053,8 +3092,9 @@ function renderDashboard(){
   // MTBF/MTTR per equipo
   const mtbfEq=equipos.map(eq=>{
     const ef=evs.filter(e=>e.equipo===eq&&e.tipo==='no_programada');
-    const tF=ef.reduce((s,e)=>s+durHReal(e),0);
-    return ef.length?(periodHours-tF)/ef.length:0;
+    // MTBF realista: horas operativas reales del equipo / número de fallas
+    const horasReales = horasOperativasReales(eq, periodHours);
+    return ef.length?(horasReales/ef.length):0;
   });
   const mttrEq=equipos.map(eq=>{
     const ef=evs.filter(e=>e.equipo===eq&&e.tipo==='no_programada');
@@ -3103,9 +3143,12 @@ function renderDashboard(){
       const ed=evs.filter(e=>e.equipo===eq&&e.tipo==='descongelamiento').length;
       if(!eb.length&&!evs.filter(e=>e.equipo===eq).length)return '';
       const tF=ef.reduce((s,e)=>s+durHReal(e),0);
-      const mB=ef.length?(periodHours-tF)/ef.length:null;
+      // Horas operativas reales del equipo (período − todas las paradas)
+      const horasRealesEq = horasOperativasReales(eq, periodHours);
+      const mB=ef.length?(horasRealesEq/ef.length):null;
       const mT=ef.length?tF/ef.length:null;
-      const dsp=Math.min(100,((periodHours-tF)/periodHours)*100);
+      // Disponibilidad = horas reales / (horas reales + horas de falla)
+      const dsp=Math.min(100,(horasRealesEq/(horasRealesEq+tF))*100);
       const conf=ef.length?Math.min(100,(1-ef.length/(eb.length+ef.length))*100):eb.length>0?100:null;
       const prod=eb.reduce((s,b)=>s+(b.peso||0),0);
       const prodTon = (prod/1000).toFixed(2);
@@ -3132,7 +3175,8 @@ function renderDashboard(){
     if(!eb.length && !evs.filter(e=>e.equipo===eq).length) return;
     eqConDatos.push(eq);
     const tF=ef.reduce((s,e)=>s+durHReal(e),0);
-    const dsp=Math.min(100,((periodHours-tF)/periodHours)*100);
+    const horasRealesEq=horasOperativasReales(eq, periodHours);
+    const dsp=Math.min(100,(horasRealesEq/(horasRealesEq+tF))*100);
     dispData.push(parseFloat(dsp.toFixed(1)));
     fallasData.push(ef.length);
   });

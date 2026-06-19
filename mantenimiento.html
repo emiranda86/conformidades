@@ -114,6 +114,25 @@ body.sidebar-collapsed .sidebar:hover{transform:translateX(0);box-shadow:4px 0 2
 .card-title{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--text2);letter-spacing:.07em;text-transform:uppercase;margin-bottom:16px;}
 .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
 .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px;}
+
+/* ===== SECCIONES DASHBOARD MANTENIMIENTO ===== */
+.mant-sec-tabs{display:flex;gap:8px;margin-bottom:18px;border-bottom:1px solid var(--border);padding-bottom:0;}
+.mant-sec-tab{background:transparent;border:none;border-bottom:3px solid transparent;color:var(--text2);font-size:13px;font-weight:600;padding:10px 18px;cursor:pointer;transition:all .15s;font-family:'DM Sans',sans-serif;}
+.mant-sec-tab:hover{color:var(--text);}
+.mant-sec-tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+.mant-kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:16px;}
+.mant-kpi{background:var(--surface2);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:8px;padding:12px 14px;}
+.mant-kpi-lbl{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:4px;}
+.mant-kpi-val{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--text);}
+.mant-heat-cell{border-radius:2px;height:20px;}
+.mant-rank-row{display:flex;align-items:center;gap:8px;}
+.mant-rank-lbl{font-size:11px;color:var(--text2);width:30px;}
+.mant-rank-bar{flex:1;height:16px;background:var(--surface);border-radius:4px;overflow:hidden;}
+.mant-rank-val{font-size:11px;color:var(--text);font-family:'DM Mono',monospace;min-width:28px;text-align:right;}
+@media (max-width:768px){
+  .mant-sec-tab{font-size:12px;padding:8px 12px;}
+  .grid-3{grid-template-columns:1fr;}
+}
 .grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
 .grid-5{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;}
 
@@ -366,6 +385,9 @@ tr:hover td{background:var(--surface2);}
   /* Tabla: scroll horizontal */
   .table-wrap { border-radius: 10px; }
   table { font-size: 11.5px; }
+  /* Columna de acciones: siempre accesible y con botones táctiles grandes en móvil */
+  .acciones-td { position: sticky; right: 0; background: var(--surface); box-shadow: -4px 0 8px rgba(0,0,0,.25); z-index: 2; }
+  .acciones-td button { min-width: 38px; min-height: 34px; }
   th { padding: 9px 10px; font-size: 9.5px; }
   td { padding: 9px 10px; }
 
@@ -1033,9 +1055,10 @@ tr.clickable-row:hover td { background: var(--surface2); }
                     <div class="dash-mini-label">Operativos</div>
                     <div class="dash-mini-value" id="kpi-operativos">0<span class="dash-mini-unit">/12</span></div>
                   </div>
-                  <div class="dash-mini-kpi c-purple">
-                    <div class="dash-mini-label">Eficiencia</div>
+                  <div class="dash-mini-kpi c-purple" id="kpi-egc-card" style="position:relative;">
+                    <div class="dash-mini-label">Eficiencia (EGC)</div>
                     <div class="dash-mini-value" id="kpi-oee">--</div>
+                    <div id="kpi-egc-semaforo" style="font-size:9px;margin-top:2px;font-weight:600;"></div>
                   </div>
                   <div class="dash-mini-kpi c-blue">
                     <div class="dash-mini-label">Acumulado mes</div>
@@ -1146,40 +1169,149 @@ tr.clickable-row:hover td { background: var(--surface2); }
 
           </div><!-- end dash-page-1 -->
           <div class="dash-page" id="dash-page-2">
-          <div class="pbi-header-bar">
-            <div>
-              <div class="pbi-header-title"><span class="pbi-header-icon">🔧</span> Panel de mantenimiento</div>
-              <div class="pbi-header-sub">Confiabilidad, disponibilidad e indicadores por equipo</div>
-            </div>
-            <div class="pbi-card-badge">Tabla detallada</div>
+
+          <!-- ============ SELECTOR DE SECCIÓN ============ -->
+          <div class="mant-sec-tabs">
+            <button class="mant-sec-tab active" id="mant-tab-A" onclick="switchMantSection('A')">🔧 Mantenimiento</button>
+            <button class="mant-sec-tab" id="mant-tab-B" onclick="switchMantSection('B')">📉 Análisis de Desviaciones</button>
           </div>
 
-          <div class="pbi-card mb-4">
-            <div class="pbi-card-head">
-              <div class="pbi-card-title">📊 Indicadores de mantenimiento por equipo</div>
-              <div class="pbi-card-badge">Click en encabezado para ordenar</div>
+          <!-- ============ SECCIÓN A: MANTENIMIENTO ============ -->
+          <div id="mant-section-A">
+            <div class="pbi-header-bar">
+              <div>
+                <div class="pbi-header-title"><span class="pbi-header-icon">🔧</span> Panel de mantenimiento</div>
+                <div class="pbi-header-sub">Confiabilidad, disponibilidad e indicadores por equipo</div>
+              </div>
+              <div class="pbi-card-badge">Sección A</div>
             </div>
-            <div class="table-wrap">
-              <table>
-                <thead><tr>
-                  <th>Equipo</th><th>Fallas</th><th>T.Fallas (h)</th><th>MTBF (h)</th><th>MTTR (h)</th>
-                  <th>Disponib. %</th><th>Confiab. %</th><th>Prog.</th><th>Descong.</th><th>Bachadas</th><th>Prod. (t)</th>
-                </tr></thead>
-                <tbody id="tbody-kpis-eq"></tbody>
-              </table>
-            </div>
-          </div>
 
-          <div class="grid-2 mb-4">
-            <div class="pbi-card">
-              <div class="pbi-card-head"><div class="pbi-card-title">🟢 Disponibilidad por equipo</div><div class="pbi-card-badge">%</div></div>
-              <div style="position:relative;height:240px;"><canvas id="chart-disp-eq"></canvas></div>
+            <!-- KPIs resumen -->
+            <div class="mant-kpi-row">
+              <div class="mant-kpi" style="border-left-color:#22d3ee;"><div class="mant-kpi-lbl">MTBF</div><div class="mant-kpi-val" id="mA-mtbf">--</div></div>
+              <div class="mant-kpi" style="border-left-color:#facc15;"><div class="mant-kpi-lbl">MTTR</div><div class="mant-kpi-val" id="mA-mttr">--</div></div>
+              <div class="mant-kpi" style="border-left-color:#00e87a;"><div class="mant-kpi-lbl">Disponib.</div><div class="mant-kpi-val" id="mA-disp">--</div></div>
+              <div class="mant-kpi" style="border-left-color:#ff3b5c;"><div class="mant-kpi-lbl">Averías</div><div class="mant-kpi-val" id="mA-fallas">--</div></div>
+              <div class="mant-kpi" style="border-left-color:#ff9500;"><div class="mant-kpi-lbl">H. detenidas</div><div class="mant-kpi-val" id="mA-hdet">--</div></div>
             </div>
-            <div class="pbi-card">
-              <div class="pbi-card-head"><div class="pbi-card-title">🚨 Fallas por equipo</div><div class="pbi-card-badge">cantidad</div></div>
-              <div style="position:relative;height:240px;"><canvas id="chart-fallas-eq"></canvas></div>
+
+            <!-- Evolución mensual + Pareto -->
+            <div class="grid-2 mb-4">
+              <div class="pbi-card">
+                <div class="pbi-card-head"><div class="pbi-card-title">📈 Evolución mensual (MTBF vs MTTR)</div></div>
+                <div style="position:relative;height:210px;"><canvas id="mA-evo"></canvas></div>
+              </div>
+              <div class="pbi-card">
+                <div class="pbi-card-head"><div class="pbi-card-title">📊 Pareto de averías por equipo</div></div>
+                <div style="position:relative;height:210px;"><canvas id="mA-pareto"></canvas></div>
+              </div>
             </div>
-          </div>
+
+            <!-- Tabla por equipo -->
+            <div class="pbi-card mb-4">
+              <div class="pbi-card-head">
+                <div class="pbi-card-title">📋 Indicadores de mantenimiento por equipo</div>
+                <div class="pbi-card-badge">detalle completo</div>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead><tr>
+                    <th>Equipo</th><th>Fallas</th><th>T.Fallas (h)</th><th>MTBF (h)</th><th>MTTR (h)</th>
+                    <th>Disponib. %</th><th>Confiab. %</th><th>Prog.</th><th>Descong.</th><th>Bachadas</th><th>Prod. (t)</th>
+                  </tr></thead>
+                  <tbody id="tbody-kpis-eq"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Rankings y distribuciones -->
+            <div class="grid-3 mb-4">
+              <div class="pbi-card">
+                <div class="pbi-card-head"><div class="pbi-card-title">🏆 Ranking equipos (disponib.)</div></div>
+                <div id="mA-ranking" style="display:flex;flex-direction:column;gap:6px;margin-top:6px;"></div>
+              </div>
+              <div class="pbi-card">
+                <div class="pbi-card-head"><div class="pbi-card-title">🍩 Distribución por tipo de evento</div></div>
+                <div style="position:relative;height:170px;"><canvas id="mA-distTipo"></canvas></div>
+              </div>
+              <div class="pbi-card">
+                <div class="pbi-card-head"><div class="pbi-card-title">🔥 Distribución por criticidad</div></div>
+                <div style="position:relative;height:170px;"><canvas id="mA-distCrit"></canvas></div>
+              </div>
+            </div>
+
+            <!-- Disponibilidad y fallas por equipo -->
+            <div class="grid-2 mb-4">
+              <div class="pbi-card">
+                <div class="pbi-card-head"><div class="pbi-card-title">🟢 Disponibilidad por equipo</div><div class="pbi-card-badge">%</div></div>
+                <div style="position:relative;height:240px;"><canvas id="chart-disp-eq"></canvas></div>
+              </div>
+              <div class="pbi-card">
+                <div class="pbi-card-head"><div class="pbi-card-title">🚨 Fallas por equipo</div><div class="pbi-card-badge">cantidad</div></div>
+                <div style="position:relative;height:240px;"><canvas id="chart-fallas-eq"></canvas></div>
+              </div>
+            </div>
+          </div><!-- end mant-section-A -->
+
+          <!-- ============ SECCIÓN B: ANÁLISIS DE DESVIACIONES ============ -->
+          <div id="mant-section-B" style="display:none;">
+            <div class="pbi-header-bar">
+              <div>
+                <div class="pbi-header-title"><span class="pbi-header-icon">📉</span> Análisis de desviaciones</div>
+                <div class="pbi-header-sub">Procesos fuera del rango operativo normal · pérdidas de eficiencia</div>
+              </div>
+              <div class="pbi-card-badge">Sección B</div>
+            </div>
+
+            <!-- KPIs de desviaciones -->
+            <div class="mant-kpi-row">
+              <div class="mant-kpi" style="border-left-color:#ff9500;"><div class="mant-kpi-lbl">Total desviaciones</div><div class="mant-kpi-val" id="mB-total">--</div></div>
+              <div class="mant-kpi" style="border-left-color:#ff3b5c;"><div class="mant-kpi-lbl">Horas perdidas</div><div class="mant-kpi-val" id="mB-horas">--</div></div>
+              <div class="mant-kpi" style="border-left-color:#facc15;"><div class="mant-kpi-lbl">Impacto productivo</div><div class="mant-kpi-val" id="mB-impacto">--</div></div>
+            </div>
+
+            <!-- Pareto + Heatmap -->
+            <div class="grid-2 mb-4">
+              <div class="pbi-card">
+                <div class="pbi-card-head"><div class="pbi-card-title">📊 Pareto de desviaciones por causa</div></div>
+                <div style="position:relative;height:200px;"><canvas id="mB-pareto"></canvas></div>
+              </div>
+              <div class="pbi-card">
+                <div class="pbi-card-head"><div class="pbi-card-title">🗓 Heatmap por hora y día</div></div>
+                <div id="mB-heatmap" style="margin-top:8px;"></div>
+              </div>
+            </div>
+
+            <!-- Tendencia + distribución -->
+            <div class="grid-2 mb-4">
+              <div class="pbi-card">
+                <div class="pbi-card-head"><div class="pbi-card-title">📉 Tendencia histórica de desviaciones</div></div>
+                <div style="position:relative;height:190px;"><canvas id="mB-tend"></canvas></div>
+              </div>
+              <div class="pbi-card">
+                <div class="pbi-card-head"><div class="pbi-card-title">🍩 Distribución % por causa</div></div>
+                <div style="position:relative;height:190px;"><canvas id="mB-distCausa"></canvas></div>
+              </div>
+            </div>
+
+            <!-- Rankings -->
+            <div class="grid-2 mb-4">
+              <div class="pbi-card">
+                <div class="pbi-card-head"><div class="pbi-card-title">🏆 Congeladores con más desviaciones</div></div>
+                <div id="mB-rankEq" style="display:flex;flex-direction:column;gap:6px;margin-top:6px;"></div>
+              </div>
+              <div class="pbi-card">
+                <div class="pbi-card-head"><div class="pbi-card-title">🔁 Eventos más recurrentes</div></div>
+                <div id="mB-rankEv" style="display:flex;flex-direction:column;gap:6px;margin-top:6px;"></div>
+              </div>
+            </div>
+
+            <!-- Análisis automático -->
+            <div class="pbi-card mb-4" style="border:1px solid #facc1555;">
+              <div class="pbi-card-head"><div class="pbi-card-title" style="color:#facc15;">⚡ Análisis automático de causas</div></div>
+              <div id="mB-analisis" style="font-size:12px;color:#c8d8e8;line-height:1.7;margin-top:4px;"></div>
+            </div>
+          </div><!-- end mant-section-B -->
 
           </div><!-- end dash-page-2 -->
           
@@ -2028,6 +2160,21 @@ function hoursToStr(h){
 // físicamente en el día calendario siguiente al día operativo declarado.
 // Devuelve horas decimales (>= 0). Se usa para dibujar barras de procesos en curso
 // y para que los KPIs de tiempo reflejen el avance real.
+// ============================================================
+// LÍMITES DE CONGELAMIENTO POR EQUIPO (para factor Calidad del EGC)
+// ============================================================
+// Devuelve {min,max} en horas del tiempo de congelamiento esperado.
+// Reutiliza los mismos rangos operativos del Timeline.
+function getLimitesEGC(equipo){
+  const esTunel = equipo === 'TE';
+  const numEq = parseInt((equipo||'').replace('C','')) || 0;
+  const esGrupo13 = numEq >= 1 && numEq <= 3;
+  if(esTunel)   return { min: 10,   max: 12  };  // Túnel: 10–12h
+  if(esGrupo13) return { min: 2,    max: 2.5 };  // C1-C3: 2:00–2:30
+  if(numEq>=4 && numEq<=11) return { min: 2.75, max: 3 }; // C4-C11: 2:45–3:00
+  return null;
+}
+
 function tiempoTranscurridoH(fechaOp, horaInicio){
   if(!fechaOp || !horaInicio) return 0;
   try {
@@ -2615,9 +2762,11 @@ function renderBachadasData(bachs){
       <td class="font-mono">${b.temp!=null?b.temp+'°C':'<span style="color:var(--text3)">—</span>'}</td>
       <td>${b.tecnico}</td>
       <td><span class="status-pill ${b.estado==='cerrado'?'status-activo':'status-pendiente'}">${b.estado==='cerrado'?'✅ Cerrado':'⏳ En Proceso'}</span></td>
-      <td class="no-print" style="display:flex;gap:6px;" onclick="event.stopPropagation()">
-        <button class="btn-sm btn-ghost" style="padding:4px 9px;font-size:11px;" onclick="openBachadaModal(${b.id})">✏️</button>
-        <button class="btn-sm btn-ghost" style="padding:4px 9px;font-size:11px;" onclick="delBachada(${b.id})">🗑</button>
+      <td class="no-print acciones-td" onclick="event.stopPropagation()">
+        <div style="display:flex;gap:6px;">
+          <button class="btn-sm btn-ghost" style="padding:6px 11px;font-size:13px;" onclick="event.stopPropagation();openBachadaModal(${b.id})" title="Editar">✏️</button>
+          <button class="btn-sm btn-ghost" style="padding:6px 11px;font-size:13px;" onclick="event.stopPropagation();delBachada(${b.id})" title="Eliminar">🗑</button>
+        </div>
       </td>
     </tr>`).join('');
 }
@@ -2655,7 +2804,17 @@ function limpiarFiltrosBachadas(){
   filtrarBachadas();
 }
 
-async function delBachada(id){if(!canAdmin()||!confirm('¿Eliminar?'))return;try{const item=DB.get('bachadas',[]).find(b=>b.id===id||b._fid===id);const fid=item?._fid||String(id);await COL.bachadas().doc(fid).delete();}catch(err){console.error(err);}}
+async function delBachada(id){
+  if(!canAdmin()){ showToast('Solo administradores pueden eliminar.','warn'); return; }
+  if(!confirm('¿Eliminar esta bachada? Esta acción no se puede deshacer.')) return;
+  try{
+    const item=DB.get('bachadas',[]).find(b=>b.id===id||b._fid===id||String(b.id)===String(id));
+    if(!item){ showToast('No se encontró la bachada.','warn'); return; }
+    const fid=item._fid||String(id);
+    await COL.bachadas().doc(fid).delete();
+    showToast('Bachada eliminada.','success');
+  }catch(err){ console.error('delBachada:',err); showToast('Error al eliminar: '+err.message,'error'); }
+}
 
 // ======== EVENTOS ========
 function openEventoModal(id){
@@ -2916,9 +3075,11 @@ function filtrarEventos(){
       <td>${e.tecnico||'—'}</td>
       <td>${e.fechaIni}</td>
       <td><span class="status-pill ${e.estado==='cerrado'?'status-activo':'status-pendiente'}">${e.estado==='cerrado'?'✅ Cerrado':'🔴 Abierto'}</span></td>
-      <td class="no-print" style="display:flex;gap:6px;" onclick="event.stopPropagation()">
-        <button class="btn-sm btn-ghost" style="padding:4px 9px;font-size:11px;" onclick="openEventoModal(${e.id})">✏️</button>
-        <button class="btn-sm btn-ghost" style="padding:4px 9px;font-size:11px;" onclick="delEvento(${e.id})">🗑</button>
+      <td class="no-print acciones-td" onclick="event.stopPropagation()">
+        <div style="display:flex;gap:6px;">
+          <button class="btn-sm btn-ghost" style="padding:6px 11px;font-size:13px;" onclick="event.stopPropagation();openEventoModal(${e.id})" title="Editar">✏️</button>
+          <button class="btn-sm btn-ghost" style="padding:6px 11px;font-size:13px;" onclick="event.stopPropagation();delEvento(${e.id})" title="Eliminar">🗑</button>
+        </div>
       </td>
     </tr>`).join('');
 }
@@ -2932,7 +3093,17 @@ function limpiarFiltrosEventos(){
 }
 
 function getBadgeEvento(tipo){return{carga_descarga:'badge-gray',descongelamiento:'badge-blue',sin_produccion:'badge-teal',programada:'badge-warn',no_programada:'badge-red',fin_proceso:'badge-purple'}[tipo]||'badge-gray';}
-async function delEvento(id){if(!canAdmin()||!confirm('¿Eliminar?'))return;try{const item=DB.get('eventos',[]).find(e=>e.id===id||e._fid===id);const fid=item?._fid||String(id);await COL.eventos().doc(fid).delete();}catch(err){console.error(err);}}
+async function delEvento(id){
+  if(!canAdmin()){ showToast('Solo administradores pueden eliminar.','warn'); return; }
+  if(!confirm('¿Eliminar este evento? Esta acción no se puede deshacer.')) return;
+  try{
+    const item=DB.get('eventos',[]).find(e=>e.id===id||e._fid===id||String(e.id)===String(id));
+    if(!item){ showToast('No se encontró el evento.','warn'); return; }
+    const fid=item._fid||String(id);
+    await COL.eventos().doc(fid).delete();
+    showToast('Evento eliminado.','success');
+  }catch(err){ console.error('delEvento:',err); showToast('Error al eliminar: '+err.message,'error'); }
+}
 
 // ======== DASHBOARD ========
 function renderDashboard(){
@@ -3079,7 +3250,27 @@ function renderDashboard(){
   const disponibilidad=horasProgramadas>0?Math.min(100,(totalOpHours/horasProgramadas)*100):100;
   const confiabilidad=nFallas>0?Math.min(100,(1-nFallas/(bachs.length+nFallas))*100):bachs.length>0?100:0;
   const rendimiento=avgTcong&&avgTcong>0?Math.min(100,(6/avgTcong)*100):100; // referencia ~6h ideal
-  const oee=disponibilidad*rendimiento/100;
+
+  // ============================================================
+  // EGC — EFICIENCIA GLOBAL DE CONGELAMIENTO (OEE adaptado)
+  // ============================================================
+  // EGC = Disponibilidad × Rendimiento × Calidad
+  //   Disponibilidad: ya calculada arriba (horas reales / programadas)
+  //   Rendimiento: tiempo ideal de congelamiento / tiempo real (ya calculado)
+  //   Calidad: % de bachadas que congelaron DENTRO del rango operativo esperado
+  // Mide cuánto de la capacidad teórica 24/7 se convierte en congelamiento
+  // efectivo y dentro de estándar.
+  let bachsEnRango = 0, bachsEvaluables = 0;
+  bachs.forEach(b => {
+    if(b.estado!=='cerrado' || b.tcong==null) return; // solo cerradas con tiempo medido
+    bachsEvaluables++;
+    const lim = getLimitesEGC(b.equipo);
+    if(lim && b.tcong >= lim.min && b.tcong <= lim.max) bachsEnRango++;
+    else if(!lim) bachsEnRango++; // sin límite definido, no penaliza
+  });
+  const calidad = bachsEvaluables>0 ? (bachsEnRango/bachsEvaluables)*100 : 100;
+  const egc = (disponibilidad/100) * (rendimiento/100) * (calidad/100) * 100;
+  const oee=egc; // el KPI "Eficiencia" ahora usa el EGC completo
 
   setText('kpi-mtbf',nFallas>0?hoursToStr(mtbf):'Sin fallas');
   setText('kpi-mttr',nFallas>0?hoursToStr(mttr):'—');
@@ -3087,6 +3278,23 @@ function renderDashboard(){
   setText('kpi-conf',confiabilidad.toFixed(1)+'%');
   setText('kpi-oee',oee.toFixed(1)+'%');
   setText('kpi-fallas',nFallas);
+
+  // ===== Semáforo del EGC (Eficiencia) =====
+  // Crítico <60% (rojo), Aceptable 60-80% (ámbar), Óptimo >80% (verde)
+  const egcCard = document.getElementById('kpi-egc-card');
+  const egcSem = document.getElementById('kpi-egc-semaforo');
+  const egcVal = document.getElementById('kpi-oee');
+  let egcColor, egcTxt;
+  if(egc < 60){ egcColor='#ff3b5c'; egcTxt='● Crítico'; }
+  else if(egc < 80){ egcColor='#facc15'; egcTxt='◐ Aceptable'; }
+  else { egcColor='#00e87a'; egcTxt='● Óptimo'; }
+  if(egcSem){ egcSem.textContent=egcTxt; egcSem.style.color=egcColor; }
+  if(egcVal){ egcVal.style.color=egcColor; }
+  if(egcCard){
+    egcCard.style.borderLeft = '3px solid '+egcColor;
+    egcCard.title = `EGC = Disponibilidad ${disponibilidad.toFixed(0)}% × Rendimiento ${rendimiento.toFixed(0)}% × Calidad ${calidad.toFixed(0)}%`;
+  }
+
   setText('kpi-prog',prog);
   setText('kpi-desc',desc);
 
@@ -3220,6 +3428,260 @@ function renderDashboard(){
       return `<tr><td>${p}</td><td>${pb.length}</td><td>${pb.reduce((s,b)=>s+(b.aros||0),0)}</td><td class="font-mono">${pb.reduce((s,b)=>s+(b.peso||0),0).toFixed(1)}</td></tr>`;
     }).join(''):'<tr><td colspan="4" style="text-align:center;color:var(--text3);padding:20px;">Sin datos</td></tr>';
   }
+
+  // ===== NUEVO: Render de las secciones A y B del dashboard de mantenimiento =====
+  renderMantSecciones(bachs, evs, from, to, periodHours);
+}
+
+// ============================================================
+// DASHBOARD DE MANTENIMIENTO — SECCIÓN A Y SECCIÓN B
+// ============================================================
+function renderMantSecciones(bachs, evs, from, to, periodHours){
+  const equipos=['C1','C2','C3','C4','C5','C6','C7','C8','C9','C10','C11','TE'];
+  const tiposParada=['no_programada','sin_produccion','programada','descongelamiento','fin_proceso'];
+  const durHR=(e)=>{ if(e.durH!=null) return e.durH; return e.estado!=='cerrado'&&e.inicio?tiempoTranscurridoH(e.fechaIni,e.inicio):0; };
+
+  // ---------- SECCIÓN A: KPIs resumen ----------
+  const fallas=evs.filter(e=>e.tipo==='no_programada');
+  const nFallas=fallas.length;
+  const tFallas=fallas.reduce((s,e)=>s+durHR(e),0);
+  let totalReal=0;
+  equipos.forEach(eq=>{
+    const act=bachs.some(b=>b.equipo===eq)||evs.some(e=>e.equipo===eq);
+    if(!act) return;
+    const par=evs.filter(e=>e.equipo===eq&&tiposParada.includes(e.tipo)).reduce((s,e)=>s+durHR(e),0);
+    totalReal+=Math.max(0,periodHours-par);
+  });
+  const mtbfA=nFallas>0?totalReal/nFallas:totalReal;
+  const mttrA=nFallas>0?tFallas/nFallas:0;
+  const dispA=(totalReal+tFallas)>0?Math.min(100,(totalReal/(totalReal+tFallas))*100):100;
+  setTextSafe('mA-mtbf', nFallas>0?hoursToStr(mtbfA):'Sin fallas');
+  setTextSafe('mA-mttr', nFallas>0?hoursToStr(mttrA):'—');
+  setTextSafe('mA-disp', dispA.toFixed(1)+'%');
+  setTextSafe('mA-fallas', nFallas);
+  setTextSafe('mA-hdet', hoursToStr(tFallas));
+
+  // ---------- A: Evolución mensual (últimos 5 meses) ----------
+  const meses=[]; const hoy=new Date();
+  for(let i=4;i>=0;i--){ const d=new Date(hoy.getFullYear(),hoy.getMonth()-i,1); meses.push({y:d.getFullYear(),m:d.getMonth(),label:['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][d.getMonth()]}); }
+  const allBachs=DB.get('bachadas',[]); const allEvs=DB.get('eventos',[]);
+  const mtbfMes=[], mttrMes=[];
+  meses.forEach(mes=>{
+    const pref=`${mes.y}-${String(mes.m+1).padStart(2,'0')}`;
+    const efMes=allEvs.filter(e=>e.tipo==='no_programada'&&(e.fechaIni||'').startsWith(pref));
+    const tfMes=efMes.reduce((s,e)=>s+durHR(e),0);
+    const diasMes=new Date(mes.y,mes.m+1,0).getDate();
+    let realMes=0;
+    equipos.forEach(eq=>{
+      const act=allBachs.some(b=>b.equipo===eq&&(b.fecha||'').startsWith(pref))||allEvs.some(e=>e.equipo===eq&&(e.fechaIni||'').startsWith(pref));
+      if(!act) return;
+      const par=allEvs.filter(e=>e.equipo===eq&&tiposParada.includes(e.tipo)&&(e.fechaIni||'').startsWith(pref)).reduce((s,e)=>s+durHR(e),0);
+      realMes+=Math.max(0,diasMes*24-par);
+    });
+    mtbfMes.push(efMes.length?parseFloat((realMes/efMes.length).toFixed(1)):0);
+    mttrMes.push(efMes.length?parseFloat((tfMes/efMes.length).toFixed(1)):0);
+  });
+  drawChartSafe('mA-evo',{type:'line',data:{labels:meses.map(m=>m.label),datasets:[
+    {label:'MTBF',data:mtbfMes,borderColor:'#22d3ee',backgroundColor:'#22d3ee22',borderWidth:2,pointRadius:2,tension:0.3,fill:true},
+    {label:'MTTR',data:mttrMes,borderColor:'#facc15',borderWidth:2,pointRadius:2,borderDash:[4,3],tension:0.3}
+  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{color:'#8aaac8',font:{size:10},boxWidth:10,usePointStyle:true}},tooltip:{callbacks:{label:c=>c.dataset.label+': '+hDec2HM(c.parsed.y)}}},scales:{x:{grid:{display:false},ticks:{color:'#8aaac8'}},y:{grid:{color:'#1e3352'},ticks:{color:'#8aaac8',callback:v=>hDec2HM(v)}}}}});
+
+  // ---------- A: Pareto de averías por equipo ----------
+  const fallasPorEq=equipos.map(eq=>({eq,n:evs.filter(e=>e.equipo===eq&&e.tipo==='no_programada').length})).filter(x=>x.n>0).sort((a,b)=>b.n-a.n);
+  const totalFp=fallasPorEq.reduce((s,x)=>s+x.n,0)||1; let acum=0;
+  const paretoPct=fallasPorEq.map(x=>{acum+=x.n;return parseFloat((acum/totalFp*100).toFixed(0));});
+  drawChartSafe('mA-pareto',{data:{labels:fallasPorEq.map(x=>x.eq),datasets:[
+    {type:'bar',data:fallasPorEq.map(x=>x.n),backgroundColor:'#ff3b5ccc',borderColor:'#ff3b5c',borderWidth:1,borderRadius:4,order:2},
+    {type:'line',data:paretoPct,borderColor:'#facc15',borderWidth:2,pointRadius:2,yAxisID:'y1',order:1}
+  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{color:'#8aaac8'}},y:{grid:{color:'#1e3352'},ticks:{color:'#8aaac8'}},y1:{position:'right',max:100,grid:{display:false},ticks:{color:'#8aaac8',callback:v=>v+'%'}}}}});
+
+  // ---------- A: Ranking de equipos por disponibilidad ----------
+  const rankDisp=equipos.map(eq=>{
+    const act=bachs.some(b=>b.equipo===eq)||evs.some(e=>e.equipo===eq);
+    if(!act) return null;
+    const ef=evs.filter(e=>e.equipo===eq&&e.tipo==='no_programada');
+    const tf=ef.reduce((s,e)=>s+durHR(e),0);
+    const par=evs.filter(e=>e.equipo===eq&&tiposParada.includes(e.tipo)).reduce((s,e)=>s+durHR(e),0);
+    const real=Math.max(0,periodHours-par);
+    const d=(real+tf)>0?(real/(real+tf))*100:100;
+    return {eq,d};
+  }).filter(Boolean).sort((a,b)=>b.d-a.d).slice(0,6);
+  const rankEl=document.getElementById('mA-ranking');
+  if(rankEl) rankEl.innerHTML=rankDisp.map(x=>{
+    const col=x.d>=90?'#00e87a':x.d>=70?'#facc15':'#ff3b5c';
+    return `<div class="mant-rank-row"><span class="mant-rank-lbl">${x.eq}</span><div class="mant-rank-bar"><div style="height:100%;width:${x.d.toFixed(0)}%;background:${col};"></div></div><span class="mant-rank-val">${x.d.toFixed(0)}%</span></div>`;
+  }).join('')||'<div style="color:var(--text3);font-size:11px;">Sin datos</div>';
+
+  // ---------- A: Distribución por tipo de evento ----------
+  const tiposL=['carga_descarga','descongelamiento','sin_produccion','programada','no_programada','fin_proceso'];
+  const tiposN=['Carga/Descarga','Descongel.','Sin MP','Mant. Prog.','Falla','Fin Proc.'];
+  const tiposC=['#ff6600','#4a6a8a','#d946ef','#00e87a','#ff3b5c','#a855f7'];
+  const tiposD=tiposL.map(t=>evs.filter(e=>e.tipo===t).length);
+  drawChartSafe('mA-distTipo',{type:'doughnut',data:{labels:tiposN,datasets:[{data:tiposD,backgroundColor:tiposC,borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,cutout:'60%',plugins:{legend:{position:'right',labels:{color:'#8aaac8',font:{size:9},boxWidth:8,padding:4,usePointStyle:true}}}}});
+
+  // ---------- A: Distribución por criticidad (derivada del tipo) ----------
+  // Alta: falla/avería · Media: mant. programado + descongelamiento · Baja: resto
+  const critAlta=evs.filter(e=>e.tipo==='no_programada').length;
+  const critMedia=evs.filter(e=>e.tipo==='programada'||e.tipo==='descongelamiento').length;
+  const critBaja=evs.filter(e=>['carga_descarga','sin_produccion','fin_proceso'].includes(e.tipo)).length;
+  drawChartSafe('mA-distCrit',{type:'doughnut',data:{labels:['Alta','Media','Baja'],datasets:[{data:[critAlta,critMedia,critBaja],backgroundColor:['#ff3b5c','#facc15','#00e87a'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,cutout:'60%',plugins:{legend:{position:'right',labels:{color:'#8aaac8',font:{size:9},boxWidth:8,padding:4,usePointStyle:true}}}}});
+
+  // ========== SECCIÓN B: ANÁLISIS DE DESVIACIONES ==========
+  renderSeccionDesviaciones(bachs, evs, periodHours, durHR);
+}
+
+function renderSeccionDesviaciones(bachs, evs, periodHours, durHR){
+  const equipos=['C1','C2','C3','C4','C5','C6','C7','C8','C9','C10','C11','TE'];
+
+  // Una DESVIACIÓN = bachada o evento cuyo tiempo excede el máximo del rango operativo.
+  // Reutiliza getLimitesEGC para bachadas y límites de eventos.
+  function limiteEvento(eq, tipo){
+    const esTunel=eq==='TE';
+    if(tipo==='carga_descarga') return esTunel?{min:2.5,max:3.5}:{min:0.25,max:0.5};
+    if(tipo==='descongelamiento') return {min:1.5,max:2};
+    return null;
+  }
+  const desviaciones=[]; // {eq, causa, exceso, fecha, hora, turno}
+  bachs.forEach(b=>{
+    if(b.estado!=='cerrado'||b.tcong==null) return;
+    const lim=getLimitesEGC(b.equipo);
+    if(lim && b.tcong>lim.max){
+      desviaciones.push({eq:b.equipo,causa:'Congelamiento',exceso:b.tcong-lim.max,fecha:b.fecha,hora:b.inicio,turno:b.turno});
+    }
+  });
+  evs.forEach(e=>{
+    if(e.estado!=='cerrado'||e.durH==null) return;
+    const lim=limiteEvento(e.equipo,e.tipo);
+    if(lim && e.durH>lim.max){
+      const causa=e.tipo==='carga_descarga'?'Carga/Descarga':e.tipo==='descongelamiento'?'Descongelamiento':e.tipo;
+      desviaciones.push({eq:e.equipo,causa,exceso:e.durH-lim.max,fecha:e.fechaIni,hora:e.inicio,turno:e.turno});
+    }
+    if(e.tipo==='no_programada'){ // las fallas siempre son desviación
+      desviaciones.push({eq:e.equipo,causa:'Falla/Avería',exceso:durHR(e),fecha:e.fechaIni,hora:e.inicio,turno:e.turno});
+    }
+  });
+
+  const totalDesv=desviaciones.length;
+  const horasPerdidas=desviaciones.reduce((s,d)=>s+d.exceso,0);
+  const prodTotal=bachs.reduce((s,b)=>s+(b.peso||0),0)/1000;
+  // Impacto: horas perdidas vs horas operativas estimadas
+  const impacto=periodHours>0?Math.min(100,(horasPerdidas/(periodHours))*100):0;
+  setTextSafe('mB-total',totalDesv);
+  setTextSafe('mB-horas',hoursToStr(horasPerdidas));
+  setTextSafe('mB-impacto',impacto.toFixed(1)+'%');
+
+  // Pareto por causa
+  const causaMap={};
+  desviaciones.forEach(d=>{causaMap[d.causa]=(causaMap[d.causa]||0)+1;});
+  const causasOrd=Object.entries(causaMap).sort((a,b)=>b[1]-a[1]);
+  const totalC=causasOrd.reduce((s,x)=>s+x[1],0)||1; let ac=0;
+  const cPct=causasOrd.map(x=>{ac+=x[1];return parseFloat((ac/totalC*100).toFixed(0));});
+  drawChartSafe('mB-pareto',{data:{labels:causasOrd.map(x=>x[0]),datasets:[
+    {type:'bar',data:causasOrd.map(x=>x[1]),backgroundColor:'#ff9500cc',borderColor:'#ff9500',borderWidth:1,borderRadius:4,order:2},
+    {type:'line',data:cPct,borderColor:'#facc15',borderWidth:2,pointRadius:2,yAxisID:'y1',order:1}
+  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{color:'#8aaac8',font:{size:9}}},y:{grid:{color:'#1e3352'},ticks:{color:'#8aaac8'}},y1:{position:'right',max:100,grid:{display:false},ticks:{color:'#8aaac8',callback:v=>v+'%'}}}}});
+
+  // Heatmap hora × día de la semana
+  const heatEl=document.getElementById('mB-heatmap');
+  if(heatEl){
+    const dias=['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
+    const franjas=[[8,'08-12'],[12,'12-16'],[16,'16-20'],[20,'20-00'],[0,'00-04'],[4,'04-08']];
+    const grid={};
+    desviaciones.forEach(d=>{
+      if(!d.fecha||!d.hora) return;
+      const dt=new Date(d.fecha+'T00:00:00');
+      let diaSem=(dt.getDay()+6)%7; // lunes=0
+      const h=parseInt(d.hora.split(':')[0]);
+      let fIdx=franjas.findIndex((f,i)=>{const nx=franjas[(i+1)%franjas.length][0];return f[0]<=nx?(h>=f[0]&&h<nx):(h>=f[0]||h<nx);});
+      if(fIdx<0) fIdx=0;
+      const key=fIdx+'-'+diaSem; grid[key]=(grid[key]||0)+1;
+    });
+    const maxV=Math.max(1,...Object.values(grid));
+    let html='<div style="display:grid;grid-template-columns:auto repeat(7,1fr);gap:2px;font-size:9px;">';
+    html+='<div></div>'+dias.map(d=>`<div style="text-align:center;color:#8aaac8;">${d}</div>`).join('');
+    franjas.forEach((f,fi)=>{
+      html+=`<div style="color:#8aaac8;padding-right:4px;white-space:nowrap;">${f[1]}</div>`;
+      dias.forEach((d,di)=>{
+        const v=grid[fi+'-'+di]||0;
+        const intensidad=v/maxV;
+        const col=v===0?'#0d1c2e':`rgba(255,59,92,${0.2+intensidad*0.8})`;
+        html+=`<div class="mant-heat-cell" style="background:${col};" title="${d} ${f[1]}: ${v} desv."></div>`;
+      });
+    });
+    html+='</div>';
+    heatEl.innerHTML=html;
+  }
+
+  // Tendencia histórica (por día operativo, últimos 14 días con desviaciones)
+  const tendMap={};
+  desviaciones.forEach(d=>{ if(d.fecha) tendMap[d.fecha]=(tendMap[d.fecha]||0)+1; });
+  const tendF=Object.keys(tendMap).sort().slice(-14);
+  drawChartSafe('mB-tend',{type:'line',data:{labels:tendF.map(f=>f.slice(5)),datasets:[{label:'Desviaciones',data:tendF.map(f=>tendMap[f]),borderColor:'#ff9500',backgroundColor:'#ff950022',borderWidth:2,pointRadius:2,tension:0.3,fill:true}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{color:'#8aaac8',font:{size:9}}},y:{grid:{color:'#1e3352'},ticks:{color:'#8aaac8',stepSize:1}}}}});
+
+  // Distribución % por causa (dona)
+  const cColors={'Congelamiento':'#22d3ee','Carga/Descarga':'#ff6600','Descongelamiento':'#4a6a8a','Falla/Avería':'#ff3b5c'};
+  drawChartSafe('mB-distCausa',{type:'doughnut',data:{labels:causasOrd.map(x=>x[0]),datasets:[{data:causasOrd.map(x=>x[1]),backgroundColor:causasOrd.map(x=>cColors[x[0]]||'#8aaac8'),borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,cutout:'60%',plugins:{legend:{position:'right',labels:{color:'#8aaac8',font:{size:9},boxWidth:8,padding:4,usePointStyle:true}}}}});
+
+  // Ranking congeladores con más desviaciones
+  const eqDesvMap={};
+  desviaciones.forEach(d=>{eqDesvMap[d.eq]=(eqDesvMap[d.eq]||0)+1;});
+  const eqDesvOrd=Object.entries(eqDesvMap).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  const maxEqD=Math.max(1,...eqDesvOrd.map(x=>x[1]));
+  const rankEqEl=document.getElementById('mB-rankEq');
+  if(rankEqEl) rankEqEl.innerHTML=eqDesvOrd.map(x=>{
+    const col=x[1]>=maxEqD*0.8?'#ff3b5c':x[1]>=maxEqD*0.5?'#ff9500':'#facc15';
+    return `<div class="mant-rank-row"><span class="mant-rank-lbl">${x[0]}</span><div class="mant-rank-bar"><div style="height:100%;width:${(x[1]/maxEqD*100).toFixed(0)}%;background:${col};"></div></div><span class="mant-rank-val">${x[1]}</span></div>`;
+  }).join('')||'<div style="color:var(--text3);font-size:11px;">Sin desviaciones registradas</div>';
+
+  // Ranking eventos más recurrentes
+  const evRecOrd=causasOrd.slice(0,6);
+  const maxEvR=Math.max(1,...evRecOrd.map(x=>x[1]));
+  const rankEvEl=document.getElementById('mB-rankEv');
+  if(rankEvEl) rankEvEl.innerHTML=evRecOrd.map(x=>{
+    return `<div class="mant-rank-row"><span class="mant-rank-lbl" style="width:auto;min-width:90px;">${x[0]}</span><div class="mant-rank-bar"><div style="height:100%;width:${(x[1]/maxEvR*100).toFixed(0)}%;background:#22d3ee;"></div></div><span class="mant-rank-val">${x[1]}</span></div>`;
+  }).join('')||'<div style="color:var(--text3);font-size:11px;">Sin datos</div>';
+
+  // Análisis automático
+  const analisisEl=document.getElementById('mB-analisis');
+  if(analisisEl){
+    let txt=[];
+    if(totalDesv===0){
+      txt.push('✅ No se detectaron desviaciones en el período. Todos los procesos están dentro del rango operativo normal.');
+    } else {
+      const causaTop=causasOrd[0];
+      const pctTop=((causaTop[1]/totalDesv)*100).toFixed(0);
+      txt.push(`• La causa principal es <b style="color:#ff7878;">${causaTop[0]}</b> con ${causaTop[1]} desviaciones (${pctTop}% del total).`);
+      if(eqDesvOrd.length){
+        const eqTop=eqDesvOrd[0];
+        const pctEq=((eqTop[1]/totalDesv)*100).toFixed(0);
+        txt.push(`• El congelador <b style="color:#ff7878;">${eqTop[0]}</b> acumula ${eqTop[1]} desviaciones (${pctEq}% del total): requiere revisión.`);
+      }
+      // Correlación turno
+      const turnoMap={};
+      desviaciones.forEach(d=>{if(d.turno)turnoMap[d.turno]=(turnoMap[d.turno]||0)+1;});
+      const turnoOrd=Object.entries(turnoMap).sort((a,b)=>b[1]-a[1]);
+      if(turnoOrd.length){
+        const pctT=((turnoOrd[0][1]/totalDesv)*100).toFixed(0);
+        txt.push(`• Las desviaciones se concentran en el turno <b style="color:#facc15;">${turnoOrd[0][0]}</b> (${pctT}%).`);
+      }
+      // Relación con productividad
+      if(prodTotal>0 && horasPerdidas>0){
+        const tonPorH=(prodTotal/Math.max(1,periodHours)).toFixed(2);
+        const tonPerdidas=(horasPerdidas*tonPorH).toFixed(1);
+        txt.push(`• Las ${hoursToStr(horasPerdidas)} de desviación equivalen a ~<b style="color:#22d3ee;">${tonPerdidas} t</b> de capacidad de congelamiento no aprovechada.`);
+      }
+    }
+    analisisEl.innerHTML=txt.join('<br>');
+  }
+}
+
+// Helpers seguros para el dashboard de mantenimiento
+function setTextSafe(id,v){const el=document.getElementById(id);if(el)el.textContent=v;}
+function drawChartSafe(id,config){
+  const c=document.getElementById(id);
+  if(!c) return;
+  if(charts[id]) charts[id].destroy();
+  try{ charts[id]=new Chart(c,config); }catch(e){ console.warn('Chart '+id+':',e); }
 }
 
 function setText(id,v){const el=document.getElementById(id);if(el)el.textContent=v;}
@@ -3663,6 +4125,20 @@ document.getElementById('b-aros').addEventListener('input',calcPeso);
 // ======== DASHBOARD FULLSCREEN & PAGINATION ========
 let currentDashPage = 1;
 const totalDashPages = 3;
+
+// ============================================================
+// ALTERNAR SECCIONES DEL DASHBOARD DE MANTENIMIENTO (A / B)
+// ============================================================
+let _mantSection = 'A';
+function switchMantSection(sec){
+  _mantSection = sec;
+  document.getElementById('mant-section-A').style.display = sec==='A' ? '' : 'none';
+  document.getElementById('mant-section-B').style.display = sec==='B' ? '' : 'none';
+  document.getElementById('mant-tab-A').classList.toggle('active', sec==='A');
+  document.getElementById('mant-tab-B').classList.toggle('active', sec==='B');
+  // Redibujar la sección visible para que los charts tomen tamaño correcto
+  setTimeout(()=>{ if(typeof renderDashboard==='function') renderDashboard(); }, 50);
+}
 
 function goToPage(n) {
   currentDashPage = n;

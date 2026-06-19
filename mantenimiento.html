@@ -689,7 +689,7 @@ tr.clickable-row:hover td { background: var(--surface2); }
 }
 .dash-zona-inferior {
   display: grid;
-  grid-template-columns: 1fr 1.3fr 0.9fr;
+  grid-template-columns: 1fr 1fr 1fr;
   gap: 12px;
 }
 .dash-kpis-card { padding: 14px; }
@@ -763,6 +763,7 @@ tr.clickable-row:hover td { background: var(--surface2); }
 }
 @media (max-width: 1100px) {
   .dash-zona-superior, .dash-zona-inferior { grid-template-columns: 1fr; }
+  .dash-zona-inferior > .pbi-card[style*="span 2"] { grid-column: span 1 !important; }
 }
 
 @keyframes pulsoAlarma {
@@ -1090,23 +1091,15 @@ tr.clickable-row:hover td { background: var(--surface2); }
                 </div>
               </div>
 
-              <!-- Superior centro: Producción diaria con meta (filtro de fecha PROPIO) -->
+              <!-- Superior centro: Producción acumulada del período (área que crece) -->
               <div class="pbi-card">
                 <div class="pbi-card-head">
-                  <div class="pbi-card-title">📅 Producción diaria · tendencia</div>
+                  <div class="pbi-card-title">📈 Producción acumulada</div>
                   <div class="dash-legend-inline">
-                    <span><span class="dash-leg-line" style="background:#00c8ff;"></span>Real</span>
-                    <span><span class="dash-leg-line" style="background:#ff3b5c;border-top:1px dashed #ff3b5c;"></span>Meta 100t</span>
+                    <span><span class="dash-leg-line" style="background:#00e87a;"></span>Acumulado (t)</span>
                   </div>
                 </div>
-                <div class="dash-tend-filtros">
-                  <span class="dash-tend-flabel">Rango propio:</span>
-                  <input type="date" id="tend-from" class="dash-tend-input" onchange="renderTendenciaProduccion()">
-                  <span class="dash-tend-sep">→</span>
-                  <input type="date" id="tend-to" class="dash-tend-input" onchange="renderTendenciaProduccion()">
-                  <button class="dash-tend-reset" onclick="resetTendenciaFechas()" title="Volver a últimas 2 semanas">↺</button>
-                </div>
-                <div style="position:relative;height:215px;"><canvas id="chart-prod-dia"></canvas></div>
+                <div style="position:relative;height:262px;"><canvas id="chart-prod-acum"></canvas></div>
               </div>
 
               <!-- Superior derecha: Bachadas vs Tiempo (barras apiladas Opción B) -->
@@ -1124,23 +1117,13 @@ tr.clickable-row:hover td { background: var(--surface2); }
 
             <!-- ===== ZONA INFERIOR ===== -->
             <div class="dash-zona-inferior">
-              <!-- Inferior izquierda: 2 donas -->
-              <div class="pbi-card">
-                <div class="pbi-card-head"><div class="pbi-card-title">🍩 Distribuciones</div></div>
-                <div class="dash-dona-label">Horas de parada por tipo</div>
-                <div style="position:relative;height:178px;"><canvas id="chart-tipos"></canvas></div>
-                <div class="dash-dona-sep"></div>
-                <div class="dash-dona-label">Distribución por producto</div>
-                <div style="position:relative;height:178px;"><canvas id="chart-productos"></canvas></div>
-              </div>
-
-              <!-- Inferior centro: Tabla operativa -->
+              <!-- Inferior izquierda: Tabla operativa de bachadas -->
               <div class="pbi-card" style="padding:0;overflow:hidden;">
                 <div class="pbi-card-head" style="padding:14px 16px;margin-bottom:0;border-bottom:1px solid var(--border);">
                   <div class="pbi-card-title">📋 Tabla operativa de bachadas</div>
                   <div class="pbi-card-badge" id="dash-tabla-count">cronológico inverso</div>
                 </div>
-                <div style="overflow-x:auto;max-height:420px;overflow-y:auto;">
+                <div style="overflow-x:auto;max-height:430px;overflow-y:auto;">
                   <table class="data-table" style="font-size:12px;">
                     <thead>
                       <tr>
@@ -1154,16 +1137,23 @@ tr.clickable-row:hover td { background: var(--surface2); }
                 </div>
               </div>
 
-              <!-- Inferior derecha: MTBF/MTTR -->
-              <div class="pbi-card">
+              <!-- Inferior centro+derecha: Tendencia de producción con meta (ocupa 2 columnas) -->
+              <div class="pbi-card" style="grid-column:span 2;">
                 <div class="pbi-card-head">
-                  <div class="pbi-card-title">🔧 MTBF / MTTR por equipo</div>
+                  <div class="pbi-card-title">📅 Producción diaria · tendencia</div>
                   <div class="dash-legend-inline">
-                    <span><span class="dash-leg-box" style="background:#00c8ff;"></span>MTBF</span>
-                    <span><span class="dash-leg-box" style="background:#ff3b5c;"></span>MTTR</span>
+                    <span><span class="dash-leg-line" style="background:#00c8ff;"></span>Real</span>
+                    <span><span class="dash-leg-line" style="background:#ff3b5c;border-top:1px dashed #ff3b5c;"></span>Meta 100t</span>
                   </div>
                 </div>
-                <div style="position:relative;height:330px;"><canvas id="chart-mant"></canvas></div>
+                <div class="dash-tend-filtros">
+                  <span class="dash-tend-flabel">Rango propio:</span>
+                  <input type="date" id="tend-from" class="dash-tend-input" onchange="renderTendenciaProduccion()">
+                  <span class="dash-tend-sep">→</span>
+                  <input type="date" id="tend-to" class="dash-tend-input" onchange="renderTendenciaProduccion()">
+                  <button class="dash-tend-reset" onclick="resetTendenciaFechas()" title="Volver a últimas 2 semanas">↺</button>
+                </div>
+                <div style="position:relative;height:340px;"><canvas id="chart-prod-dia"></canvas></div>
               </div>
             </div>
 
@@ -3341,6 +3331,9 @@ function renderDashboard(){
   const dataTiempo = idxConDatos.map(i => tiempoPorEq[i]);
   renderBachadasTiempo('chart-bach-tiempo', labelsBT, dataBach, dataTiempo);
 
+  // ===== NUEVO: Producción acumulada del período (área que crece) =====
+  renderProduccionAcumulada(bachs);
+
   // ===== NUEVO: Tabla operativa de bachadas (cronológico inverso) =====
   renderTablaOperativa(bachs);
 
@@ -3792,6 +3785,72 @@ function renderLineConMeta(id,labels,data,label,color,meta){
         y:{grid:{color:'#1e3352'},ticks:{color:'#8aaac8',font:{size:9},callback:v=>v+'t'},suggestedMax:Math.max(meta*1.1, ...data)+5}}}});
 }
 
+// ============================================================
+// PRODUCCIÓN ACUMULADA DEL PERÍODO (área que crece con cada bachada)
+// ============================================================
+// Suma progresiva del peso a lo largo del tiempo. A medida que se cargan
+// bachadas, la curva sube — refleja el avance productivo en tiempo real.
+function renderProduccionAcumulada(bachs){
+  const id='chart-prod-acum';
+  const c=document.getElementById(id);
+  if(!c) return;
+  if(charts[id]) charts[id].destroy();
+
+  // Ordenar bachadas cronológicamente por día operativo + hora de inicio
+  const ordenadas=bachs.filter(b=>b.inicio&&b.fecha)
+    .slice()
+    .sort((a,b)=>{
+      const ka=(a.fecha||'')+'T'+(a.inicio||'00:00');
+      const kb=(b.fecha||'')+'T'+(b.inicio||'00:00');
+      return ka.localeCompare(kb);
+    });
+
+  // Acumular peso progresivamente, etiqueta por fecha+hora
+  let acum=0;
+  const labels=[], data=[];
+  ordenadas.forEach(b=>{
+    acum += (b.peso||0)/1000; // toneladas
+    labels.push((b.fecha||'').slice(5)+' '+(b.inicio||''));
+    data.push(parseFloat(acum.toFixed(2)));
+  });
+
+  if(!data.length){
+    const ctx=c.getContext('2d');
+    ctx.clearRect(0,0,c.width,c.height);
+    return;
+  }
+
+  charts[id]=new Chart(c,{
+    type:'line',
+    data:{labels,datasets:[{
+      label:'Acumulado (t)',
+      data,
+      borderColor:'#00e87a',
+      backgroundColor:'rgba(0,232,122,0.15)',
+      borderWidth:2,
+      pointRadius:data.length>30?0:2,
+      pointBackgroundColor:'#00e87a',
+      tension:0.2,
+      fill:true,
+      stepped:false
+    }]},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{callbacks:{
+          title:items=>items[0].label,
+          label:c=>'Acumulado: '+c.parsed.y.toFixed(1)+' t'
+        }}
+      },
+      scales:{
+        x:{grid:{display:false},ticks:{color:'#8aaac8',font:{size:9},maxRotation:0,autoSkip:true,maxTicksLimit:6}},
+        y:{grid:{color:'#1e3352'},ticks:{color:'#8aaac8',callback:v=>v+'t'},beginAtZero:true}
+      }
+    }
+  });
+}
+
 function renderBachadasTiempo(id,labels,dataBach,dataTiempo){
   const c=document.getElementById(id);if(!c)return;
   if(charts[id])charts[id].destroy();
@@ -3802,9 +3861,18 @@ function renderBachadasTiempo(id,labels,dataBach,dataTiempo){
       const ctx=chart.ctx;
       const mB=chart.getDatasetMeta(0);
       const mT=chart.getDatasetMeta(1);
+      // Ancho disponible por barra: si es estrecho, rotar el texto del tiempo
+      const chartW = chart.chartArea.right - chart.chartArea.left;
+      const nBarras = labels.length || 1;
+      const anchoPorBarra = chartW / nBarras;
+      const rotarTiempo = anchoPorBarra < 48; // estrecho → rotar vertical
+      const fontTiempo = anchoPorBarra < 36 ? 8 : (anchoPorBarra < 52 ? 9 : 10);
+
       ctx.save();
-      ctx.font="600 10px 'DM Sans', sans-serif";
       ctx.textAlign='center';
+
+      // Valores de bachadas: en el centro de la barra inferior
+      ctx.font="600 "+(anchoPorBarra<36?9:10)+"px 'DM Sans', sans-serif";
       mB.data.forEach((bar,i)=>{
         if(dataBach[i]<=0) return;
         const yBase=chart.scales.y.getPixelForValue(0);
@@ -3812,10 +3880,24 @@ function renderBachadasTiempo(id,labels,dataBach,dataTiempo){
         ctx.fillStyle='#d4ecf5';
         ctx.fillText(dataBach[i],bar.x,yCenter+4);
       });
+
+      // Valores de tiempo: encima de la barra superior; rotados si hay poco espacio
+      ctx.font="600 "+fontTiempo+"px 'DM Sans', sans-serif";
+      ctx.fillStyle='#7fd4e8';
       mT.data.forEach((bar,i)=>{
         if(dataTiempo[i]<=0) return;
-        ctx.fillStyle='#7fd4e8';
-        ctx.fillText(hDec2HM(dataTiempo[i]),bar.x,bar.y-5);
+        const txt=hDec2HM(dataTiempo[i]);
+        if(rotarTiempo){
+          ctx.save();
+          ctx.translate(bar.x, bar.y-6);
+          ctx.rotate(-Math.PI/2); // vertical
+          ctx.textAlign='left';
+          ctx.fillText(txt,0,4);
+          ctx.restore();
+        } else {
+          ctx.textAlign='center';
+          ctx.fillText(txt,bar.x,bar.y-5);
+        }
       });
       ctx.restore();
     }
@@ -3824,7 +3906,7 @@ function renderBachadasTiempo(id,labels,dataBach,dataTiempo){
     {label:'Bachadas',data:dataBach,backgroundColor:'#1e3a5f',borderColor:'#1e3a5f',borderWidth:1,borderRadius:{bottomLeft:4,bottomRight:4},stack:'s'},
     {label:'T. prom',data:dataTiempo,backgroundColor:'#7fd4e8',borderColor:'#7fd4e8',borderWidth:1,borderRadius:{topLeft:4,topRight:4},stack:'s'}
   ]},
-    options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:22}},
+    options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:40}},
       plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>ctx.dataset.label==='Bachadas'?(ctx.parsed.y+' bachadas'):('T. prom: '+hDec2HM(ctx.parsed.y))}}},
       scales:{x:{stacked:true,grid:{display:false},ticks:{color:'#e8f4ff',font:{size:10}}},
         y:{stacked:true,grid:{color:'#1e3352'},ticks:{display:false},border:{display:false}}}},

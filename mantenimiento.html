@@ -197,10 +197,43 @@ tr:hover td{background:var(--surface2);}
 .alert-info{background:#00c8ff18;border:1px solid #00c8ff44;color:var(--accent);}
 
 /* HOME */
-.home-modules{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:18px;margin-top:20px;}
-.module-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:26px 22px;cursor:pointer;transition:all .22s;position:relative;overflow:hidden;}
-.module-card:hover{border-color:var(--border2);transform:translateY(-3px);box-shadow:0 16px 40px #00000066;}
-.module-card.active-module{border-color:var(--accent);box-shadow:0 0 0 1px #00c8ff44;}
+/* ===== NUEVA PORTADA: TARJETAS DE EQUIPOS ACTIVOS ===== */
+.home-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:12px;}
+.home-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:var(--text);}
+.home-sub{font-size:12px;color:var(--text3);margin-top:2px;}
+#home-cards-container{display:flex;flex-direction:column;gap:10px;margin-bottom:16px;}
+.hc{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px 15px;border-left:4px solid var(--accent);}
+.hc.hc-warn{border-left-color:#facc15;}
+.hc.hc-evento{border-left-color:#ff6600;}
+.hc-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:8px;}
+.hc-equipo{font-size:15px;font-weight:700;color:var(--text);}
+.hc-badge{font-size:10.5px;font-weight:600;padding:2px 9px;border-radius:20px;white-space:nowrap;}
+.hc-badge-blue{background:#185fa522;color:#22d3ee;}
+.hc-badge-warn{background:#facc1522;color:#facc15;}
+.hc-badge-ev{background:#ff660022;color:#ff9500;}
+.hc-estado{font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px;white-space:nowrap;}
+.hc-estado-ok{background:#00e87a22;color:#00e87a;}
+.hc-estado-warn{background:#facc1522;color:#facc15;}
+.hc-estado-ev{background:#ff660022;color:#ff9500;}
+.hc-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px;}
+.hc-grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;}
+.hc-lbl{font-size:10.5px;color:var(--text3);margin:0 0 2px;}
+.hc-val{font-size:12.5px;font-weight:600;color:var(--text);margin:0;font-family:'DM Mono',monospace;}
+.hc-val-accent{color:var(--accent);}
+.hc-val-warn{color:#facc15;}
+.hc-val-ev{color:#ff9500;}
+.hc-val-normal{color:var(--text);font-family:'DM Sans',sans-serif;font-weight:500;}
+.hc-btns{display:flex;gap:6px;}
+.hc-btn{flex:1;font-size:11.5px;padding:7px 4px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);cursor:pointer;text-align:center;min-height:32px;transition:background .15s;}
+.hc-btn:hover{background:var(--border);}
+.hc-btn-del{flex:0 0 36px;color:#ff3b5c;border-color:#ff3b5c33;}
+.home-empty{text-align:center;padding:36px 0;color:var(--text3);}
+.home-empty-ico{font-size:30px;margin-bottom:8px;}
+/* Acceso rápido a módulos */
+.home-quick-nav{display:flex;gap:8px;flex-wrap:wrap;padding-top:10px;border-top:1px solid var(--border);}
+.quick-nav-item{font-size:12px;color:var(--text2);padding:7px 13px;border:1px solid var(--border);border-radius:8px;cursor:pointer;background:var(--surface);transition:all .15s;}
+.quick-nav-item:hover{border-color:var(--accent);color:var(--accent);}
+@media(max-width:768px){.hc-grid{grid-template-columns:1fr 1fr;}.home-quick-nav{gap:6px;}.quick-nav-item{font-size:11px;padding:6px 10px;}}
 .module-icon{font-size:34px;margin-bottom:12px;}
 .module-name{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:5px;}
 .module-desc{font-size:12px;color:var(--text2);line-height:1.5;}
@@ -850,22 +883,26 @@ tr.clickable-row:hover td { background: var(--surface2); }
 
       <!-- HOME -->
       <div class="page active" id="page-home">
-        <div style="color:var(--text2);font-size:13px;margin-bottom:4px;">IP Santa Mónica Fishing — Departamento de Mantenimiento</div>
-        <div class="home-modules">
-          <div class="module-card active-module" onclick="navigate('congelamiento')">
-            <div class="module-icon">🧊</div>
-            <div class="module-name">Congelamiento</div>
-            <div class="module-desc">Registro de bachadas, paradas, eventos y análisis de eficiencia y mantenimiento de congeladores y túnel estático</div>
+        <div class="home-header">
+          <div>
+            <div class="home-title">Equipos en proceso</div>
+            <div class="home-sub" id="home-sub">Cargando...</div>
           </div>
-
-          <div class="module-card" style="opacity:.45;cursor:not-allowed;"><div class="module-icon">📓</div><div class="module-name">Bitácora</div><div class="module-desc">Actividades diarias por turno y técnico</div><div class="module-coming">Pronto</div></div>
-          <div class="module-card" style="opacity:.45;cursor:not-allowed;"><div class="module-icon">📋</div><div class="module-name">Formatos</div><div class="module-desc">Checklists y formatos de equipos de planta</div><div class="module-coming">Pronto</div></div>
-          <div class="module-card" style="opacity:.45;cursor:not-allowed;"><div class="module-icon">💧</div><div class="module-name">Consumos</div><div class="module-desc">Agua, energía, refrigerante y aceites</div><div class="module-coming">Pronto</div></div>
-          <div class="module-card" id="module-admin" onclick="abrirAdmin()" style="border-color:var(--accent);">
-            <div class="module-icon">👥</div>
-            <div class="module-name">Usuarios</div>
-            <div class="module-desc">Crear usuarios, asignar roles y gestionar accesos al sistema</div>
+          <button class="btn-sm btn-accent no-print" onclick="openBachadaModal(null)">+ Nueva bachada</button>
+        </div>
+        <div id="home-cards-container">
+          <div style="text-align:center;padding:40px 0;color:var(--text3);">
+            <div style="font-size:28px;margin-bottom:8px;">🧊</div>
+            <div style="font-size:13px;">Cargando equipos activos...</div>
           </div>
+        </div>
+        <!-- Acceso rápido a módulos (compacto) -->
+        <div class="home-quick-nav" id="home-quick-nav">
+          <div class="quick-nav-item" onclick="navigate('congelamiento');showTab('cong','dashboard')">📊 Dashboard</div>
+          <div class="quick-nav-item" onclick="navigate('congelamiento');showTab('cong','bachadas')">🧊 Bachadas</div>
+          <div class="quick-nav-item" onclick="navigate('congelamiento');showTab('cong','eventos')">⏸ Eventos</div>
+          <div class="quick-nav-item" onclick="navigate('congelamiento');showTab('cong','reportes')">🖨 Reportes</div>
+          <div class="quick-nav-item" id="quick-admin" onclick="abrirAdmin()" style="display:none">👥 Usuarios</div>
         </div>
       </div>
 
@@ -1845,6 +1882,27 @@ const COL = {
 let _listeners = [];
 function stopListeners() { _listeners.forEach(u => u()); _listeners = []; }
 
+// ============================================================
+// DEBOUNCE: evita re-renders en cascada cuando Firebase dispara
+// varios eventos consecutivos (ej. guardar + cerrar una bachada)
+// ============================================================
+let _dashDebounceTimer = null;
+let _tlDebounceTimer   = null;
+
+function renderDashboardDebounced() {
+  if(_dashDebounceTimer) clearTimeout(_dashDebounceTimer);
+  _dashDebounceTimer = setTimeout(() => {
+    try { renderDashboard(); } catch(e) { console.warn('renderDashboard:', e); }
+  }, 350); // espera 350ms de silencio antes de renderizar
+}
+
+function renderTimelineDebounced() {
+  if(_tlDebounceTimer) clearTimeout(_tlDebounceTimer);
+  _tlDebounceTimer = setTimeout(() => {
+    try { renderTimeline(); } catch(e) { console.warn('renderTimeline:', e); }
+  }, 350);
+}
+
 function startListeners() {
   stopListeners();
 
@@ -1853,12 +1911,12 @@ function startListeners() {
     const data = snap.docs.map(d => ({...d.data(), _fid: d.id}));
     CACHE.set('bachadas', data);
     filtrarBachadas();
-    // Re-renderizar timeline si está visible (página 3 = Timeline Equipo)
+    // Actualizar portada (ligero) y dashboard/timeline (debounced)
+    renderHomeCards();
     if(document.getElementById('dash-page-3')?.classList.contains('active')) {
-      renderTimeline();
+      renderTimelineDebounced();
     } else if(document.querySelector('.dash-page.active')) {
-      // Re-renderizar dashboard (General o Mantenimiento) si está visible
-      renderDashboard();
+      renderDashboardDebounced();
     }
   }, err => console.warn('bachadas:', err)));
 
@@ -1867,12 +1925,12 @@ function startListeners() {
     const data = snap.docs.map(d => ({...d.data(), _fid: d.id}));
     CACHE.set('eventos', data);
     renderEventos();
-    // Re-renderizar timeline si está visible (página 3 = Timeline Equipo)
+    // Actualizar portada (ligero) y dashboard/timeline (debounced)
+    renderHomeCards();
     if(document.getElementById('dash-page-3')?.classList.contains('active')) {
-      renderTimeline();
+      renderTimelineDebounced();
     } else if(document.querySelector('.dash-page.active')) {
-      // Re-renderizar dashboard (General o Mantenimiento) si está visible
-      renderDashboard();
+      renderDashboardDebounced();
     }
   }, err => console.warn('eventos:', err)));
 
@@ -1991,6 +2049,8 @@ window.addEventListener('load', function() {
     startListeners();
     navigate('home');
     setDefaultDates();
+    // Renderizar portada inicial (los listeners la actualizarán en tiempo real)
+    setTimeout(renderHomeCards, 500);
   }
 });
 
@@ -4267,8 +4327,156 @@ let currentDashPage = 1;
 const totalDashPages = 3;
 
 // ============================================================
-// ALTERNAR SECCIONES DEL DASHBOARD DE MANTENIMIENTO (A / B)
+// PORTADA: TARJETAS DE EQUIPOS ACTIVOS
+// Ligero, sin Chart.js. Solo manipula DOM/texto.
 // ============================================================
+function renderHomeCards() {
+  const container = document.getElementById('home-cards-container');
+  const subEl = document.getElementById('home-sub');
+  if(!container) return;
+
+  const bachadas = DB.get('bachadas', []);
+  const eventos  = DB.get('eventos',  []);
+
+  // Día operativo actual (08:00 de hoy)
+  const ahora = new Date();
+  const h = ahora.getHours();
+  const hoy = new Date(ahora);
+  if(h < 8) hoy.setDate(hoy.getDate() - 1); // antes de las 8am, el día operativo empezó ayer
+  const fechaOp = hoy.toISOString().slice(0, 10);
+
+  // Bachadas pendientes (en proceso) del día actual
+  const bachasActivas = bachadas.filter(b =>
+    b.estado === 'pendiente' && b.fecha === fechaOp
+  );
+
+  // Eventos abiertos del día actual
+  const eventosActivos = eventos.filter(e =>
+    e.estado === 'abierto' && e.fechaIni === fechaOp &&
+    e.tipo !== 'fin_proceso'
+  );
+
+  // Combinar: una fila por equipo con actividad
+  // Si un equipo tiene bachada activa Y evento activo, mostrar la bachada primero
+  const equiposConActividad = new Set([
+    ...bachasActivas.map(b => b.equipo),
+    ...eventosActivos.map(e => e.equipo)
+  ]);
+
+  // Ordenar equipos: C1, C2, ... C13, TE
+  const ORDEN_EQ = ['C1','C2','C3','C4','C5','C6','C7','C8','C9','C10','C11','C12','C13','TE'];
+  const equiposOrdenados = ORDEN_EQ.filter(eq => equiposConActividad.has(eq));
+
+  if(equiposOrdenados.length === 0) {
+    container.innerHTML = `<div class="home-empty"><div class="home-empty-ico">🧊</div><div style="font-size:13px;margin-bottom:6px;">Sin equipos activos hoy</div><div style="font-size:11px;">Registra una nueva bachada para comenzar</div></div>`;
+    if(subEl) subEl.textContent = 'Sin actividad en el día operativo actual';
+    return;
+  }
+
+  if(subEl) subEl.textContent = `${equiposOrdenados.length} equipo${equiposOrdenados.length!==1?'s':''} activo${equiposOrdenados.length!==1?'s':''} hoy · ${new Date().toLocaleTimeString('es-PE',{hour:'2-digit',minute:'2-digit'})}`;
+
+  const tiposLabel = {
+    carga_descarga:'Carga/Descarga', descongelamiento:'Descongelamiento',
+    sin_produccion:'Sin MP', programada:'Mant. Programado', no_programada:'Falla/Avería'
+  };
+
+  container.innerHTML = equiposOrdenados.map(eq => {
+    const bach  = bachasActivas.find(b => b.equipo === eq);
+    const evAct = eventosActivos.find(e => e.equipo === eq);
+    const estado = bach ? calcularEstadoBachadas(eq) : null;
+    const esWarning = estado && estado.consecutivas >= estado.limite;
+
+    if(bach) {
+      // ── Tarjeta de BACHADA activa ──────────────────────────
+      const transcH = tiempoTranscurridoH(bach.fecha, bach.inicio);
+      const hh = Math.floor(transcH), mm = Math.round((transcH-hh)*60);
+      const transcStr = `${hh}h ${String(mm).padStart(2,'0')}m`;
+      const colorTime = esWarning ? 'hc-val-warn' : 'hc-val-accent';
+      const hcClass   = esWarning ? 'hc hc-warn' : 'hc';
+      const badgeClass= esWarning ? 'hc-badge hc-badge-warn' : 'hc-badge hc-badge-blue';
+      const badgeTxt  = `Bachada #${bach.bach}${esWarning ? ' ⚠' : ''}`;
+      const estadoTxt = esWarning ? 'Próx. descongelamiento' : 'En proceso';
+      const estadoCls = esWarning ? 'hc-estado hc-estado-warn' : 'hc-estado hc-estado-ok';
+      const peso      = bach.peso ? (bach.peso/1000).toFixed(2)+' t' : '—';
+      const factor    = bach.factor || getFactorDefault(eq);
+
+      return `
+      <div class="${hcClass}" data-id="${bach.id}">
+        <div class="hc-top">
+          <div style="display:flex;align-items:center;gap:7px;">
+            <span class="hc-equipo">${eq === 'TE' ? 'Túnel Est.' : eq}</span>
+            <span class="${badgeClass}">${badgeTxt}</span>
+          </div>
+          <span class="${estadoCls}">${estadoTxt}</span>
+        </div>
+        <div class="hc-grid">
+          <div><div class="hc-lbl">Inicio</div><div class="hc-val">${bach.inicio||'—'}</div></div>
+          <div><div class="hc-lbl">Transcurrido ⏱</div><div class="hc-val ${colorTime}" data-hc-timer="${bach.id}" data-hc-fecha="${bach.fecha}" data-hc-inicio="${bach.inicio}">${transcStr}</div></div>
+          <div><div class="hc-lbl">Producto</div><div class="hc-val hc-val-normal">${bach.producto||'—'}</div></div>
+        </div>
+        <div class="hc-grid2">
+          <div><div class="hc-lbl">Aros × ${factor} kg</div><div class="hc-val hc-val-normal">${bach.aros||'—'} aros = ${peso}</div></div>
+          <div><div class="hc-lbl">Técnico</div><div class="hc-val hc-val-normal">${bach.tecnico||'—'}</div></div>
+        </div>
+        <div class="hc-btns">
+          <button class="hc-btn" onclick="event.stopPropagation();openBachadaModal('${bach.id}')">✏️ Editar</button>
+          <button class="hc-btn" onclick="event.stopPropagation();openBachadaModal('${bach.id}');setTimeout(()=>{const s=document.getElementById('b-cierre-section');if(s)s.scrollIntoView({behavior:'smooth'});},300)">✅ Cerrar</button>
+          <button class="hc-btn hc-btn-del" onclick="event.stopPropagation();delBachada('${bach.id}')" title="Eliminar">🗑</button>
+        </div>
+      </div>`;
+    } else if(evAct) {
+      // ── Tarjeta de EVENTO activo ───────────────────────────
+      const transcH = tiempoTranscurridoH(evAct.fechaIni, evAct.inicio);
+      const hh = Math.floor(transcH), mm = Math.round((transcH-hh)*60);
+      const transcStr = `${hh}h ${String(mm).padStart(2,'0')}m`;
+      const tipoLabel = tiposLabel[evAct.tipo] || evAct.tipo;
+      return `
+      <div class="hc hc-evento" data-evid="${evAct.id}">
+        <div class="hc-top">
+          <div style="display:flex;align-items:center;gap:7px;">
+            <span class="hc-equipo">${eq === 'TE' ? 'Túnel Est.' : eq}</span>
+            <span class="hc-badge hc-badge-ev">${tipoLabel}</span>
+          </div>
+          <span class="hc-estado hc-estado-ev">Evento activo</span>
+        </div>
+        <div class="hc-grid">
+          <div><div class="hc-lbl">Inicio</div><div class="hc-val">${evAct.inicio||'—'}</div></div>
+          <div><div class="hc-lbl">Transcurrido ⏱</div><div class="hc-val hc-val-ev" data-hc-timer-ev="${evAct.id}" data-hc-fecha="${evAct.fechaIni}" data-hc-inicio="${evAct.inicio}">${transcStr}</div></div>
+          <div><div class="hc-lbl">Técnico</div><div class="hc-val hc-val-normal">${evAct.tecnico||'—'}</div></div>
+        </div>
+        ${evAct.desc ? `<div style="font-size:11px;color:var(--text3);margin-bottom:10px;">${evAct.desc}</div>` : ''}
+        <div class="hc-btns">
+          <button class="hc-btn" onclick="event.stopPropagation();openEventoModal('${evAct.id}')">✏️ Editar evento</button>
+          <button class="hc-btn" onclick="event.stopPropagation();openEventoModal('${evAct.id}');setTimeout(()=>{const f=document.getElementById('e-fin');if(f){f.scrollIntoView({behavior:'smooth'});}},300)">✅ Cerrar evento</button>
+          <button class="hc-btn hc-btn-del" onclick="event.stopPropagation();delEvento('${evAct.id}')" title="Eliminar">🗑</button>
+        </div>
+      </div>`;
+    }
+    return '';
+  }).join('');
+
+  // Mostrar botón admin si el usuario tiene rol admin
+  const adminBtn = document.getElementById('quick-admin');
+  if(adminBtn) adminBtn.style.display = canAdmin() ? '' : 'none';
+}
+
+// Actualizar solo los contadores de tiempo (muy ligero, sin recrear DOM)
+function actualizarTiemposPortada() {
+  document.querySelectorAll('[data-hc-timer],[data-hc-timer-ev]').forEach(el => {
+    const fecha = el.dataset.hcFecha;
+    const inicio = el.dataset.hcInicio;
+    if(!fecha || !inicio) return;
+    const transcH = tiempoTranscurridoH(fecha, inicio);
+    const hh = Math.floor(transcH), mm = Math.round((transcH-hh)*60);
+    el.textContent = `${hh}h ${String(mm).padStart(2,'0')}m`;
+  });
+  // Actualizar subtítulo con la hora actual
+  const subEl = document.getElementById('home-sub');
+  if(subEl && subEl.textContent && !subEl.textContent.includes('Sin actividad')) {
+    subEl.textContent = subEl.textContent.replace(/· \d{2}:\d{2}$/, '')
+      + `· ${new Date().toLocaleTimeString('es-PE',{hour:'2-digit',minute:'2-digit'})}`;
+  }
+}
 let _mantSection = 'A';
 function switchMantSection(sec){
   _mantSection = sec;
@@ -4314,13 +4522,25 @@ function redibujarPaginaActiva() {
 let _realtimeInterval = null;
 function startRealtimeRefresh() {
   if(_realtimeInterval) return;
+  // Intervalo rápido (10s): solo actualiza tiempos en vivo en la portada
+  // Es muy ligero — solo manipula texto, no recrea gráficos
+  setInterval(() => {
+    try { actualizarTiemposPortada(); } catch(e) {}
+  }, 10000);
+
+  // Intervalo lento (60s): redibuja el dashboard/timeline SI está visible
+  // (necesario para que las barras del timeline crezcan en tiempo real)
   _realtimeInterval = setInterval(() => {
     const dashTab = document.getElementById('tab-cong-dashboard');
-    // Solo refrescar si la pestaña del dashboard está visible
     if(dashTab && dashTab.offsetParent !== null) {
-      try { redibujarPaginaActiva(); } catch(e) { console.warn('Auto-refresh:', e); }
+      // Solo re-renderizar si la pestaña es visible — y usar debounce
+      if(document.getElementById('dash-page-3')?.classList.contains('active')) {
+        try { renderTimeline(); } catch(e) {}
+      }
+      // Dashboard General/Mantenimiento: NO re-renderizar en el intervalo
+      // (los listeners de Firebase ya lo actualizan cuando cambian datos)
     }
-  }, 60000); // 60 segundos
+  }, 60000);
 }
 // Iniciar al cargar
 if(document.readyState === 'loading') {

@@ -899,7 +899,7 @@ tr.clickable-row:hover td { background: var(--surface2); }
                 <option value="C1">C1</option><option value="C2">C2</option><option value="C3">C3</option>
                 <option value="C4">C4</option><option value="C5">C5</option><option value="C6">C6</option>
                 <option value="C7">C7</option><option value="C8">C8</option><option value="C9">C9</option>
-                <option value="C10">C10</option><option value="C11">C11</option><option value="TE">Túnel Est.</option>
+                <option value="C10">C10</option><option value="C11">C11</option><option value="C12">C12</option><option value="C13">C13</option><option value="TE">Túnel Est.</option>
               </select>
             </div>
             <div style="flex:1;min-width:130px;">
@@ -964,7 +964,7 @@ tr.clickable-row:hover td { background: var(--surface2); }
                   <option value="C1">Congelador 1</option><option value="C2">Congelador 2</option><option value="C3">Congelador 3</option>
                   <option value="C4">Congelador 4</option><option value="C5">Congelador 5</option><option value="C6">Congelador 6</option>
                   <option value="C7">Congelador 7</option><option value="C8">Congelador 8</option><option value="C9">Congelador 9</option>
-                  <option value="C10">Congelador 10</option><option value="C11">Congelador 11</option><option value="TE">Túnel Estático</option>
+                  <option value="C10">Congelador 10</option><option value="C11">Congelador 11</option><option value="C12">Congelador 12</option><option value="C13">Congelador 13</option><option value="TE">Túnel Estático</option>
                 </select>
               </div>
               <div class="field"><label>Tipo de Evento</label>
@@ -1017,7 +1017,7 @@ tr.clickable-row:hover td { background: var(--surface2); }
                   <option value="C1">Congelador 1</option><option value="C2">Congelador 2</option><option value="C3">Congelador 3</option>
                   <option value="C4">Congelador 4</option><option value="C5">Congelador 5</option><option value="C6">Congelador 6</option>
                   <option value="C7">Congelador 7</option><option value="C8">Congelador 8</option><option value="C9">Congelador 9</option>
-                  <option value="C10">Congelador 10</option><option value="C11">Congelador 11</option><option value="TE">Túnel Estático</option>
+                  <option value="C10">Congelador 10</option><option value="C11">Congelador 11</option><option value="C12">Congelador 12</option><option value="C13">Congelador 13</option><option value="TE">Túnel Estático</option>
                 </select>
               </div>
               <div class="field"><label>Turno</label>
@@ -1057,7 +1057,7 @@ tr.clickable-row:hover td { background: var(--surface2); }
                     <div class="dash-mini-value" id="kpi-operativos">0<span class="dash-mini-unit">/12</span></div>
                   </div>
                   <div class="dash-mini-kpi c-purple" id="kpi-egc-card" style="position:relative;">
-                    <div class="dash-mini-label">Eficiencia (EGC)</div>
+                    <div class="dash-mini-label" id="kpi-efic-label">Eficiencia</div>
                     <div class="dash-mini-value" id="kpi-oee">--</div>
                     <div id="kpi-egc-semaforo" style="font-size:9px;margin-top:2px;font-weight:600;"></div>
                   </div>
@@ -1320,7 +1320,7 @@ tr.clickable-row:hover td { background: var(--surface2); }
                     <option value="C5">Congelador 5</option><option value="C6">Congelador 6</option>
                     <option value="C7">Congelador 7</option><option value="C8">Congelador 8</option>
                     <option value="C9">Congelador 9</option><option value="C10">Congelador 10</option>
-                    <option value="C11">Congelador 11</option><option value="TE">Túnel Estático</option>
+                    <option value="C11">Congelador 11</option><option value="C12">Congelador 12</option><option value="C13">Congelador 13</option><option value="TE">Túnel Estático</option>
                   </select>
                 </div>
                 <div class="field"><label>Turno</label>
@@ -1406,7 +1406,7 @@ tr.clickable-row:hover td { background: var(--surface2); }
                   <option value="C1">Congelador 1</option><option value="C2">Congelador 2</option><option value="C3">Congelador 3</option>
                   <option value="C4">Congelador 4</option><option value="C5">Congelador 5</option><option value="C6">Congelador 6</option>
                   <option value="C7">Congelador 7</option><option value="C8">Congelador 8</option><option value="C9">Congelador 9</option>
-                  <option value="C10">Congelador 10</option><option value="C11">Congelador 11</option><option value="TE">Túnel Estático</option>
+                  <option value="C10">Congelador 10</option><option value="C11">Congelador 11</option><option value="C12">Congelador 12</option><option value="C13">Congelador 13</option><option value="TE">Túnel Estático</option>
                 </select>
               </div>
             </div>
@@ -1617,7 +1617,7 @@ tr.clickable-row:hover td { background: var(--surface2); }
             <option value="C1">Congelador 1</option><option value="C2">Congelador 2</option><option value="C3">Congelador 3</option>
             <option value="C4">Congelador 4</option><option value="C5">Congelador 5</option><option value="C6">Congelador 6</option>
             <option value="C7">Congelador 7</option><option value="C8">Congelador 8</option><option value="C9">Congelador 9</option>
-            <option value="C10">Congelador 10</option><option value="C11">Congelador 11</option><option value="TE">Túnel Estático</option>
+            <option value="C10">Congelador 10</option><option value="C11">Congelador 11</option><option value="C12">Congelador 12</option><option value="C13">Congelador 13</option><option value="TE">Túnel Estático</option>
           </select>
         </div>
         <div class="field"><label>N° Bach</label>
@@ -1626,6 +1626,11 @@ tr.clickable-row:hover td { background: var(--surface2); }
         </div>
         <div class="field"><label>Producto</label><select id="b-producto"></select></div>
         <div class="field"><label>Cantidad de Aros</label><input type="number" id="b-aros" min="1" oninput="calcPeso()"></div>
+        <div class="field">
+          <label>Peso por aro (kg/aro)</label>
+          <input type="number" id="b-factor" step="0.01" min="0.1" oninput="calcPeso()" placeholder="Auto según equipo" style="max-width:120px;">
+          <div class="field-note" id="b-factor-note">Se completa automáticamente al elegir equipo · editable si es necesario</div>
+        </div>
         <div class="field"><label>Peso Calculado (kg)</label><input type="text" id="b-peso" readonly><div class="field-note" id="b-peso-note"></div></div>
         <div class="field"><label>Fecha</label><input type="date" id="b-fecha"></div>
         <div class="field"><label>Turno</label><select id="b-turno"><option value="Día">Día (8am–8pm)</option><option value="Noche">Noche (8pm–8am)</option></select></div>
@@ -1673,7 +1678,7 @@ tr.clickable-row:hover td { background: var(--surface2); }
             <option value="C1">Congelador 1</option><option value="C2">Congelador 2</option><option value="C3">Congelador 3</option>
             <option value="C4">Congelador 4</option><option value="C5">Congelador 5</option><option value="C6">Congelador 6</option>
             <option value="C7">Congelador 7</option><option value="C8">Congelador 8</option><option value="C9">Congelador 9</option>
-            <option value="C10">Congelador 10</option><option value="C11">Congelador 11</option><option value="TE">Túnel Estático</option>
+            <option value="C10">Congelador 10</option><option value="C11">Congelador 11</option><option value="C12">Congelador 12</option><option value="C13">Congelador 13</option><option value="TE">Túnel Estático</option>
           </select>
         </div>
         <div class="field"><label>Tipo de Parada</label>
@@ -1925,7 +1930,7 @@ async function initFirebaseDefaults() {
     for(let i=0; i<tecs.length; i++) await COL.tecnicos().add({nombre: tecs[i], orden: i});
     const prods = ['Pota','Merluza','Perico','Bonito'];
     for(let i=0; i<prods.length; i++) await COL.productos().add({nombre: prods[i], orden: i});
-    await COL.config().doc('equipos').set({C1:24,C2:24,C3:24,C4:24,C5:24,C6:24,C7:24,C8:24,C9:24,C10:24,C11:24,TE:24});
+    await COL.config().doc('equipos').set({C1:24,C2:24,C3:24,C4:24,C5:24,C6:24,C7:24,C8:24,C9:24,C10:24,C11:24,C12:24,C13:24,TE:24});
     console.log('✅ Datos iniciales cargados en Firebase');
   }
 }
@@ -2161,7 +2166,7 @@ function getLimitesEGC(equipo){
   const esGrupo13 = numEq >= 1 && numEq <= 3;
   if(esTunel)   return { min: 10,   max: 12  };  // Túnel: 10–12h
   if(esGrupo13) return { min: 2,    max: 2.5 };  // C1-C3: 2:00–2:30
-  if(numEq>=4 && numEq<=11) return { min: 2.75, max: 3 }; // C4-C11: 2:45–3:00
+  if(numEq>=4 && numEq<=13) return { min: 2.75, max: 3 }; // C4-C13: 2:45–3:00
   return null;
 }
 
@@ -2255,6 +2260,9 @@ function openBachadaModal(id){
     document.getElementById('b-bach').value=b.bach;
     document.getElementById('b-producto').value=b.producto;
     document.getElementById('b-aros').value=b.aros;
+    // Cargar el factor guardado o el default del equipo
+    const factorElEdit=document.getElementById('b-factor');
+    if(factorElEdit) factorElEdit.value=(b.factor||getFactorDefault(b.equipo)).toFixed(2);
     document.getElementById('b-fecha').value=b.fecha;
     document.getElementById('b-turno').value=b.turno;
     document.getElementById('b-tecnico').value=b.tecnico;
@@ -2268,7 +2276,7 @@ function openBachadaModal(id){
     document.getElementById('b-modal-title').textContent='🧊 Nueva Bachada';
     document.getElementById('b-modal-sub').textContent='Registra datos de inicio. Luego edita para completar al finalizar.';
     ['b-equipo','b-producto','b-tecnico'].forEach(id=>document.getElementById(id).value='');
-    ['b-bach','b-aros','b-peso','b-tcong','b-fin','b-temp','b-obs'].forEach(id=>document.getElementById(id).value='');
+    ['b-bach','b-aros','b-factor','b-peso','b-tcong','b-fin','b-temp','b-obs'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
     document.getElementById('b-fecha').value=today();
     document.getElementById('b-inicio').value=nowTime();
     const h=new Date().getHours();
@@ -2309,11 +2317,26 @@ function onEquipoChange(){
   }
 }
 
+// ── Factor por defecto según equipo ──────────────────────────────────────
+// C1-C9: 7.45 kg/aro · C10-C13 y TE: 10 kg/aro
+// El usuario puede editar el campo si carga aros de peso distinto al default.
+function getFactorDefault(eq){
+  if(!eq) return 7.45;
+  if(eq==='TE') return 10;
+  const num=parseInt((eq||'').replace('C',''))||0;
+  return num>=10 ? 10 : 7.45;
+}
+
 function calcPeso(){
   const eq=document.getElementById('b-equipo').value;
   const aros=parseFloat(document.getElementById('b-aros').value)||0;
+  const factorEl=document.getElementById('b-factor');
+  // Si el campo de factor está vacío, usar el default del equipo
+  if(eq && factorEl && !factorEl.value){
+    factorEl.value=getFactorDefault(eq).toFixed(2);
+  }
+  const factor=parseFloat(factorEl?factorEl.value:0)||getFactorDefault(eq);
   if(!eq||!aros){document.getElementById('b-peso').value='';return;}
-  const factor=eq==='TE'?10:7.4;
   document.getElementById('b-peso').value=(aros*factor).toFixed(1)+' kg';
   document.getElementById('b-peso-note').textContent='Factor: '+factor+' kg/aro';
   calcTCong();
@@ -2374,7 +2397,8 @@ async function saveBachada(){
     return;
   }
 
-  const factor=eq==='TE'?10:7.4;
+  const factorElSave=document.getElementById('b-factor');
+  const factor=parseFloat(factorElSave?factorElSave.value:0)||getFactorDefault(eq);
   const peso=aros*factor;
   const tcong=fin?calcTimeDiffHours(fecha,inicio,fecha,fin):null;
   const estado=fin?'cerrado':'pendiente';
@@ -3160,7 +3184,7 @@ function renderDashboard(){
 
   // ===== NUEVOS KPIs del Dashboard General =====
   // Congeladores operativos (con actividad en el período) sobre el total
-  const equiposTotales = ['C1','C2','C3','C4','C5','C6','C7','C8','C9','C10','C11','TE'];
+  const equiposTotales = ['C1','C2','C3','C4','C5','C6','C7','C8','C9','C10','C11','C12','C13','TE'];
   const equiposActivos = new Set(bachs.map(b=>b.equipo).concat(evs.map(e=>e.equipo)));
   const nOperativos = equiposTotales.filter(eq => equiposActivos.has(eq)).length;
   const elOper = document.getElementById('kpi-operativos');
@@ -3215,7 +3239,7 @@ function renderDashboard(){
   // Paradas que descuentan disponibilidad: TODOS los eventos que detienen el
   // equipo (fallas, sin MP, mant. programado, descongelamiento, fin de proceso).
   // Carga/Descarga NO se descuenta: es parte normal del ciclo productivo.
-  const equiposParaCalculo = equipoF ? [equipoF] : ['C1','C2','C3','C4','C5','C6','C7','C8','C9','C10','C11','TE'];
+  const equiposParaCalculo = equipoF ? [equipoF] : ['C1','C2','C3','C4','C5','C6','C7','C8','C9','C10','C11','C12','C13','TE'];
 
   // Solo cuentan los equipos que tuvieron actividad (bachadas o eventos) en el período.
   let totalOpHoursReal = 0;
@@ -3250,46 +3274,80 @@ function renderDashboard(){
   //   Calidad: % de bachadas que congelaron DENTRO del rango operativo esperado
   // Mide cuánto de la capacidad teórica 24/7 se convierte en congelamiento
   // efectivo y dentro de estándar.
-  let bachsEnRango = 0, bachsEvaluables = 0;
-  bachs.forEach(b => {
-    if(b.estado!=='cerrado' || b.tcong==null) return; // solo cerradas con tiempo medido
-    bachsEvaluables++;
-    const lim = getLimitesEGC(b.equipo);
-    if(lim && b.tcong >= lim.min && b.tcong <= lim.max) bachsEnRango++;
-    else if(!lim) bachsEnRango++; // sin límite definido, no penaliza
-  });
-  const calidad = bachsEvaluables>0 ? (bachsEnRango/bachsEvaluables)*100 : 100;
-  const egc = (disponibilidad/100) * (rendimiento/100) * (calidad/100) * 100;
-  const oee=egc; // el KPI "Eficiencia" ahora usa el EGC completo
+
+  // ============================================================
+  // KPI: EFICIENCIA DE PRODUCCIÓN (real vs capacidad teórica máxima)
+  // ============================================================
+  // Metodología definitiva — todos los eventos programados incluidos:
+  //
+  //   CONGELADORES (ciclo real = 4 bachadas + 1 descongelamiento):
+  //     C1-C3:   4×(2:30+0:30) + 2:00 = 14.0h → 4×1110  / 14.0 = 317.14 kg/h
+  //     C4-C9:   4×(3:00+0:30) + 2:00 = 16.0h → 4×1243  / 16.0 = 310.80 kg/h
+  //     C10-C11: 4×(3:00+0:30) + 2:00 = 16.0h → 4×1776  / 16.0 = 444.00 kg/h
+  //
+  //   TÚNEL ESTÁTICO (descong cabe dentro de C/D, sin overhead extra):
+  //     TE:      12:00 + 3:30 = 15.5h → 7680 / 15.5 = 495.48 kg/h
+  //     (C/D de 3:30h es suficiente para el descong máx de 2:00h)
+  //
+  //   TOTAL FLOTA: 4,199.70 kg/h = 100.8 t/día
+  //   (coincide con la meta de 100 t/día ya configurada en el sistema)
+  // Capacidad por equipo con factores actualizados (7.45 kg/aro C1-C9, 10 kg/aro C10-C13):
+  // C1-C3: 150×7.45=1117.5 kg/bach · ciclo 14h → 4×1117.5/14 = 319.29 kg/h
+  // C4-C9: 168×7.45=1251.6 kg/bach · ciclo 16h → 4×1251.6/16 = 312.90 kg/h
+  // C10-C13: 240×10=2400 kg/bach   · ciclo 16h → 4×2400/16   = 600.00 kg/h
+  // TE: 768×10=7680 kg/bach         · ciclo 15.5h → 7680/15.5  = 495.48 kg/h
+  const CAP_MAX_KGH = {
+    C1:319.29, C2:319.29, C3:319.29,
+    C4:312.90, C5:312.90, C6:312.90, C7:312.90, C8:312.90, C9:312.90,
+    C10:600.00, C11:600.00, C12:600.00, C13:600.00,
+    TE:495.48
+  };
+  // Total flota 14 equipos = 3×319.29 + 6×312.90 + 4×600.00 + 495.48
+  // = 957.87 + 1877.40 + 2400.00 + 495.48 = 5730.75 kg/h = 137.5 t/día
+  const CAP_MAX_TOTAL_KGH = 5730.75; // kg/h
+
+  // Capacidad teórica para el período y equipos filtrados
+  const equiposEfic = equipoF ? [equipoF] : Object.keys(CAP_MAX_KGH);
+  const maxKgH = equiposEfic.reduce((s,eq)=>s+(CAP_MAX_KGH[eq]||0),0);
+  const teorMaxKg  = maxKgH * periodHours;
+  const teorMaxTDia = (maxKgH * 24) / 1000; // t/día para mostrar en el título
+
+  // Eficiencia = producción real / capacidad teórica del período × 100
+  const eficienciaCapacidad = teorMaxKg > 0 ? Math.min(100,(totalProd / teorMaxKg) * 100) : 0;
+  const oee = eficienciaCapacidad; // alias usado por el KPI
 
   setText('kpi-mtbf',nFallas>0?hoursToStr(mtbf):'Sin fallas');
   setText('kpi-mttr',nFallas>0?hoursToStr(mttr):'—');
   setText('kpi-disp',disponibilidad.toFixed(1)+'%');
   setText('kpi-conf',confiabilidad.toFixed(1)+'%');
-  setText('kpi-oee',oee.toFixed(1)+'%');
+  setText('kpi-oee',eficienciaCapacidad.toFixed(1)+'%');
   setText('kpi-fallas',nFallas);
 
-  // ===== Semáforo del EGC (Eficiencia) =====
-  // Crítico <60% (rojo), Aceptable 60-80% (ámbar), Óptimo >80% (verde)
+  // Título dinámico con la capacidad máxima del período filtrado
+  const eficLabel = document.getElementById('kpi-efic-label');
+  if(eficLabel) eficLabel.textContent = `Eficiencia (${teorMaxTDia.toFixed(1)} t/día)`;
+
+  // Semáforo: Crítico <50%, Aceptable 50-75%, Óptimo >75%
   const egcCard = document.getElementById('kpi-egc-card');
-  const egcSem = document.getElementById('kpi-egc-semaforo');
-  const egcVal = document.getElementById('kpi-oee');
+  const egcSem  = document.getElementById('kpi-egc-semaforo');
+  const egcVal  = document.getElementById('kpi-oee');
   let egcColor, egcTxt;
-  if(egc < 60){ egcColor='#ff3b5c'; egcTxt='● Crítico'; }
-  else if(egc < 80){ egcColor='#facc15'; egcTxt='◐ Aceptable'; }
-  else { egcColor='#00e87a'; egcTxt='● Óptimo'; }
+  if(eficienciaCapacidad < 50){ egcColor='#ff3b5c'; egcTxt='● Baja'; }
+  else if(eficienciaCapacidad < 75){ egcColor='#facc15'; egcTxt='◐ Moderada'; }
+  else { egcColor='#00e87a'; egcTxt='● Óptima'; }
   if(egcSem){ egcSem.textContent=egcTxt; egcSem.style.color=egcColor; }
   if(egcVal){ egcVal.style.color=egcColor; }
   if(egcCard){
-    egcCard.style.borderLeft = '3px solid '+egcColor;
-    egcCard.title = `EGC = Disponibilidad ${disponibilidad.toFixed(0)}% × Rendimiento ${rendimiento.toFixed(0)}% × Calidad ${calidad.toFixed(0)}%`;
+    egcCard.style.borderLeft='3px solid '+egcColor;
+    egcCard.title=`Eficiencia = ${totalProd.toFixed(0)} kg producidos / ${teorMaxKg.toFixed(0)} kg capacidad máxima del período\nCapacidad máxima: ${teorMaxTDia.toFixed(1)} t/día con todos los equipos en ciclo continuo`;
   }
+
 
   setText('kpi-prog',prog);
   setText('kpi-desc',desc);
 
   // CHARTS
-  const equipos=['C1','C2','C3','C4','C5','C6','C7','C8','C9','C10','C11','TE'];
+  const equipos=['C1','C2','C3','C4','C5','C6','C7','C8','C9','C10','C11','C12','C13','TE'];
 
   // Dona 1: Horas de parada por tipo (6 tipos completos)
   const tiposL=['carga_descarga','descongelamiento','sin_produccion','programada','no_programada','fin_proceso'];
@@ -3318,7 +3376,7 @@ function renderDashboard(){
   renderTendenciaProduccion();
 
   // ===== NUEVO: Comparativo Bachadas vs Tiempo (barras apiladas Opción B) =====
-  const equiposCD = ['C1','C2','C3','C4','C5','C6','C7','C8','C9','C10','C11','TE'];
+  const equiposCD = ['C1','C2','C3','C4','C5','C6','C7','C8','C9','C10','C11','C12','C13','TE'];
   const bachPorEq = equiposCD.map(eq => bachs.filter(b=>b.equipo===eq).length);
   const tiempoPorEq = equiposCD.map(eq => {
     const eb = bachs.filter(b=>b.equipo===eq);
@@ -3430,7 +3488,7 @@ function renderDashboard(){
 // DASHBOARD DE MANTENIMIENTO — SECCIÓN A Y SECCIÓN B
 // ============================================================
 function renderMantSecciones(bachs, evs, from, to, periodHours){
-  const equipos=['C1','C2','C3','C4','C5','C6','C7','C8','C9','C10','C11','TE'];
+  const equipos=['C1','C2','C3','C4','C5','C6','C7','C8','C9','C10','C11','C12','C13','TE'];
   const tiposParada=['no_programada','sin_produccion','programada','descongelamiento','fin_proceso'];
   const durHR=(e)=>{ if(e.durH!=null) return e.durH; return e.estado!=='cerrado'&&e.inicio?tiempoTranscurridoH(e.fechaIni,e.inicio):0; };
 
@@ -3524,7 +3582,7 @@ function renderMantSecciones(bachs, evs, from, to, periodHours){
 }
 
 function renderSeccionDesviaciones(bachs, evs, periodHours, durHR){
-  const equipos=['C1','C2','C3','C4','C5','C6','C7','C8','C9','C10','C11','TE'];
+  const equipos=['C1','C2','C3','C4','C5','C6','C7','C8','C9','C10','C11','C12','C13','TE'];
 
   // Una DESVIACIÓN = bachada o evento cuyo tiempo excede el máximo del rango operativo.
   // Reutiliza getLimitesEGC para bachadas y límites de eventos.
@@ -4025,7 +4083,7 @@ function generarReporte(){
         <tbody>${bachs.map(b=>`<tr><td>${b.equipo}</td><td>#${b.bach}</td><td>${b.producto}</td><td>${b.aros}</td><td>${(b.peso||0).toFixed(1)}</td><td>${b.fecha}</td><td>${b.turno}</td><td>${hoursToStr(b.tcong)}</td><td>${b.temp!=null?b.temp+'°C':'—'}</td><td>${b.tecnico}</td></tr>`).join('')}</tbody>
       </table></div></div>`;
   } else if(tipo==='mantenimiento'){
-    const equipos=['C1','C2','C3','C4','C5','C6','C7','C8','C9','C10','C11','TE'];
+    const equipos=['C1','C2','C3','C4','C5','C6','C7','C8','C9','C10','C11','C12','C13','TE'];
     let periodH=0;
     if(from&&to){const d1=new Date(from),d2=new Date(to);periodH=Math.max(1,(d2-d1)/3600000+24);}else periodH=720;
     c.innerHTML=`<div class="card"><div class="card-title">Indicadores de Mantenimiento · ${period}</div>
@@ -4050,7 +4108,7 @@ function generarReporte(){
         <tbody>${evs.map(e=>`<tr><td>${e.equipo}</td><td>${e.tipoLabel}</td><td>${e.fechaIni} ${e.inicio}</td><td>${e.fechaFin&&e.fin?e.fechaFin+' '+e.fin:'—'}</td><td>${hoursToStr(e.durH)}</td><td>${e.desc||'—'}</td><td>${e.accion||'—'}</td><td>${e.tecnico}</td></tr>`).join('')}</tbody>
       </table></div></div>`;
   } else if(tipo==='eficiencia'){
-    const equipos=['C1','C2','C3','C4','C5','C6','C7','C8','C9','C10','C11','TE'];
+    const equipos=['C1','C2','C3','C4','C5','C6','C7','C8','C9','C10','C11','C12','C13','TE'];
     c.innerHTML=`<div class="card"><div class="card-title">Reporte de Eficiencia · ${period}</div>
       <div class="table-wrap"><table>
         <thead><tr><th>Equipo</th><th>Bachadas</th><th>T.Cong Prom.</th><th>T.C/D Prom.</th><th>Prod. (kg)</th><th>T°Prom.</th></tr></thead>
@@ -4116,7 +4174,7 @@ async function removeProducto(nombre){try{const snap=await COL.productos().where
 
 function renderEquiposConfig(){
   const cfg=DB.get('eq_config',{});
-  const equipos=['C1','C2','C3','C4','C5','C6','C7','C8','C9','C10','C11','TE'];
+  const equipos=['C1','C2','C3','C4','C5','C6','C7','C8','C9','C10','C11','C12','C13','TE'];
   const g=document.getElementById('config-equipos-grid');
   if(!g)return;
   g.innerHTML=equipos.map(eq=>`
@@ -4132,7 +4190,7 @@ async function saveEquiposConfig() {
   let _goh='';
   if(_gb){_goh=_gb.innerHTML;_gb.disabled=true;_gb.style.opacity='0.6';_gb.style.cursor='wait';if(!_gb.dataset.noLoadingText)_gb.innerHTML='⏳ Procesando...';}
   try {
-  const equipos=['C1','C2','C3','C4','C5','C6','C7','C8','C9','C10','C11','TE'];
+  const equipos=['C1','C2','C3','C4','C5','C6','C7','C8','C9','C10','C11','C12','C13','TE'];
   const cfg={};
   equipos.forEach(eq=>{const el=document.getElementById('cfg-eq-'+eq);if(el)cfg[eq]=parseFloat(el.value)||24;});
   try{await COL.config().doc('equipos').set(cfg);alert('✅ Configuración guardada.');}catch(err){alert('Error al guardar configuración.');}
@@ -4337,7 +4395,7 @@ function renderTimeline() {
   const equipoLabel = (eq) => eq==='TE' ? 'Túnel Estático' : 'Congelador ' + eq.replace('C','');
 
   const equiposLista = equipoSel === 'ALL'
-    ? ['C1','C2','C3','C4','C5','C6','C7','C8','C9','C10','C11','TE']
+    ? ['C1','C2','C3','C4','C5','C6','C7','C8','C9','C10','C11','C12','C13','TE']
     : [equipoSel];
 
   // Ventana operativa: SIEMPRE 08:00 a 08:00 del día siguiente (=08h a 32h relativo)
@@ -5324,7 +5382,7 @@ function verDetalleBachada(id, event) {
   document.getElementById('det-fecha').textContent = b.fecha || '—';
   document.getElementById('det-turno').innerHTML = `<span class="badge ${b.turno==='Día'?'badge-warn':'badge-gray'}">${b.turno}</span>`;
   document.getElementById('det-aros').textContent = b.aros + ' aros';
-  document.getElementById('det-factor').textContent = (b.factor || (eq==='TE'?10:7.4)) + ' kg/aro';
+  document.getElementById('det-factor').textContent = (b.factor || getFactorDefault(eq)) + ' kg/aro';
   document.getElementById('det-peso').textContent = (b.peso || 0).toFixed(1) + ' kg';
   document.getElementById('det-inicio').textContent = b.inicio || '—';
   document.getElementById('det-fin').textContent = b.fin || 'Pendiente';

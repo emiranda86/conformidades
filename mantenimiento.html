@@ -201,6 +201,38 @@ tr:hover td{background:var(--surface2);}
 .module-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:26px 22px;cursor:pointer;transition:all .22s;position:relative;overflow:hidden;}
 .module-card:hover{border-color:var(--border2);transform:translateY(-3px);box-shadow:0 16px 40px #00000066;}
 .module-card.active-module{border-color:var(--accent);box-shadow:0 0 0 1px #00c8ff44;}
+
+/* ===== TARJETAS DE EQUIPOS EN PROCESO ===== */
+#bc-container{display:flex;flex-direction:column;gap:10px;}
+.bc-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px 15px;border-left:4px solid var(--accent);transition:border-color .2s;}
+.bc-card.bc-warn{border-left-color:#facc15;}
+.bc-card.bc-ev{border-left-color:#ff9500;}
+.bc-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:11px;gap:8px;flex-wrap:wrap;}
+.bc-nombre{font-size:15px;font-weight:700;color:var(--text);}
+.bc-pills{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.bc-pill{font-size:10.5px;font-weight:600;padding:2px 9px;border-radius:20px;}
+.bc-pill-blue{background:#185fa522;color:#22d3ee;}
+.bc-pill-warn{background:#facc1522;color:#facc15;}
+.bc-pill-ev{background:#ff950022;color:#ff9500;}
+.bc-pill-ok{background:#00e87a22;color:#00e87a;font-size:11px;padding:3px 9px;}
+.bc-pill-warnst{background:#facc1522;color:#facc15;font-size:11px;padding:3px 9px;}
+.bc-pill-evst{background:#ff950022;color:#ff9500;font-size:11px;padding:3px 9px;}
+.bc-info{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px 12px;margin-bottom:12px;}
+.bc-info2{display:grid;grid-template-columns:1fr 1fr;gap:8px 12px;margin-bottom:12px;}
+.bc-lbl{font-size:10.5px;color:var(--text3);margin:0 0 2px;}
+.bc-val{font-size:12.5px;font-weight:600;color:var(--text);margin:0;font-family:'DM Mono',monospace;}
+.bc-val-t{color:var(--accent);}
+.bc-val-warn{color:#facc15;}
+.bc-val-ev{color:#ff9500;}
+.bc-val-txt{color:var(--text);font-family:'DM Sans',sans-serif;font-weight:500;font-size:12.5px;}
+.bc-btns{display:flex;gap:6px;}
+.bc-btn{flex:1;font-size:11.5px;padding:7px 6px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);cursor:pointer;text-align:center;min-height:34px;transition:background .15s;font-family:'DM Sans',sans-serif;}
+.bc-btn:hover{background:var(--border);}
+.bc-btn:active{transform:scale(.97);}
+.bc-btn-del{flex:0 0 38px;min-height:34px;color:#ff3b5c;border-color:#ff3b5c33;}
+.bc-empty{text-align:center;padding:42px 0;color:var(--text3);}
+.bc-empty-ico{font-size:32px;margin-bottom:10px;}
+@media(max-width:600px){.bc-info{grid-template-columns:1fr 1fr;}.bc-info2{grid-template-columns:1fr 1fr;}}
 .module-icon{font-size:34px;margin-bottom:12px;}
 .module-name{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:5px;}
 .module-desc{font-size:12px;color:var(--text2);line-height:1.5;}
@@ -857,7 +889,6 @@ tr.clickable-row:hover td { background: var(--surface2); }
             <div class="module-name">Congelamiento</div>
             <div class="module-desc">Registro de bachadas, paradas, eventos y análisis de eficiencia y mantenimiento de congeladores y túnel estático</div>
           </div>
-
           <div class="module-card" style="opacity:.45;cursor:not-allowed;"><div class="module-icon">📓</div><div class="module-name">Bitácora</div><div class="module-desc">Actividades diarias por turno y técnico</div><div class="module-coming">Pronto</div></div>
           <div class="module-card" style="opacity:.45;cursor:not-allowed;"><div class="module-icon">📋</div><div class="module-name">Formatos</div><div class="module-desc">Checklists y formatos de equipos de planta</div><div class="module-coming">Pronto</div></div>
           <div class="module-card" style="opacity:.45;cursor:not-allowed;"><div class="module-icon">💧</div><div class="module-name">Consumos</div><div class="module-desc">Agua, energía, refrigerante y aceites</div><div class="module-coming">Pronto</div></div>
@@ -872,25 +903,37 @@ tr.clickable-row:hover td { background: var(--surface2); }
       <!-- CONGELAMIENTO -->
       <div class="page" id="page-congelamiento">
         <div class="tabs" id="cong-tabs">
-          <div class="tab active" onclick="showTab('cong','bachadas')">🧊 Bachadas</div>
+          <div class="tab active" onclick="showTab('cong','bachadas')">🧊 En Proceso</div>
+          <div class="tab" onclick="showTab('cong','registros')">📋 Registros</div>
           <div class="tab" onclick="showTab('cong','eventos')">⏸ Eventos / Paradas</div>
           <div class="tab" onclick="showTab('cong','dashboard')">📊 Dashboard</div>
           <div class="tab" onclick="showTab('cong','reportes')">🖨 Reportes</div>
           <div class="tab" onclick="showTab('cong','config')">⚙️ Configuración</div>
         </div>
 
-        <!-- BACHADAS -->
+        <!-- EN PROCESO: tarjetas de equipos activos -->
         <div class="tab-content active" id="tab-cong-bachadas">
-          <!-- Barra superior: título + botón -->
+          <div class="flex-between mb-4">
+            <div>
+              <span style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;">Equipos en proceso</span>
+              <span style="font-size:12px;color:var(--text2);margin-left:12px;" id="bc-sub">Cargando...</span>
+            </div>
+            <button class="btn-sm btn-accent no-print" onclick="openBachadaModal(null)">+ Nueva Bachada</button>
+          </div>
+          <div id="bc-container"></div>
+        </div>
+
+        <!-- REGISTROS: tabla histórica completa (antes llamada Bachadas) -->
+        <div class="tab-content" id="tab-cong-registros">
           <div class="flex-between mb-4">
             <div>
               <span style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;">Registro de Bachadas</span>
-              <span style="font-size:12px;color:var(--text2);margin-left:12px;">Registra inicio y luego completa al finalizar</span>
+              <span style="font-size:12px;color:var(--text2);margin-left:12px;">Historial completo · Registra inicio y completa al finalizar</span>
             </div>
             <button class="btn-sm btn-accent no-print" onclick="openBachadaModal(null)">+ Nueva Bachada</button>
           </div>
 
-          <!-- Filtros de búsqueda -->
+          <!-- Filtros -->
           <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:16px;padding:14px 16px;background:var(--surface);border:1px solid var(--border);border-radius:12px;" class="no-print">
             <div style="flex:1;min-width:130px;">
               <div style="font-size:10px;font-weight:600;color:var(--text2);letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px;">Congelador</div>
@@ -929,7 +972,6 @@ tr.clickable-row:hover td { background: var(--surface2); }
             </div>
           </div>
 
-          <!-- Contador de resultados -->
           <div id="bachadas-count" style="font-size:12px;color:var(--text2);margin-bottom:10px;"></div>
           <div id="alert-bachadas"></div>
           <div class="table-wrap">
@@ -1845,6 +1887,27 @@ const COL = {
 let _listeners = [];
 function stopListeners() { _listeners.forEach(u => u()); _listeners = []; }
 
+// ============================================================
+// DEBOUNCE: evita re-renders en cascada cuando Firebase dispara
+// varios eventos consecutivos (ej. guardar + cerrar una bachada)
+// ============================================================
+let _dashDebounceTimer = null;
+let _tlDebounceTimer   = null;
+
+function renderDashboardDebounced() {
+  if(_dashDebounceTimer) clearTimeout(_dashDebounceTimer);
+  _dashDebounceTimer = setTimeout(() => {
+    try { renderDashboard(); } catch(e) { console.warn('renderDashboard:', e); }
+  }, 350); // espera 350ms de silencio antes de renderizar
+}
+
+function renderTimelineDebounced() {
+  if(_tlDebounceTimer) clearTimeout(_tlDebounceTimer);
+  _tlDebounceTimer = setTimeout(() => {
+    try { renderTimeline(); } catch(e) { console.warn('renderTimeline:', e); }
+  }, 350);
+}
+
 function startListeners() {
   stopListeners();
 
@@ -1853,12 +1916,12 @@ function startListeners() {
     const data = snap.docs.map(d => ({...d.data(), _fid: d.id}));
     CACHE.set('bachadas', data);
     filtrarBachadas();
-    // Re-renderizar timeline si está visible (página 3 = Timeline Equipo)
+    // Actualizar portada (ligero) y dashboard/timeline (debounced)
+    renderBachadasCards();
     if(document.getElementById('dash-page-3')?.classList.contains('active')) {
-      renderTimeline();
+      renderTimelineDebounced();
     } else if(document.querySelector('.dash-page.active')) {
-      // Re-renderizar dashboard (General o Mantenimiento) si está visible
-      renderDashboard();
+      renderDashboardDebounced();
     }
   }, err => console.warn('bachadas:', err)));
 
@@ -1867,12 +1930,12 @@ function startListeners() {
     const data = snap.docs.map(d => ({...d.data(), _fid: d.id}));
     CACHE.set('eventos', data);
     renderEventos();
-    // Re-renderizar timeline si está visible (página 3 = Timeline Equipo)
+    // Actualizar portada (ligero) y dashboard/timeline (debounced)
+    renderBachadasCards();
     if(document.getElementById('dash-page-3')?.classList.contains('active')) {
-      renderTimeline();
+      renderTimelineDebounced();
     } else if(document.querySelector('.dash-page.active')) {
-      // Re-renderizar dashboard (General o Mantenimiento) si está visible
-      renderDashboard();
+      renderDashboardDebounced();
     }
   }, err => console.warn('eventos:', err)));
 
@@ -1991,6 +2054,7 @@ window.addEventListener('load', function() {
     startListeners();
     navigate('home');
     setDefaultDates();
+    setTimeout(renderBachadasCards, 600);
   }
 });
 
@@ -2104,7 +2168,7 @@ function showTab(prefix,name){
   // contents
   order.forEach(n=>{const el=document.getElementById('tab-cong-'+n);if(el)el.classList.remove('active');});
   const tc=document.getElementById('tab-cong-'+name);
-  if(tc){tc.classList.add('active');if(name==='dashboard')renderDashboard();if(name==='config'){renderTecnicos();renderProductos();renderEquiposConfig();}}
+  if(tc){tc.classList.add('active');if(name==='dashboard')renderDashboard();if(name==='bachadas')renderBachadasCards();if(name==='config'){renderTecnicos();renderProductos();renderEquiposConfig();}}
 }
 
 function showSubTab(prefix,name){
@@ -4267,9 +4331,263 @@ let currentDashPage = 1;
 const totalDashPages = 3;
 
 // ============================================================
-// ALTERNAR SECCIONES DEL DASHBOARD DE MANTENIMIENTO (A / B)
+// PORTADA: TARJETAS DE EQUIPOS ACTIVOS
+// Ligero, sin Chart.js. Solo manipula DOM/texto.
 // ============================================================
+function renderHomeCards() {
+  const container = document.getElementById('home-cards-container');
+  const subEl = document.getElementById('home-sub');
+  if(!container) return;
+
+  const bachadas = DB.get('bachadas', []);
+  const eventos  = DB.get('eventos',  []);
+
+  // Día operativo actual (08:00 de hoy)
+  const ahora = new Date();
+  const h = ahora.getHours();
+  const hoy = new Date(ahora);
+  if(h < 8) hoy.setDate(hoy.getDate() - 1); // antes de las 8am, el día operativo empezó ayer
+  const fechaOp = hoy.toISOString().slice(0, 10);
+
+  // Bachadas pendientes (en proceso) del día actual
+  const bachasActivas = bachadas.filter(b =>
+    b.estado === 'pendiente' && b.fecha === fechaOp
+  );
+
+  // Eventos abiertos del día actual
+  const eventosActivos = eventos.filter(e =>
+    e.estado === 'abierto' && e.fechaIni === fechaOp &&
+    e.tipo !== 'fin_proceso'
+  );
+
+  // Combinar: una fila por equipo con actividad
+  // Si un equipo tiene bachada activa Y evento activo, mostrar la bachada primero
+  const equiposConActividad = new Set([
+    ...bachasActivas.map(b => b.equipo),
+    ...eventosActivos.map(e => e.equipo)
+  ]);
+
+  // Ordenar equipos: C1, C2, ... C13, TE
+  const ORDEN_EQ = ['C1','C2','C3','C4','C5','C6','C7','C8','C9','C10','C11','C12','C13','TE'];
+  const equiposOrdenados = ORDEN_EQ.filter(eq => equiposConActividad.has(eq));
+
+  if(equiposOrdenados.length === 0) {
+    container.innerHTML = `<div class="home-empty"><div class="home-empty-ico">🧊</div><div style="font-size:13px;margin-bottom:6px;">Sin equipos activos hoy</div><div style="font-size:11px;">Registra una nueva bachada para comenzar</div></div>`;
+    if(subEl) subEl.textContent = 'Sin actividad en el día operativo actual';
+    return;
+  }
+
+  if(subEl) subEl.textContent = `${equiposOrdenados.length} equipo${equiposOrdenados.length!==1?'s':''} activo${equiposOrdenados.length!==1?'s':''} hoy · ${new Date().toLocaleTimeString('es-PE',{hour:'2-digit',minute:'2-digit'})}`;
+
+  const tiposLabel = {
+    carga_descarga:'Carga/Descarga', descongelamiento:'Descongelamiento',
+    sin_produccion:'Sin MP', programada:'Mant. Programado', no_programada:'Falla/Avería'
+  };
+
+  container.innerHTML = equiposOrdenados.map(eq => {
+    const bach  = bachasActivas.find(b => b.equipo === eq);
+    const evAct = eventosActivos.find(e => e.equipo === eq);
+    const estado = bach ? calcularEstadoBachadas(eq) : null;
+    const esWarning = estado && estado.consecutivas >= estado.limite;
+
+    if(bach) {
+      // ── Tarjeta de BACHADA activa ──────────────────────────
+      const transcH = tiempoTranscurridoH(bach.fecha, bach.inicio);
+      const hh = Math.floor(transcH), mm = Math.round((transcH-hh)*60);
+      const transcStr = `${hh}h ${String(mm).padStart(2,'0')}m`;
+      const colorTime = esWarning ? 'hc-val-warn' : 'hc-val-accent';
+      const hcClass   = esWarning ? 'hc hc-warn' : 'hc';
+      const badgeClass= esWarning ? 'hc-badge hc-badge-warn' : 'hc-badge hc-badge-blue';
+      const badgeTxt  = `Bachada #${bach.bach}${esWarning ? ' ⚠' : ''}`;
+      const estadoTxt = esWarning ? 'Próx. descongelamiento' : 'En proceso';
+      const estadoCls = esWarning ? 'hc-estado hc-estado-warn' : 'hc-estado hc-estado-ok';
+      const peso      = bach.peso ? (bach.peso/1000).toFixed(2)+' t' : '—';
+      const factor    = bach.factor || getFactorDefault(eq);
+
+      return `
+      <div class="${hcClass}" data-id="${bach.id}">
+        <div class="hc-top">
+          <div style="display:flex;align-items:center;gap:7px;">
+            <span class="hc-equipo">${eq === 'TE' ? 'Túnel Est.' : eq}</span>
+            <span class="${badgeClass}">${badgeTxt}</span>
+          </div>
+          <span class="${estadoCls}">${estadoTxt}</span>
+        </div>
+        <div class="hc-grid">
+          <div><div class="hc-lbl">Inicio</div><div class="hc-val">${bach.inicio||'—'}</div></div>
+          <div><div class="hc-lbl">Transcurrido ⏱</div><div class="hc-val ${colorTime}" data-hc-timer="${bach.id}" data-hc-fecha="${bach.fecha}" data-hc-inicio="${bach.inicio}">${transcStr}</div></div>
+          <div><div class="hc-lbl">Producto</div><div class="hc-val hc-val-normal">${bach.producto||'—'}</div></div>
+        </div>
+        <div class="hc-grid2">
+          <div><div class="hc-lbl">Aros × ${factor} kg</div><div class="hc-val hc-val-normal">${bach.aros||'—'} aros = ${peso}</div></div>
+          <div><div class="hc-lbl">Técnico</div><div class="hc-val hc-val-normal">${bach.tecnico||'—'}</div></div>
+        </div>
+        <div class="hc-btns">
+          <button class="hc-btn" onclick="event.stopPropagation();openBachadaModal('${bach.id}')">✏️ Editar</button>
+          <button class="hc-btn" onclick="event.stopPropagation();openBachadaModal('${bach.id}');setTimeout(()=>{const s=document.getElementById('b-cierre-section');if(s)s.scrollIntoView({behavior:'smooth'});},300)">✅ Cerrar</button>
+          <button class="hc-btn hc-btn-del" onclick="event.stopPropagation();delBachada('${bach.id}')" title="Eliminar">🗑</button>
+        </div>
+      </div>`;
+    } else if(evAct) {
+      // ── Tarjeta de EVENTO activo ───────────────────────────
+      const transcH = tiempoTranscurridoH(evAct.fechaIni, evAct.inicio);
+      const hh = Math.floor(transcH), mm = Math.round((transcH-hh)*60);
+      const transcStr = `${hh}h ${String(mm).padStart(2,'0')}m`;
+      const tipoLabel = tiposLabel[evAct.tipo] || evAct.tipo;
+      return `
+      <div class="hc hc-evento" data-evid="${evAct.id}">
+        <div class="hc-top">
+          <div style="display:flex;align-items:center;gap:7px;">
+            <span class="hc-equipo">${eq === 'TE' ? 'Túnel Est.' : eq}</span>
+            <span class="hc-badge hc-badge-ev">${tipoLabel}</span>
+          </div>
+          <span class="hc-estado hc-estado-ev">Evento activo</span>
+        </div>
+        <div class="hc-grid">
+          <div><div class="hc-lbl">Inicio</div><div class="hc-val">${evAct.inicio||'—'}</div></div>
+          <div><div class="hc-lbl">Transcurrido ⏱</div><div class="hc-val hc-val-ev" data-hc-timer-ev="${evAct.id}" data-hc-fecha="${evAct.fechaIni}" data-hc-inicio="${evAct.inicio}">${transcStr}</div></div>
+          <div><div class="hc-lbl">Técnico</div><div class="hc-val hc-val-normal">${evAct.tecnico||'—'}</div></div>
+        </div>
+        ${evAct.desc ? `<div style="font-size:11px;color:var(--text3);margin-bottom:10px;">${evAct.desc}</div>` : ''}
+        <div class="hc-btns">
+          <button class="hc-btn" onclick="event.stopPropagation();openEventoModal('${evAct.id}')">✏️ Editar evento</button>
+          <button class="hc-btn" onclick="event.stopPropagation();openEventoModal('${evAct.id}');setTimeout(()=>{const f=document.getElementById('e-fin');if(f){f.scrollIntoView({behavior:'smooth'});}},300)">✅ Cerrar evento</button>
+          <button class="hc-btn hc-btn-del" onclick="event.stopPropagation();delEvento('${evAct.id}')" title="Eliminar">🗑</button>
+        </div>
+      </div>`;
+    }
+    return '';
+  }).join('');
+
+  // Mostrar botón admin si el usuario tiene rol admin
+  const adminBtn = document.getElementById('quick-admin');
+  if(adminBtn) adminBtn.style.display = canAdmin() ? '' : 'none';
+}
+
+// Actualizar solo los contadores de tiempo (muy ligero, sin recrear DOM)
+function actualizarTiemposPortada() {
+  document.querySelectorAll('[data-hc-timer],[data-hc-timer-ev]').forEach(el => {
+    const fecha = el.dataset.hcFecha;
+    const inicio = el.dataset.hcInicio;
+    if(!fecha || !inicio) return;
+    const transcH = tiempoTranscurridoH(fecha, inicio);
+    const hh = Math.floor(transcH), mm = Math.round((transcH-hh)*60);
+    el.textContent = `${hh}h ${String(mm).padStart(2,'0')}m`;
+  });
+  // Actualizar subtítulo con la hora actual
+  const subEl = document.getElementById('home-sub');
+  if(subEl && subEl.textContent && !subEl.textContent.includes('Sin actividad')) {
+    subEl.textContent = subEl.textContent.replace(/· \d{2}:\d{2}$/, '')
+      + `· ${new Date().toLocaleTimeString('es-PE',{hour:'2-digit',minute:'2-digit'})}`;
+  }
+}
 let _mantSection = 'A';
+// ============================================================
+// TARJETAS DE EQUIPOS EN PROCESO (pestaña "En Proceso")
+// Re-renderiza todo el bloque de tarjetas — sin manipulación
+// parcial de DOM que deforma el layout.
+// ============================================================
+const TIPOSEV = {
+  carga_descarga:'Carga/Descarga', descongelamiento:'Descongelamiento',
+  sin_produccion:'Sin MP', programada:'Mant. Programado', no_programada:'Falla/Avería'
+};
+const ORDEN_EQ = ['C1','C2','C3','C4','C5','C6','C7','C8','C9','C10','C11','C12','C13','TE'];
+
+function renderBachadasCards() {
+  const container = document.getElementById('bc-container');
+  const subEl     = document.getElementById('bc-sub');
+  if(!container) return;
+
+  const bachadas = DB.get('bachadas', []);
+  const eventos  = DB.get('eventos',  []);
+
+  const bachasActivas  = bachadas.filter(b => b.estado === 'pendiente');
+  const eventosActivos = eventos.filter(e => e.estado === 'abierto' && e.tipo !== 'fin_proceso');
+
+  const equiposConAct = new Set([
+    ...bachasActivas.map(b => b.equipo),
+    ...eventosActivos.map(e => e.equipo)
+  ]);
+  const equipos = ORDEN_EQ.filter(eq => equiposConAct.has(eq));
+
+  if(equipos.length === 0) {
+    container.innerHTML = `<div class="bc-empty"><div class="bc-empty-ico">🧊</div><div style="font-size:13px;margin-bottom:6px;font-weight:600;">Sin equipos en proceso ahora mismo</div><div style="font-size:11px;">Registra una nueva bachada para comenzar</div></div>`;
+    if(subEl) subEl.textContent = 'Sin actividad activa';
+    return;
+  }
+
+  const ahora = new Date();
+  if(subEl) subEl.textContent = `${equipos.length} equipo${equipos.length!==1?'s':''} activo${equipos.length!==1?'s':''} · ${ahora.toLocaleTimeString('es-PE',{hour:'2-digit',minute:'2-digit'})}`;
+
+  container.innerHTML = equipos.map(eq => {
+    const bach   = bachasActivas.find(b => b.equipo === eq);
+    const evAct  = eventosActivos.find(e => e.equipo === eq);
+    const est    = bach ? calcularEstadoBachadas(eq) : null;
+    const esWarn = est && est.consecutivas >= est.limite;
+
+    if(bach) {
+      const h  = tiempoTranscurridoH(bach.fecha, bach.inicio);
+      const hh = Math.floor(h), mm = String(Math.round((h-hh)*60)).padStart(2,'0');
+      const peso   = bach.peso ? (bach.peso/1000).toFixed(2)+' t' : '—';
+      const factor = bach.factor || getFactorDefault(eq);
+      return `
+<div class="${esWarn?'bc-card bc-warn':'bc-card'}">
+  <div class="bc-head">
+    <div class="bc-pills">
+      <span class="bc-nombre">${eq==='TE'?'Túnel Estático':eq}</span>
+      <span class="bc-pill ${esWarn?'bc-pill-warn':'bc-pill-blue'}">Bachada #${bach.bach}${esWarn?' ⚠':''}</span>
+    </div>
+    <span class="bc-pill ${esWarn?'bc-pill-warnst':'bc-pill-ok'}">${esWarn?'Próx. descong.':'En proceso'}</span>
+  </div>
+  <div class="bc-info">
+    <div><div class="bc-lbl">Inicio</div><div class="bc-val">${bach.inicio||'—'}</div></div>
+    <div><div class="bc-lbl">⏱ Transcurrido</div><div class="bc-val ${esWarn?'bc-val-warn':'bc-val-t'}">${hh}h ${mm}m</div></div>
+    <div><div class="bc-lbl">Producto</div><div class="bc-val-txt">${bach.producto||'—'}</div></div>
+  </div>
+  <div class="bc-info2">
+    <div><div class="bc-lbl">Aros × ${factor} kg</div><div class="bc-val-txt">${bach.aros||'—'} aros · ${peso}</div></div>
+    <div><div class="bc-lbl">Técnico</div><div class="bc-val-txt">${bach.tecnico||'—'}</div></div>
+  </div>
+  <div class="bc-btns">
+    <button class="bc-btn" onclick="event.stopPropagation();openBachadaModal('${bach.id}')">✏️ Editar</button>
+    <button class="bc-btn" onclick="event.stopPropagation();abrirCierreBachada('${bach.id}')">✅ Cerrar</button>
+    <button class="bc-btn bc-btn-del" onclick="event.stopPropagation();delBachada('${bach.id}')" title="Eliminar">🗑</button>
+  </div>
+</div>`;
+    } else if(evAct) {
+      const h  = tiempoTranscurridoH(evAct.fechaIni, evAct.inicio);
+      const hh = Math.floor(h), mm = String(Math.round((h-hh)*60)).padStart(2,'0');
+      return `
+<div class="bc-card bc-ev">
+  <div class="bc-head">
+    <div class="bc-pills">
+      <span class="bc-nombre">${eq==='TE'?'Túnel Estático':eq}</span>
+      <span class="bc-pill bc-pill-ev">${TIPOSEV[evAct.tipo]||evAct.tipo}</span>
+    </div>
+    <span class="bc-pill bc-pill-evst">Evento activo</span>
+  </div>
+  <div class="bc-info">
+    <div><div class="bc-lbl">Inicio</div><div class="bc-val">${evAct.inicio||'—'}</div></div>
+    <div><div class="bc-lbl">⏱ Transcurrido</div><div class="bc-val bc-val-ev">${hh}h ${mm}m</div></div>
+    <div><div class="bc-lbl">Técnico</div><div class="bc-val-txt">${evAct.tecnico||'—'}</div></div>
+  </div>
+  ${evAct.desc?`<div style="font-size:11px;color:var(--text3);margin-bottom:10px;padding:6px 8px;background:var(--surface2);border-radius:6px;">${evAct.desc}</div>`:''}
+  <div class="bc-btns">
+    <button class="bc-btn" onclick="event.stopPropagation();openEventoModal('${evAct.id}')">✏️ Editar evento</button>
+    <button class="bc-btn" onclick="event.stopPropagation();openEventoModal('${evAct.id}')">✅ Cerrar evento</button>
+    <button class="bc-btn bc-btn-del" onclick="event.stopPropagation();delEvento('${evAct.id}')" title="Eliminar">🗑</button>
+  </div>
+</div>`;
+    }
+    return '';
+  }).join('');
+}
+
+function abrirCierreBachada(id){
+  openBachadaModal(id);
+  setTimeout(()=>{const s=document.getElementById('b-cierre-section');if(s)s.scrollIntoView({behavior:'smooth',block:'nearest'});},320);
+}
+
 function switchMantSection(sec){
   _mantSection = sec;
   document.getElementById('mant-section-A').style.display = sec==='A' ? '' : 'none';
@@ -4314,13 +4632,28 @@ function redibujarPaginaActiva() {
 let _realtimeInterval = null;
 function startRealtimeRefresh() {
   if(_realtimeInterval) return;
+  // Intervalo rápido (10s): solo actualiza tiempos en vivo en la portada
+  // Es muy ligero — solo manipula texto, no recrea gráficos
+  setInterval(() => {
+    try { actualizarTiemposPortada(); } catch(e) {}
+  }, 10000);
+
+  // Intervalo lento (60s): redibuja el dashboard/timeline SI está visible
+  // (necesario para que las barras del timeline crezcan en tiempo real)
   _realtimeInterval = setInterval(() => {
-    const dashTab = document.getElementById('tab-cong-dashboard');
-    // Solo refrescar si la pestaña del dashboard está visible
-    if(dashTab && dashTab.offsetParent !== null) {
-      try { redibujarPaginaActiva(); } catch(e) { console.warn('Auto-refresh:', e); }
+    // Actualizar tarjetas de equipos en proceso si la pestaña está visible
+    const bcTab = document.getElementById('tab-cong-bachadas');
+    if(bcTab && bcTab.offsetParent !== null) {
+      try { renderBachadasCards(); } catch(e) {}
     }
-  }, 60000); // 60 segundos
+    // Redibujar timeline si está visible (barras de procesos crecen en tiempo real)
+    const dashTab = document.getElementById('tab-cong-dashboard');
+    if(dashTab && dashTab.offsetParent !== null) {
+      if(document.getElementById('dash-page-3')?.classList.contains('active')) {
+        try { renderTimeline(); } catch(e) {}
+      }
+    }
+  }, 30000);
 }
 // Iniciar al cargar
 if(document.readyState === 'loading') {

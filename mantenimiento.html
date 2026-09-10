@@ -1670,7 +1670,7 @@ tr.clickable-row:hover td { background: var(--surface2); }
         <div class="field"><label>Cantidad de Aros</label><input type="number" id="b-aros" min="1" oninput="calcPeso()"></div>
         <div class="field">
           <label>Peso por aro (kg/aro)</label>
-          <input type="number" id="b-factor" step="0.01" min="0.1" oninput="calcPeso()" placeholder="Auto según equipo" style="max-width:120px;">
+          <input type="number" id="b-factor" step="0.01" oninput="calcPeso()" placeholder="Auto según equipo" style="max-width:120px;">
           <div class="field-note" id="b-factor-note">Se completa automáticamente al elegir equipo · editable si es necesario</div>
         </div>
         <div class="field"><label>Peso Calculado (kg)</label><input type="text" id="b-peso" readonly><div class="field-note" id="b-peso-note"></div></div>
@@ -2161,14 +2161,25 @@ function showToast(msg, type='info'){
 }
 
 function showTab(prefix,name){
-  const order=['bachadas','eventos','dashboard','reportes','config'];
-  // tabs
+  const order=['bachadas','registros','eventos','dashboard','reportes','config'];
+  // Activar el botón de tab correcto
   const tabsEl=document.getElementById('cong-tabs');
-  if(tabsEl){tabsEl.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));const idx=order.indexOf(name);if(tabsEl.querySelectorAll('.tab')[idx])tabsEl.querySelectorAll('.tab')[idx].classList.add('active');}
-  // contents
+  if(tabsEl){
+    tabsEl.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    const idx=order.indexOf(name);
+    if(idx>=0 && tabsEl.querySelectorAll('.tab')[idx])
+      tabsEl.querySelectorAll('.tab')[idx].classList.add('active');
+  }
+  // Ocultar todos los contenidos (incluido 'registros')
   order.forEach(n=>{const el=document.getElementById('tab-cong-'+n);if(el)el.classList.remove('active');});
+  // Mostrar el seleccionado y disparar render si aplica
   const tc=document.getElementById('tab-cong-'+name);
-  if(tc){tc.classList.add('active');if(name==='dashboard')renderDashboard();if(name==='bachadas')renderBachadasCards();if(name==='config'){renderTecnicos();renderProductos();renderEquiposConfig();}}
+  if(tc){
+    tc.classList.add('active');
+    if(name==='dashboard') setTimeout(()=>{try{renderDashboard();}catch(e){console.warn('dashboard:',e);}},30);
+    if(name==='bachadas')  try{renderBachadasCards();}catch(e){console.warn('cards:',e);}
+    if(name==='config'){renderTecnicos();renderProductos();renderEquiposConfig();}
+  }
 }
 
 function showSubTab(prefix,name){
@@ -2395,11 +2406,13 @@ function calcPeso(){
   const eq=document.getElementById('b-equipo').value;
   const aros=parseFloat(document.getElementById('b-aros').value)||0;
   const factorEl=document.getElementById('b-factor');
-  // Si el campo de factor está vacío, usar el default del equipo
-  if(eq && factorEl && !factorEl.value){
-    factorEl.value=getFactorDefault(eq).toFixed(2);
-  }
-  const factor=parseFloat(factorEl?factorEl.value:0)||getFactorDefault(eq);
+  // Leer el valor del campo: si el usuario lo está editando (incluso vacío),
+  // respetar lo que está escribiendo. NO sobreescribir el campo desde aquí.
+  // Solo onEquipoChange() establece el valor por defecto (al cambiar el equipo).
+  const factorStr = factorEl ? factorEl.value : '';
+  const factor = (factorStr !== '' && !isNaN(parseFloat(factorStr)))
+    ? parseFloat(factorStr)
+    : getFactorDefault(eq);
   if(!eq||!aros){document.getElementById('b-peso').value='';return;}
   document.getElementById('b-peso').value=(aros*factor).toFixed(1)+' kg';
   document.getElementById('b-peso-note').textContent='Factor: '+factor+' kg/aro';
@@ -4501,41 +4514,48 @@ function renderBachadasCards() {
   const bachadas = DB.get('bachadas', []);
   const eventos  = DB.get('eventos',  []);
 
+  // TODOS los registros activos — sin filtro de equipo único
+  // Si un técnico dejó varios abiertos por error, deben verse todos para poder corregirlos
   const bachasActivas  = bachadas.filter(b => b.estado === 'pendiente');
   const eventosActivos = eventos.filter(e => e.estado === 'abierto' && e.tipo !== 'fin_proceso');
 
-  const equiposConAct = new Set([
-    ...bachasActivas.map(b => b.equipo),
-    ...eventosActivos.map(e => e.equipo)
-  ]);
-  const equipos = ORDEN_EQ.filter(eq => equiposConAct.has(eq));
+  const totalActivos = bachasActivas.length + eventosActivos.length;
 
-  if(equipos.length === 0) {
+  if(totalActivos === 0) {
     container.innerHTML = `<div class="bc-empty"><div class="bc-empty-ico">🧊</div><div style="font-size:13px;margin-bottom:6px;font-weight:600;">Sin equipos en proceso ahora mismo</div><div style="font-size:11px;">Registra una nueva bachada para comenzar</div></div>`;
     if(subEl) subEl.textContent = 'Sin actividad activa';
     return;
   }
 
   const ahora = new Date();
-  if(subEl) subEl.textContent = `${equipos.length} equipo${equipos.length!==1?'s':''} activo${equipos.length!==1?'s':''} · ${ahora.toLocaleTimeString('es-PE',{hour:'2-digit',minute:'2-digit'})}`;
+  if(subEl) subEl.textContent = `${bachasActivas.length} bachada${bachasActivas.length!==1?'s':''} · ${eventosActivos.length} evento${eventosActivos.length!==1?'s':''} activo${eventosActivos.length!==1?'s':''} · ${ahora.toLocaleTimeString('es-PE',{hour:'2-digit',minute:'2-digit'})}`;
 
-  container.innerHTML = equipos.map(eq => {
-    const bach   = bachasActivas.find(b => b.equipo === eq);
-    const evAct  = eventosActivos.find(e => e.equipo === eq);
-    const est    = bach ? calcularEstadoBachadas(eq) : null;
+  // Ordenar: primero por equipo (orden natural C1→TE), luego por timestamp
+  const eqIdx = eq => { const i = ORDEN_EQ.indexOf(eq); return i < 0 ? 99 : i; };
+
+  const todasBachas = [...bachasActivas].sort((a,b)=>
+    eqIdx(a.equipo)-eqIdx(b.equipo) || (a.ts||'').localeCompare(b.ts||'')
+  );
+  const todosEvs = [...eventosActivos].sort((a,b)=>
+    eqIdx(a.equipo)-eqIdx(b.equipo) || (a.ts||'').localeCompare(b.ts||'')
+  );
+
+  // Construir cards: primero todas las bachadas, luego todos los eventos
+  // (así el técnico ve primero qué está congelando)
+  const cardsBachas = todasBachas.map(bach => {
+    const eq   = bach.equipo;
+    const est  = calcularEstadoBachadas(eq);
     const esWarn = est && est.consecutivas >= est.limite;
-
-    if(bach) {
-      const h  = tiempoTranscurridoH(bach.fecha, bach.inicio);
-      const hh = Math.floor(h), mm = String(Math.round((h-hh)*60)).padStart(2,'0');
-      const peso   = bach.peso ? (bach.peso/1000).toFixed(2)+' t' : '—';
-      const factor = bach.factor || getFactorDefault(eq);
-      return `
+    const h  = tiempoTranscurridoH(bach.fecha, bach.inicio);
+    const hh = Math.floor(h), mm = String(Math.round((h-hh)*60)).padStart(2,'0');
+    const peso   = bach.peso ? (bach.peso/1000).toFixed(2)+' t' : '—';
+    const factor = bach.factor || getFactorDefault(eq);
+    return `
 <div class="${esWarn?'bc-card bc-warn':'bc-card'}">
   <div class="bc-head">
     <div class="bc-pills">
       <span class="bc-nombre">${eq==='TE'?'Túnel Estático':eq}</span>
-      <span class="bc-pill ${esWarn?'bc-pill-warn':'bc-pill-blue'}">Bachada #${bach.bach}${esWarn?' ⚠':''}</span>
+      <span class="bc-pill ${esWarn?'bc-pill-warn':'bc-pill-blue'}">Bachada #${bach.bach||'?'}${esWarn?' ⚠':''}</span>
     </div>
     <span class="bc-pill ${esWarn?'bc-pill-warnst':'bc-pill-ok'}">${esWarn?'Próx. descong.':'En proceso'}</span>
   </div>
@@ -4554,33 +4574,36 @@ function renderBachadasCards() {
     <button class="bc-btn bc-btn-del" onclick="event.stopPropagation();delBachada('${bach.id}')" title="Eliminar">🗑</button>
   </div>
 </div>`;
-    } else if(evAct) {
-      const h  = tiempoTranscurridoH(evAct.fechaIni, evAct.inicio);
-      const hh = Math.floor(h), mm = String(Math.round((h-hh)*60)).padStart(2,'0');
-      return `
+  });
+
+  const cardsEvs = todosEvs.map(ev => {
+    const eq = ev.equipo;
+    const h  = tiempoTranscurridoH(ev.fechaIni, ev.inicio);
+    const hh = Math.floor(h), mm = String(Math.round((h-hh)*60)).padStart(2,'0');
+    return `
 <div class="bc-card bc-ev">
   <div class="bc-head">
     <div class="bc-pills">
       <span class="bc-nombre">${eq==='TE'?'Túnel Estático':eq}</span>
-      <span class="bc-pill bc-pill-ev">${TIPOSEV[evAct.tipo]||evAct.tipo}</span>
+      <span class="bc-pill bc-pill-ev">${TIPOSEV[ev.tipo]||ev.tipo}</span>
     </div>
     <span class="bc-pill bc-pill-evst">Evento activo</span>
   </div>
   <div class="bc-info">
-    <div><div class="bc-lbl">Inicio</div><div class="bc-val">${evAct.inicio||'—'}</div></div>
+    <div><div class="bc-lbl">Inicio</div><div class="bc-val">${ev.inicio||'—'}</div></div>
     <div><div class="bc-lbl">⏱ Transcurrido</div><div class="bc-val bc-val-ev">${hh}h ${mm}m</div></div>
-    <div><div class="bc-lbl">Técnico</div><div class="bc-val-txt">${evAct.tecnico||'—'}</div></div>
+    <div><div class="bc-lbl">Técnico</div><div class="bc-val-txt">${ev.tecnico||'—'}</div></div>
   </div>
-  ${evAct.desc?`<div style="font-size:11px;color:var(--text3);margin-bottom:10px;padding:6px 8px;background:var(--surface2);border-radius:6px;">${evAct.desc}</div>`:''}
+  ${ev.desc?`<div style="font-size:11px;color:var(--text3);margin-bottom:10px;padding:6px 8px;background:var(--surface2);border-radius:6px;">${ev.desc}</div>`:''}
   <div class="bc-btns">
-    <button class="bc-btn" onclick="event.stopPropagation();openEventoModal('${evAct.id}')">✏️ Editar evento</button>
-    <button class="bc-btn" onclick="event.stopPropagation();openEventoModal('${evAct.id}')">✅ Cerrar evento</button>
-    <button class="bc-btn bc-btn-del" onclick="event.stopPropagation();delEvento('${evAct.id}')" title="Eliminar">🗑</button>
+    <button class="bc-btn" onclick="event.stopPropagation();openEventoModal('${ev.id}')">✏️ Editar</button>
+    <button class="bc-btn" onclick="event.stopPropagation();openEventoModal('${ev.id}')">✅ Cerrar</button>
+    <button class="bc-btn bc-btn-del" onclick="event.stopPropagation();delEvento('${ev.id}')" title="Eliminar">🗑</button>
   </div>
 </div>`;
-    }
-    return '';
-  }).join('');
+  });
+
+  container.innerHTML = [...cardsBachas, ...cardsEvs].join('');
 }
 
 function abrirCierreBachada(id){

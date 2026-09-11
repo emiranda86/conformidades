@@ -3949,31 +3949,35 @@ function renderEstadoEquipos(bachs, evs) {
 
   const nOperativos = nCongel + nEvOp;
   const badge = document.getElementById('eq-status-badge');
-  if(badge) badge.textContent = `${nOperativos} de ${FLOTA.length} operativos`;
+  if(badge) badge.textContent = nOperativos + ' de ' + FLOTA.length + ' operativos';
 
   const COLORS = ['#00C8FF','#FF9500','#FF3B5C','#2A4466'];
   const datos  = [nCongel, nEvOp, nMant, nLibre];
-  const labels = ['En congelamiento','C/D · Descongelamiento','Mantenimiento','Sin actividad'];
+  // Valor incluido en el label → color de texto hereda de labels.color, sin generateLabels
+  const labels = [
+    'En congelamiento   ' + nCongel,
+    'C/D · Descongelamiento   ' + nEvOp,
+    'Mantenimiento   ' + nMant,
+    'Sin actividad   ' + nLibre
+  ];
 
-  // Plugin 1: texto central de la dona
+  // Plugin 1: texto central — usa coordenadas reales del arco, no chartArea
   const centerPlugin = {
     id: 'center_eq',
     afterDraw(chart) {
-      const {ctx, chartArea:{top,bottom,left,right}} = chart;
-      // Límite derecho de la dona = donde empieza la leyenda lateral
-      // Para centrarlo sobre la dona, usamos el área de chart menos el ancho de la leyenda
-      const legendW = chart.legend ? chart.legend.width || 0 : 0;
-      const donutRight = right - legendW;
-      const cx = (left + donutRight) / 2;
-      const cy = (top + bottom) / 2;
+      const meta = chart.getDatasetMeta(0);
+      if(!meta.data.length) return;
+      const arc = meta.data[0]; // arc.x/arc.y = centro real de la dona
+      const cx = arc.x, cy = arc.y;
+      const ctx = chart.ctx;
       ctx.save();
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.font = "bold 26px 'Syne',sans-serif";
+      ctx.font = "bold 28px 'Syne',sans-serif";
       ctx.fillStyle = '#E8F4FF';
-      ctx.fillText(nOperativos, cx, cy - 9);
+      ctx.fillText(nOperativos, cx, cy - 10);
       ctx.font = "10px 'DM Sans',sans-serif";
       ctx.fillStyle = '#8AAAC8';
-      ctx.fillText(`de ${FLOTA.length} equipos`, cx, cy + 10);
+      ctx.fillText('de ' + FLOTA.length + ' equipos', cx, cy + 10);
       ctx.restore();
     }
   };
@@ -3982,31 +3986,21 @@ function renderEstadoEquipos(bachs, evs) {
   const sliceLabelsPlugin = {
     id: 'slice_labels',
     afterDatasetDraw(chart) {
-      const {ctx} = chart;
+      const { ctx } = chart;
       const meta = chart.getDatasetMeta(0);
       ctx.save();
       meta.data.forEach((arc, i) => {
         const val = datos[i];
         if(val === 0) return;
-        // Calcular ángulo medio del arco
-        const startAngle = arc.startAngle;
-        const endAngle   = arc.endAngle;
-        const midAngle   = (startAngle + endAngle) / 2;
-        // Radio a 72% del arco (entre centro y borde exterior)
-        const outerR = arc.outerRadius;
-        const innerR = arc.innerRadius;
-        const r = innerR + (outerR - innerR) * 0.55;
+        const arcSpan = arc.endAngle - arc.startAngle;
+        if(arcSpan < 0.30) return;
+        const midAngle = (arc.startAngle + arc.endAngle) / 2;
+        const r = arc.innerRadius + (arc.outerRadius - arc.innerRadius) * 0.52;
         const x = arc.x + Math.cos(midAngle) * r;
         const y = arc.y + Math.sin(midAngle) * r;
-        // Solo dibujar si el arco tiene suficiente espacio
-        const arcSpan = endAngle - startAngle;
-        if(arcSpan < 0.25) return; // arco muy pequeño → no cabe etiqueta
-        ctx.font = "bold 13px 'DM Sans',sans-serif";
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        // Sombra para legibilidad sobre colores oscuros
-        ctx.shadowColor = 'rgba(0,0,0,0.6)';
-        ctx.shadowBlur = 4;
+        ctx.font = "bold 14px 'DM Sans',sans-serif";
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.shadowColor = 'rgba(0,0,0,0.7)'; ctx.shadowBlur = 5;
         ctx.fillStyle = '#FFFFFF';
         ctx.fillText(val, x, y);
         ctx.shadowBlur = 0;
@@ -4018,10 +4012,10 @@ function renderEstadoEquipos(bachs, evs) {
   charts[id] = new Chart(c, {
     type: 'doughnut',
     data: {
-      labels,
+      labels: labels,
       datasets: [{
         data: datos,
-        backgroundColor: COLORS.map(col => col + 'cc'),
+        backgroundColor: COLORS.map(function(col){ return col + 'cc'; }),
         borderColor: COLORS,
         borderWidth: 2,
         hoverOffset: 10
@@ -4031,37 +4025,24 @@ function renderEstadoEquipos(bachs, evs) {
       responsive: true,
       maintainAspectRatio: false,
       cutout: '60%',
-      layout: { padding: { right: 4 } },
       plugins: {
         legend: {
-          position: 'right',
-          align: 'center',
+          position: 'bottom',
+          align: 'end',
           labels: {
             color: '#8AAAC8',
             font: { size: 10.5, family: "'DM Sans',sans-serif" },
-            boxWidth: 11,
-            boxHeight: 11,
-            padding: 10,
+            boxWidth: 10, boxHeight: 10,
+            padding: 7,
             usePointStyle: true,
-            pointStyle: 'circle',
-            // Mostrar nombre + valor en cada ítem de la leyenda
-            generateLabels(chart) {
-              return chart.data.labels.map((label, i) => ({
-                text: `${label}  (${datos[i]})`,
-                fillStyle: COLORS[i] + 'cc',
-                strokeStyle: COLORS[i],
-                lineWidth: 1.5,
-                hidden: false,
-                index: i
-              }));
-            }
+            pointStyle: 'circle'
           }
         },
         tooltip: {
           callbacks: {
-            label: ctx => {
-              const pct = FLOTA.length > 0 ? Math.round(ctx.parsed / FLOTA.length * 100) : 0;
-              return ` ${ctx.label}: ${ctx.parsed} equipo${ctx.parsed!==1?'s':''} · ${pct}%`;
+            label: function(ctx) {
+              var pct = FLOTA.length > 0 ? Math.round(ctx.parsed / FLOTA.length * 100) : 0;
+              return ' ' + ctx.parsed + ' equipo' + (ctx.parsed!==1?'s':'') + ' · ' + pct + '%';
             }
           }
         }
@@ -4070,7 +4051,6 @@ function renderEstadoEquipos(bachs, evs) {
     plugins: [centerPlugin, sliceLabelsPlugin]
   });
 }
-
 function renderBachadasTiempo(id,labels,dataBach,dataTiempo){
   const c=document.getElementById(id);if(!c)return;
   if(charts[id])charts[id].destroy();

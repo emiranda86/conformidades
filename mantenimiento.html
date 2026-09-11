@@ -1139,7 +1139,7 @@ tr.clickable-row:hover td { background: var(--surface2); }
                   <div class="pbi-card-title">🔄 Estado de equipos · tiempo real</div>
                   <div class="pbi-card-badge" id="eq-status-badge">14 equipos</div>
                 </div>
-                <div style="position:relative;height:210px;"><canvas id="chart-estado-equipos"></canvas></div>
+                <div style="position:relative;height:260px;"><canvas id="chart-estado-equipos"></canvas></div>
               </div>
 
               <!-- Superior derecha: Bachadas vs Tiempo (barras apiladas Opción B) -->
@@ -3925,11 +3925,6 @@ function renderLineConMeta(id,labels,data,label,color,meta){
 // bachadas, la curva sube — refleja el avance productivo en tiempo real.
 // ============================================================
 // DONA: ESTADO DE EQUIPOS EN TIEMPO REAL
-// Muestra la distribución de la flota en cada momento:
-//   🔵 En congelamiento (bachada activa)
-//   🟠 Parado operativo (C/D o descongelamiento)
-//   🔴 En mantenimiento (programada, falla, sin MP)
-//   ⬜ Sin actividad (disponible)
 // ============================================================
 function renderEstadoEquipos(bachs, evs) {
   const id = 'chart-estado-equipos';
@@ -3942,7 +3937,6 @@ function renderEstadoEquipos(bachs, evs) {
   const EV_MANT = ['programada','no_programada','sin_produccion','fin_proceso'];
 
   let nCongel=0, nEvOp=0, nMant=0, nLibre=0;
-
   FLOTA.forEach(eq=>{
     const tieneBach  = bachs.some(b=>b.equipo===eq && b.estado==='pendiente');
     const tieneEvOp  = evs.some(e=>e.equipo===eq && e.estado==='abierto' && EV_OP.includes(e.tipo));
@@ -3953,26 +3947,70 @@ function renderEstadoEquipos(bachs, evs) {
     else                 nLibre++;
   });
 
-  const nOperativos = nCongel + nEvOp; // C/D y descong son parte de la operación
-
-  // Actualizar badge
+  const nOperativos = nCongel + nEvOp;
   const badge = document.getElementById('eq-status-badge');
   if(badge) badge.textContent = `${nOperativos} de ${FLOTA.length} operativos`;
 
-  // Plugin para texto central de la dona
+  const COLORS = ['#00C8FF','#FF9500','#FF3B5C','#2A4466'];
+  const datos  = [nCongel, nEvOp, nMant, nLibre];
+  const labels = ['En congelamiento','C/D · Descongelamiento','Mantenimiento','Sin actividad'];
+
+  // Plugin 1: texto central de la dona
   const centerPlugin = {
     id: 'center_eq',
     afterDraw(chart) {
       const {ctx, chartArea:{top,bottom,left,right}} = chart;
+      // Límite derecho de la dona = donde empieza la leyenda lateral
+      // Para centrarlo sobre la dona, usamos el área de chart menos el ancho de la leyenda
+      const legendW = chart.legend ? chart.legend.width || 0 : 0;
+      const donutRight = right - legendW;
+      const cx = (left + donutRight) / 2;
+      const cy = (top + bottom) / 2;
       ctx.save();
-      const cx=(left+right)/2, cy=(top+bottom)/2;
-      ctx.textAlign='center'; ctx.textBaseline='middle';
-      ctx.font="bold 24px 'Syne',sans-serif";
-      ctx.fillStyle='#E8F4FF';
-      ctx.fillText(nOperativos, cx, cy-7);
-      ctx.font="10px 'DM Sans',sans-serif";
-      ctx.fillStyle='#8AAAC8';
-      ctx.fillText(`de ${FLOTA.length} equipos`, cx, cy+11);
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.font = "bold 26px 'Syne',sans-serif";
+      ctx.fillStyle = '#E8F4FF';
+      ctx.fillText(nOperativos, cx, cy - 9);
+      ctx.font = "10px 'DM Sans',sans-serif";
+      ctx.fillStyle = '#8AAAC8';
+      ctx.fillText(`de ${FLOTA.length} equipos`, cx, cy + 10);
+      ctx.restore();
+    }
+  };
+
+  // Plugin 2: valores sobre cada porción
+  const sliceLabelsPlugin = {
+    id: 'slice_labels',
+    afterDatasetDraw(chart) {
+      const {ctx} = chart;
+      const meta = chart.getDatasetMeta(0);
+      ctx.save();
+      meta.data.forEach((arc, i) => {
+        const val = datos[i];
+        if(val === 0) return;
+        // Calcular ángulo medio del arco
+        const startAngle = arc.startAngle;
+        const endAngle   = arc.endAngle;
+        const midAngle   = (startAngle + endAngle) / 2;
+        // Radio a 72% del arco (entre centro y borde exterior)
+        const outerR = arc.outerRadius;
+        const innerR = arc.innerRadius;
+        const r = innerR + (outerR - innerR) * 0.55;
+        const x = arc.x + Math.cos(midAngle) * r;
+        const y = arc.y + Math.sin(midAngle) * r;
+        // Solo dibujar si el arco tiene suficiente espacio
+        const arcSpan = endAngle - startAngle;
+        if(arcSpan < 0.25) return; // arco muy pequeño → no cabe etiqueta
+        ctx.font = "bold 13px 'DM Sans',sans-serif";
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        // Sombra para legibilidad sobre colores oscuros
+        ctx.shadowColor = 'rgba(0,0,0,0.6)';
+        ctx.shadowBlur = 4;
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillText(val, x, y);
+        ctx.shadowBlur = 0;
+      });
       ctx.restore();
     }
   };
@@ -3980,39 +4018,56 @@ function renderEstadoEquipos(bachs, evs) {
   charts[id] = new Chart(c, {
     type: 'doughnut',
     data: {
-      labels: ['En congelamiento','C/D · Descongelamiento','Mantenimiento','Sin actividad'],
+      labels,
       datasets: [{
-        data: [nCongel, nEvOp, nMant, nLibre],
-        backgroundColor: ['#00C8FFcc','#FF9500cc','#FF3B5Ccc','#1E3352'],
-        borderColor:     ['#00C8FF',  '#FF9500',  '#FF3B5C',  '#2A4466'],
+        data: datos,
+        backgroundColor: COLORS.map(col => col + 'cc'),
+        borderColor: COLORS,
         borderWidth: 2,
-        hoverOffset: 8
+        hoverOffset: 10
       }]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      cutout: '64%',
+      cutout: '60%',
+      layout: { padding: { right: 4 } },
       plugins: {
         legend: {
-          position: 'bottom',
+          position: 'right',
+          align: 'center',
           labels: {
-            color:'#8AAAC8',
-            font:{size:10,family:"'DM Sans',sans-serif"},
-            boxWidth:10, padding:6, usePointStyle:true
+            color: '#8AAAC8',
+            font: { size: 10.5, family: "'DM Sans',sans-serif" },
+            boxWidth: 11,
+            boxHeight: 11,
+            padding: 10,
+            usePointStyle: true,
+            pointStyle: 'circle',
+            // Mostrar nombre + valor en cada ítem de la leyenda
+            generateLabels(chart) {
+              return chart.data.labels.map((label, i) => ({
+                text: `${label}  (${datos[i]})`,
+                fillStyle: COLORS[i] + 'cc',
+                strokeStyle: COLORS[i],
+                lineWidth: 1.5,
+                hidden: false,
+                index: i
+              }));
+            }
           }
         },
         tooltip: {
           callbacks: {
             label: ctx => {
-              const pct = FLOTA.length > 0 ? Math.round(ctx.parsed/FLOTA.length*100) : 0;
-              return ` ${ctx.label}: ${ctx.parsed} equipo${ctx.parsed!==1?'s':''} (${pct}%)`;
+              const pct = FLOTA.length > 0 ? Math.round(ctx.parsed / FLOTA.length * 100) : 0;
+              return ` ${ctx.label}: ${ctx.parsed} equipo${ctx.parsed!==1?'s':''} · ${pct}%`;
             }
           }
         }
       }
     },
-    plugins: [centerPlugin]
+    plugins: [centerPlugin, sliceLabelsPlugin]
   });
 }
 

@@ -1133,15 +1133,13 @@ tr.clickable-row:hover td { background: var(--surface2); }
                 </div>
               </div>
 
-              <!-- Superior centro: Producción acumulada del período (área que crece) -->
+              <!-- Superior centro: Estado de equipos en tiempo real (dona) -->
               <div class="pbi-card">
                 <div class="pbi-card-head">
-                  <div class="pbi-card-title">📈 Producción acumulada</div>
-                  <div class="dash-legend-inline">
-                    <span><span class="dash-leg-line" style="background:#00e87a;"></span>Acumulado (t)</span>
-                  </div>
+                  <div class="pbi-card-title">🔄 Estado de equipos · tiempo real</div>
+                  <div class="pbi-card-badge" id="eq-status-badge">14 equipos</div>
                 </div>
-                <div style="position:relative;height:262px;"><canvas id="chart-prod-acum"></canvas></div>
+                <div style="position:relative;height:210px;"><canvas id="chart-estado-equipos"></canvas></div>
               </div>
 
               <!-- Superior derecha: Bachadas vs Tiempo (barras apiladas Opción B) -->
@@ -3466,8 +3464,8 @@ function renderDashboard(){
   const dataTiempo = idxConDatos.map(i => tiempoPorEq[i]);
   renderBachadasTiempo('chart-bach-tiempo', labelsBT, dataBach, dataTiempo);
 
-  // ===== NUEVO: Producción acumulada del período (área que crece) =====
-  renderProduccionAcumulada(bachs);
+  // ===== Estado de equipos en tiempo real (dona) =====
+  renderEstadoEquipos(bachs, evs);
 
   // ===== NUEVO: Tabla operativa de bachadas (cronológico inverso) =====
   renderTablaOperativa(bachs);
@@ -3925,64 +3923,96 @@ function renderLineConMeta(id,labels,data,label,color,meta){
 // ============================================================
 // Suma progresiva del peso a lo largo del tiempo. A medida que se cargan
 // bachadas, la curva sube — refleja el avance productivo en tiempo real.
-function renderProduccionAcumulada(bachs){
-  const id='chart-prod-acum';
-  const c=document.getElementById(id);
+// ============================================================
+// DONA: ESTADO DE EQUIPOS EN TIEMPO REAL
+// Muestra la distribución de la flota en cada momento:
+//   🔵 En congelamiento (bachada activa)
+//   🟠 Parado operativo (C/D o descongelamiento)
+//   🔴 En mantenimiento (programada, falla, sin MP)
+//   ⬜ Sin actividad (disponible)
+// ============================================================
+function renderEstadoEquipos(bachs, evs) {
+  const id = 'chart-estado-equipos';
+  const c  = document.getElementById(id);
   if(!c) return;
   if(charts[id]) charts[id].destroy();
 
-  // Ordenar bachadas cronológicamente por día operativo + hora de inicio
-  const ordenadas=bachs.filter(b=>b.inicio&&b.fecha)
-    .slice()
-    .sort((a,b)=>{
-      const ka=(a.fecha||'')+'T'+(a.inicio||'00:00');
-      const kb=(b.fecha||'')+'T'+(b.inicio||'00:00');
-      return ka.localeCompare(kb);
-    });
+  const FLOTA = ['C1','C2','C3','C4','C5','C6','C7','C8','C9','C10','C11','C12','C13','TE'];
+  const EV_OP   = ['carga_descarga','descongelamiento'];
+  const EV_MANT = ['programada','no_programada','sin_produccion','fin_proceso'];
 
-  // Acumular peso progresivamente, etiqueta por fecha+hora
-  let acum=0;
-  const labels=[], data=[];
-  ordenadas.forEach(b=>{
-    acum += (b.peso||0)/1000; // toneladas
-    labels.push((b.fecha||'').slice(5)+' '+(b.inicio||''));
-    data.push(parseFloat(acum.toFixed(2)));
+  let nCongel=0, nEvOp=0, nMant=0, nLibre=0;
+
+  FLOTA.forEach(eq=>{
+    const tieneBach  = bachs.some(b=>b.equipo===eq && b.estado==='pendiente');
+    const tieneEvOp  = evs.some(e=>e.equipo===eq && e.estado==='abierto' && EV_OP.includes(e.tipo));
+    const tieneEvMnt = evs.some(e=>e.equipo===eq && e.estado==='abierto' && EV_MANT.includes(e.tipo));
+    if(tieneBach)        nCongel++;
+    else if(tieneEvOp)   nEvOp++;
+    else if(tieneEvMnt)  nMant++;
+    else                 nLibre++;
   });
 
-  if(!data.length){
-    const ctx=c.getContext('2d');
-    ctx.clearRect(0,0,c.width,c.height);
-    return;
-  }
+  const nOperativos = nCongel + nEvOp; // C/D y descong son parte de la operación
 
-  charts[id]=new Chart(c,{
-    type:'line',
-    data:{labels,datasets:[{
-      label:'Acumulado (t)',
-      data,
-      borderColor:'#00e87a',
-      backgroundColor:'rgba(0,232,122,0.15)',
-      borderWidth:2,
-      pointRadius:data.length>30?0:2,
-      pointBackgroundColor:'#00e87a',
-      tension:0.2,
-      fill:true,
-      stepped:false
-    }]},
-    options:{
-      responsive:true,maintainAspectRatio:false,
-      plugins:{
-        legend:{display:false},
-        tooltip:{callbacks:{
-          title:items=>items[0].label,
-          label:c=>'Acumulado: '+c.parsed.y.toFixed(1)+' t'
-        }}
-      },
-      scales:{
-        x:{grid:{display:false},ticks:{color:'#8aaac8',font:{size:9},maxRotation:0,autoSkip:true,maxTicksLimit:6}},
-        y:{grid:{color:'#1e3352'},ticks:{color:'#8aaac8',callback:v=>v+'t'},beginAtZero:true}
-      }
+  // Actualizar badge
+  const badge = document.getElementById('eq-status-badge');
+  if(badge) badge.textContent = `${nOperativos} de ${FLOTA.length} operativos`;
+
+  // Plugin para texto central de la dona
+  const centerPlugin = {
+    id: 'center_eq',
+    afterDraw(chart) {
+      const {ctx, chartArea:{top,bottom,left,right}} = chart;
+      ctx.save();
+      const cx=(left+right)/2, cy=(top+bottom)/2;
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.font="bold 24px 'Syne',sans-serif";
+      ctx.fillStyle='#E8F4FF';
+      ctx.fillText(nOperativos, cx, cy-7);
+      ctx.font="10px 'DM Sans',sans-serif";
+      ctx.fillStyle='#8AAAC8';
+      ctx.fillText(`de ${FLOTA.length} equipos`, cx, cy+11);
+      ctx.restore();
     }
+  };
+
+  charts[id] = new Chart(c, {
+    type: 'doughnut',
+    data: {
+      labels: ['En congelamiento','C/D · Descongelamiento','Mantenimiento','Sin actividad'],
+      datasets: [{
+        data: [nCongel, nEvOp, nMant, nLibre],
+        backgroundColor: ['#00C8FFcc','#FF9500cc','#FF3B5Ccc','#1E3352'],
+        borderColor:     ['#00C8FF',  '#FF9500',  '#FF3B5C',  '#2A4466'],
+        borderWidth: 2,
+        hoverOffset: 8
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '64%',
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: {
+            color:'#8AAAC8',
+            font:{size:10,family:"'DM Sans',sans-serif"},
+            boxWidth:10, padding:6, usePointStyle:true
+          }
+        },
+        tooltip: {
+          callbacks: {
+            label: ctx => {
+              const pct = FLOTA.length > 0 ? Math.round(ctx.parsed/FLOTA.length*100) : 0;
+              return ` ${ctx.label}: ${ctx.parsed} equipo${ctx.parsed!==1?'s':''} (${pct}%)`;
+            }
+          }
+        }
+      }
+    },
+    plugins: [centerPlugin]
   });
 }
 

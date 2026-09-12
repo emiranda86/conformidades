@@ -1183,7 +1183,7 @@ tr.clickable-row:hover td { background: var(--surface2); }
                   <div class="pbi-card-title">📅 Producción diaria · tendencia</div>
                   <div class="dash-legend-inline">
                     <span><span class="dash-leg-line" style="background:#00c8ff;"></span>Real</span>
-                    <span><span class="dash-leg-line" style="background:#ff3b5c;border-top:1px dashed #ff3b5c;"></span>Meta 100t</span>
+                    <span><span class="dash-leg-line" style="background:#ff3b5c;border-top:1px dashed #ff3b5c;"></span>Meta 120t</span>
                   </div>
                 </div>
                 <div class="dash-tend-filtros">
@@ -1668,8 +1668,11 @@ tr.clickable-row:hover td { background: var(--surface2); }
         <div class="field"><label>Cantidad de Aros</label><input type="number" id="b-aros" min="1" oninput="calcPeso()"></div>
         <div class="field">
           <label>Peso por aro (kg/aro)</label>
-          <input type="number" id="b-factor" step="0.01" oninput="calcPeso()" placeholder="Auto según equipo" style="max-width:120px;">
-          <div class="field-note" id="b-factor-note">Se completa automáticamente al elegir equipo · editable si es necesario</div>
+          <select id="b-factor" onchange="calcPeso()" style="max-width:160px;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:8px 12px;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;outline:none;">
+            <option value="7.35">7.35 kg/aro — estándar (C1-C9)</option>
+            <option value="10">10.00 kg/aro — aro grande (C10-C13 · TE)</option>
+          </select>
+          <div class="field-note" id="b-factor-note">Se ajusta automáticamente al elegir el equipo</div>
         </div>
         <div class="field"><label>Peso Calculado (kg)</label><input type="text" id="b-peso" readonly><div class="field-note" id="b-peso-note"></div></div>
         <div class="field"><label>Fecha</label><input type="date" id="b-fecha"></div>
@@ -2335,7 +2338,12 @@ function openBachadaModal(id){
     document.getElementById('b-aros').value=b.aros;
     // Cargar el factor guardado o el default del equipo
     const factorElEdit=document.getElementById('b-factor');
-    if(factorElEdit) factorElEdit.value=(b.factor||getFactorDefault(b.equipo)).toFixed(2);
+    if(factorElEdit){
+      // Normalizar a las dos opciones válidas (compatibilidad con registros anteriores)
+      const fVal=b.factor||getFactorDefault(b.equipo);
+      const fNorm=fVal>8?10:7.35;
+      Array.from(factorElEdit.options).forEach(opt=>{ opt.selected=(parseFloat(opt.value)===fNorm); });
+    }
     document.getElementById('b-fecha').value=b.fecha;
     document.getElementById('b-turno').value=b.turno;
     document.getElementById('b-tecnico').value=b.tecnico;
@@ -2391,13 +2399,13 @@ function onEquipoChange(){
 }
 
 // ── Factor por defecto según equipo ──────────────────────────────────────
-// C1-C9: 7.45 kg/aro · C10-C13 y TE: 10 kg/aro
-// El usuario puede editar el campo si carga aros de peso distinto al default.
+// C1-C9: 7.35 kg/aro · C10-C13 y TE: 10 kg/aro
+// Solo dos valores posibles — seleccionables, no editables libremente.
 function getFactorDefault(eq){
-  if(!eq) return 7.45;
+  if(!eq) return 7.35;
   if(eq==='TE') return 10;
   const num=parseInt((eq||'').replace('C',''))||0;
-  return num>=10 ? 10 : 7.45;
+  return num>=10 ? 10 : 7.35;
 }
 
 function calcPeso(){
@@ -2407,10 +2415,9 @@ function calcPeso(){
   // Leer el valor del campo: si el usuario lo está editando (incluso vacío),
   // respetar lo que está escribiendo. NO sobreescribir el campo desde aquí.
   // Solo onEquipoChange() establece el valor por defecto (al cambiar el equipo).
+  // Select tiene siempre un valor válido; parseFloat funciona igual que con input
   const factorStr = factorEl ? factorEl.value : '';
-  const factor = (factorStr !== '' && !isNaN(parseFloat(factorStr)))
-    ? parseFloat(factorStr)
-    : getFactorDefault(eq);
+  const factor = parseFloat(factorStr) || getFactorDefault(eq);
   if(!eq||!aros){document.getElementById('b-peso').value='';return;}
   document.getElementById('b-peso').value=(aros*factor).toFixed(1)+' kg';
   document.getElementById('b-peso-note').textContent='Factor: '+factor+' kg/aro';
@@ -3366,20 +3373,20 @@ function renderDashboard(){
   //
   //   TOTAL FLOTA: 4,199.70 kg/h = 100.8 t/día
   //   (coincide con la meta de 100 t/día ya configurada en el sistema)
-  // Capacidad por equipo con factores actualizados (7.45 kg/aro C1-C9, 10 kg/aro C10-C13):
-  // C1-C3: 150×7.45=1117.5 kg/bach · ciclo 14h → 4×1117.5/14 = 319.29 kg/h
-  // C4-C9: 168×7.45=1251.6 kg/bach · ciclo 16h → 4×1251.6/16 = 312.90 kg/h
+  // Capacidad por equipo con factores actualizados (7.35 kg/aro C1-C9, 10 kg/aro C10-C13):
+  // C1-C3: 150×7.35=1102.5 kg/bach · ciclo 14h → 4×1102.5/14 = 315.00 kg/h
+  // C4-C9: 168×7.35=1234.8 kg/bach · ciclo 16h → 4×1234.8/16 = 308.70 kg/h
   // C10-C13: 240×10=2400 kg/bach   · ciclo 16h → 4×2400/16   = 600.00 kg/h
   // TE: 768×10=7680 kg/bach         · ciclo 15.5h → 7680/15.5  = 495.48 kg/h
   const CAP_MAX_KGH = {
-    C1:319.29, C2:319.29, C3:319.29,
-    C4:312.90, C5:312.90, C6:312.90, C7:312.90, C8:312.90, C9:312.90,
+    C1:315.00, C2:315.00, C3:315.00,
+    C4:308.70, C5:308.70, C6:308.70, C7:308.70, C8:308.70, C9:308.70,
     C10:600.00, C11:600.00, C12:600.00, C13:600.00,
     TE:495.48
   };
-  // Total flota 14 equipos = 3×319.29 + 6×312.90 + 4×600.00 + 495.48
-  // = 957.87 + 1877.40 + 2400.00 + 495.48 = 5730.75 kg/h = 137.5 t/día
-  const CAP_MAX_TOTAL_KGH = 5730.75; // kg/h
+  // Total flota 14 equipos = 3×315.00 + 6×308.70 + 4×600.00 + 495.48
+  // = 945.00 + 1852.20 + 2400.00 + 495.48 = 5692.68 kg/h = 136.6 t/día
+  const CAP_MAX_TOTAL_KGH = 5692.68; // kg/h
 
   // Capacidad teórica para el período y equipos filtrados
   const equiposEfic = equipoF ? [equipoF] : Object.keys(CAP_MAX_KGH);
@@ -3901,7 +3908,7 @@ function renderTendenciaProduccion() {
   const fechasOrd = Object.keys(fechasMap).sort();
   const prodDiariaTon = fechasOrd.map(f => parseFloat((fechasMap[f] / 1000).toFixed(1)));
 
-  renderLineConMeta('chart-prod-dia', fechasOrd.map(f => f.slice(5)), prodDiariaTon, 'Producción (t)', '#00c8ff', 100);
+  renderLineConMeta('chart-prod-dia', fechasOrd.map(f => f.slice(5)), prodDiariaTon, 'Producción (t)', '#00c8ff', 120);
 }
 
 function renderLineConMeta(id,labels,data,label,color,meta){
@@ -3955,10 +3962,10 @@ function renderEstadoEquipos(bachs, evs) {
   const datos  = [nCongel, nEvOp, nMant, nLibre];
   // Valor incluido en el label → color de texto hereda de labels.color, sin generateLabels
   const labels = [
-    'En congelamiento   ' + nCongel,
-    'C/D · Descongelamiento   ' + nEvOp,
-    'Mantenimiento   ' + nMant,
-    'Sin actividad   ' + nLibre
+    'En congelamiento',
+    'C/D · Descongelamiento',
+    'Mantenimiento',
+    'Sin actividad'
   ];
 
   // Plugin 1: texto central — usa coordenadas reales del arco, no chartArea

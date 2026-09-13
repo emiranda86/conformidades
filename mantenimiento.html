@@ -2357,7 +2357,10 @@ function openBachadaModal(id){
     document.getElementById('b-modal-title').textContent='🧊 Nueva Bachada';
     document.getElementById('b-modal-sub').textContent='Registra datos de inicio. Luego edita para completar al finalizar.';
     ['b-equipo','b-producto','b-tecnico'].forEach(id=>document.getElementById(id).value='');
-    ['b-bach','b-aros','b-factor','b-peso','b-tcong','b-fin','b-temp','b-obs'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+    ['b-bach','b-aros','b-peso','b-tcong','b-fin','b-temp','b-obs'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+    // Resetear el select de factor al valor por defecto (7.35 para nueva bachada sin equipo seleccionado aún)
+    const factorElReset = document.getElementById('b-factor');
+    if(factorElReset) factorElReset.value = '7.35';;
     document.getElementById('b-fecha').value=today();
     document.getElementById('b-inicio').value=nowTime();
     const h=new Date().getHours();
@@ -2370,6 +2373,17 @@ function openBachadaModal(id){
 
 function onEquipoChange(){
   const eq = document.getElementById('b-equipo').value;
+
+  // 1. Establecer el factor por defecto según el equipo ANTES de calcPeso
+  const factorEl = document.getElementById('b-factor');
+  if(factorEl && eq) {
+    factorEl.value = String(getFactorDefault(eq));   // select.value = "7.35" o "10"
+    const noteEl = document.getElementById('b-factor-note');
+    if(noteEl) noteEl.textContent = getFactorDefault(eq) === 10
+      ? 'C10-C13 y TE: 10 kg/aro — selecciona 7.35 si carga aros estándar'
+      : 'C1-C9: 7.35 kg/aro — selecciona 10 si carga aros grandes';
+  }
+
   calcPeso();
   if(eq && editingBachadaId === null) {
     // ============================================================

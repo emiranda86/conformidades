@@ -1157,24 +1157,29 @@ tr.clickable-row:hover td { background: var(--surface2); }
 
             <!-- ===== ZONA INFERIOR ===== -->
             <div class="dash-zona-inferior">
-              <!-- Inferior izquierda: Tabla operativa de bachadas -->
+              <!-- Inferior izquierda: Producción por equipo · barras horizontales -->
               <div class="pbi-card" style="padding:0;overflow:hidden;">
-                <div class="pbi-card-head" style="padding:14px 16px;margin-bottom:0;border-bottom:1px solid var(--border);">
-                  <div class="pbi-card-title">📋 Tabla operativa de bachadas</div>
-                  <div class="pbi-card-badge" id="dash-tabla-count">cronológico inverso</div>
+                <div class="pbi-card-head" style="padding:12px 16px;margin-bottom:0;border-bottom:1px solid var(--border);">
+                  <div class="pbi-card-title">📊 Producción por equipo · hoy</div>
+                  <div class="pbi-card-badge" id="dash-barras-badge">—</div>
                 </div>
-                <div style="overflow-x:auto;max-height:430px;overflow-y:auto;">
-                  <table class="data-table" style="font-size:12px;">
-                    <thead>
-                      <tr>
-                        <th>Fecha</th><th>Turno</th><th>Cong.</th><th>Bach</th>
-                        <th style="text-align:right;">Ton</th><th style="text-align:right;">T.Cong</th>
-                        <th>Inicio</th><th>Fin</th><th>Estado</th>
-                      </tr>
-                    </thead>
-                    <tbody id="dash-tabla-bachadas"></tbody>
-                  </table>
+                <!-- Leyenda -->
+                <div style="display:flex;gap:12px;padding:10px 16px 6px;flex-wrap:wrap;border-bottom:1px solid var(--border);">
+                  <span style="display:flex;align-items:center;gap:4px;font-size:10.5px;color:var(--text2);">
+                    <span style="width:20px;height:6px;border-radius:2px;background:#1E3352;display:inline-block;border:1px solid #2A4466;"></span>Meta
+                  </span>
+                  <span style="display:flex;align-items:center;gap:4px;font-size:10.5px;color:var(--text2);">
+                    <span style="width:20px;height:6px;border-radius:2px;background:#00E87A;display:inline-block;"></span>&gt;100%
+                  </span>
+                  <span style="display:flex;align-items:center;gap:4px;font-size:10.5px;color:var(--text2);">
+                    <span style="width:20px;height:6px;border-radius:2px;background:#00C8FF;display:inline-block;"></span>75–100%
+                  </span>
+                  <span style="display:flex;align-items:center;gap:4px;font-size:10.5px;color:var(--text2);">
+                    <span style="width:20px;height:6px;border-radius:2px;background:#FF3B5C;display:inline-block;"></span>&lt;75%
+                  </span>
                 </div>
+                <!-- Barras -->
+                <div id="dash-barras-prod" style="padding:10px 16px 8px;display:flex;flex-direction:column;gap:5px;"></div>
               </div>
 
               <!-- Inferior centro+derecha: Tendencia de producción con meta (ocupa 2 columnas) -->
@@ -3488,8 +3493,8 @@ function renderDashboard(){
   // ===== Estado de equipos en tiempo real (dona) =====
   renderEstadoEquipos(bachs, evs);
 
-  // ===== NUEVO: Tabla operativa de bachadas (cronológico inverso) =====
-  renderTablaOperativa(bachs);
+  // ===== Producción por equipo · barras horizontales =====
+  renderProduccionBarras(bachs);
 
   // NUEVO: Distribución por producto (doughnut)
   const prodMap = {};
@@ -4428,6 +4433,66 @@ document.getElementById('b-aros').addEventListener('input',calcPeso);
 // ======== DASHBOARD FULLSCREEN & PAGINATION ========
 let currentDashPage = 1;
 const totalDashPages = 3;
+
+// ============================================================
+// ============================================================
+// BARRAS HORIZONTALES: Producción por equipo vs meta diaria
+// Tema oscuro: verde/cyan/rojo con texto contrastante dentro
+// ============================================================
+function renderProduccionBarras(bachs) {
+  const container = document.getElementById('dash-barras-prod');
+  const badge     = document.getElementById('dash-barras-badge');
+  if(!container) return;
+
+  // Día operativo actual (empieza a las 08:00)
+  const ahora = new Date();
+  const dOp   = new Date(ahora);
+  if(ahora.getHours() < 8) dOp.setDate(dOp.getDate() - 1);
+  const fechaOp = dOp.toISOString().slice(0, 10);
+  if(badge) badge.textContent = fechaOp;
+
+  // Producción real por equipo del día operativo (kg → t)
+  const ORDEN = ['C1','C2','C3','C4','C5','C6','C7','C8','C9','C10','C11','C12','C13','TE'];
+  const realKg = {};
+  ORDEN.forEach(eq => realKg[eq] = 0);
+  bachs.filter(b => b.fecha === fechaOp && b.peso)
+       .forEach(b => { if(realKg.hasOwnProperty(b.equipo)) realKg[b.equipo] += (b.peso || 0); });
+
+  // Meta diaria por equipo: CAP_MAX_KGH (kg/h) × 24 h ÷ 1000 = t/día
+  const metaT = {};
+  ORDEN.forEach(eq => { metaT[eq] = (CAP_MAX_KGH[eq] || 0) * 24 / 1000; });
+  const MAX_META = Math.max(...ORDEN.map(eq => metaT[eq]));
+
+  // Helpers de color (tema oscuro)
+  function barCol(pct){ return pct>100?'#00E87A':pct>=75?'#00C8FF':'#FF3B5C'; }
+  function inkCol(pct){ return pct>=75?'#042C53':'#FFFFFF'; } // contraste dentro de la barra
+  function pctCol(pct){ return pct>100?'#00E87A':pct>=75?'#00C8FF':'#FF3B5C'; }
+
+  container.innerHTML = ORDEN.map(eq => {
+    const mT    = metaT[eq] || 0;
+    const rT    = realKg[eq] / 1000;          // kg → t
+    const pct   = mT > 0 ? (rT / mT * 100) : 0;
+    const metaW = (mT / MAX_META) * 100;
+    const realW = Math.min((rT / MAX_META) * 100, metaW); // nunca supera la meta → sin desborde
+    const mark75= metaW * 0.75;
+    const bc=barCol(pct), ic=inkCol(pct), pc=pctCol(pct);
+    const textInside = (realW / 100 * 300) > 54; // ~300px área útil de barra
+
+    return `
+<div style="display:grid;grid-template-columns:32px 1fr 44px;align-items:center;gap:7px;">
+  <span style="font-size:11px;color:var(--text2);text-align:right;">${eq}</span>
+  <div style="position:relative;height:20px;border-radius:3px;overflow:hidden;background:#0C2D4F;border:1px solid #1E3352;">
+    <div style="position:absolute;left:0;top:0;height:100%;width:${metaW.toFixed(2)}%;background:#1E3352;border-radius:3px;"></div>
+    <div style="position:absolute;left:0;top:0;height:100%;width:${realW.toFixed(2)}%;background:${bc};border-radius:3px;display:flex;align-items:center;overflow:hidden;">
+      ${textInside?`<span style="padding-left:7px;font-size:10.5px;font-weight:600;color:${ic};white-space:nowrap;font-family:var(--font-mono);">${rT.toFixed(1)} t</span>`:''}
+    </div>
+    ${!textInside?`<span style="position:absolute;left:calc(${realW.toFixed(2)}% + 4px);top:50%;transform:translateY(-50%);font-size:10.5px;font-weight:600;color:${bc};white-space:nowrap;font-family:var(--font-mono);">${rT.toFixed(1)} t</span>`:''}
+    <div style="position:absolute;left:${mark75.toFixed(2)}%;top:3px;height:calc(100% - 6px);width:1.5px;background:rgba(255,255,255,0.2);border-radius:1px;"></div>
+  </div>
+  <span style="font-size:11px;font-weight:600;color:${pc};text-align:right;">${pct.toFixed(0)}%</span>
+</div>`;
+  }).join('');
+}
 
 // ============================================================
 // PORTADA: TARJETAS DE EQUIPOS ACTIVOS

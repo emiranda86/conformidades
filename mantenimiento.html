@@ -3390,17 +3390,17 @@ function renderDashboard(){
   // Capacidad por equipo con factores actualizados (7.35 kg/aro C1-C9, 10 kg/aro C10-C13):
   // C1-C3: 150×7.35=1102.5 kg/bach · ciclo 14h → 4×1102.5/14 = 315.00 kg/h
   // C4-C9: 168×7.35=1234.8 kg/bach · ciclo 16h → 4×1234.8/16 = 308.70 kg/h
-  // C10-C13: 240×10=2400 kg/bach   · ciclo 16h → 4×2400/16   = 600.00 kg/h
+  // C10-C13: 216×10=2160 kg/bach   · ciclo 16h → 4×2160/16   = 540.00 kg/h
   // TE: 768×10=7680 kg/bach         · ciclo 15.5h → 7680/15.5  = 495.48 kg/h
   const CAP_MAX_KGH = {
     C1:315.00, C2:315.00, C3:315.00,
     C4:308.70, C5:308.70, C6:308.70, C7:308.70, C8:308.70, C9:308.70,
-    C10:600.00, C11:600.00, C12:600.00, C13:600.00,
+    C10:540.00, C11:540.00, C12:540.00, C13:540.00,
     TE:495.48
   };
-  // Total flota 14 equipos = 3×315.00 + 6×308.70 + 4×600.00 + 495.48
-  // = 945.00 + 1852.20 + 2400.00 + 495.48 = 5692.68 kg/h = 136.6 t/día
-  const CAP_MAX_TOTAL_KGH = 5692.68; // kg/h
+  // Total flota 14 equipos = 3×315.00 + 6×308.70 + 4×540.00 + 495.48
+  // = 945.00 + 1852.20 + 2160.00 + 495.48 = 5452.68 kg/h = 130.9 t/día
+  const CAP_MAX_TOTAL_KGH = 5452.68; // kg/h
 
   // Capacidad teórica para el período y equipos filtrados
   const equiposEfic = equipoF ? [equipoF] : Object.keys(CAP_MAX_KGH);

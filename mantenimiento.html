@@ -4444,31 +4444,38 @@ function renderProduccionBarras(bachs, capKgh) {
   const badge     = document.getElementById('dash-barras-badge');
   if(!container) return;
 
-  // Fallback: si capKgh no llega, usar valores fijos por defecto
   const CAP = capKgh || {
     C1:315.00,C2:315.00,C3:315.00,
     C4:308.70,C5:308.70,C6:308.70,C7:308.70,C8:308.70,C9:308.70,
-    C10:540.00,C11:540.00,C12:540.00,C13:540.00,
-    TE:495.48
+    C10:540.00,C11:540.00,C12:540.00,C13:540.00,TE:495.48
   };
 
-  // Día operativo actual (empieza a las 08:00)
-  const ahora = new Date();
-  const dOp   = new Date(ahora);
-  if(ahora.getHours() < 8) dOp.setDate(dOp.getDate() - 1);
-  const fechaOp = dOp.toISOString().slice(0, 10);
-  if(badge) badge.textContent = fechaOp;
+  // Período activo del dashboard (mismo filtro de fecha que el resto del dashboard)
+  // bachs YA viene filtrado por renderDashboard — NO re-filtrar por fecha aquí.
+  const from = document.getElementById('dash-from')?.value;
+  const to   = document.getElementById('dash-to')?.value;
+  let nDias = 1, periodoLabel = '';
 
-  // Producción real por equipo del día operativo (kg)
+  if(from && to) {
+    nDias = Math.max(1, Math.round((new Date(to)-new Date(from))/86400000)+1);
+    periodoLabel = nDias===1 ? from : from+' → '+to+' ('+nDias+'d)';
+  } else {
+    const fechas = new Set(bachs.map(b=>b.fecha).filter(Boolean));
+    nDias = Math.max(1, fechas.size);
+    periodoLabel = fechas.size===1 ? ([...fechas][0]||'—') : fechas.size+' días';
+  }
+  if(badge) badge.textContent = periodoLabel;
+
+  // Producción real por equipo — usa bachs tal como viene (ya filtrado por el dashboard)
   const ORDEN = ['C1','C2','C3','C4','C5','C6','C7','C8','C9','C10','C11','C12','C13','TE'];
   const realKg = {};
   ORDEN.forEach(eq => realKg[eq] = 0);
-  bachs.filter(b => b.fecha === fechaOp && b.peso)
-       .forEach(b => { if(realKg.hasOwnProperty(b.equipo)) realKg[b.equipo] += (b.peso || 0); });
+  bachs.filter(b => b.peso)
+       .forEach(b => { if(realKg.hasOwnProperty(b.equipo)) realKg[b.equipo] += (b.peso||0); });
 
-  // Meta diaria por equipo: CAP (kg/h) × 24 h ÷ 1000 = t/día
+  // Meta del período = meta diaria × nDías
   const metaT = {};
-  ORDEN.forEach(eq => { metaT[eq] = (CAP[eq] || 0) * 24 / 1000; });
+  ORDEN.forEach(eq => { metaT[eq] = (CAP[eq]||0) * 24 / 1000 * nDias; });
   const MAX_META = Math.max(...ORDEN.map(eq => metaT[eq]));
   if(MAX_META <= 0){ container.innerHTML = '<div style="color:var(--text3);font-size:12px;padding:8px;">Sin datos de capacidad</div>'; return; }
 

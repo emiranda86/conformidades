@@ -3494,7 +3494,7 @@ function renderDashboard(){
   renderEstadoEquipos(bachs, evs);
 
   // ===== Producción por equipo · barras horizontales =====
-  renderProduccionBarras(bachs);
+  renderProduccionBarras(bachs, CAP_MAX_KGH);
 
   // NUEVO: Distribución por producto (doughnut)
   const prodMap = {};
@@ -4439,10 +4439,18 @@ const totalDashPages = 3;
 // BARRAS HORIZONTALES: Producción por equipo vs meta diaria
 // Tema oscuro: verde/cyan/rojo con texto contrastante dentro
 // ============================================================
-function renderProduccionBarras(bachs) {
+function renderProduccionBarras(bachs, capKgh) {
   const container = document.getElementById('dash-barras-prod');
   const badge     = document.getElementById('dash-barras-badge');
   if(!container) return;
+
+  // Fallback: si capKgh no llega, usar valores fijos por defecto
+  const CAP = capKgh || {
+    C1:315.00,C2:315.00,C3:315.00,
+    C4:308.70,C5:308.70,C6:308.70,C7:308.70,C8:308.70,C9:308.70,
+    C10:540.00,C11:540.00,C12:540.00,C13:540.00,
+    TE:495.48
+  };
 
   // Día operativo actual (empieza a las 08:00)
   const ahora = new Date();
@@ -4451,32 +4459,33 @@ function renderProduccionBarras(bachs) {
   const fechaOp = dOp.toISOString().slice(0, 10);
   if(badge) badge.textContent = fechaOp;
 
-  // Producción real por equipo del día operativo (kg → t)
+  // Producción real por equipo del día operativo (kg)
   const ORDEN = ['C1','C2','C3','C4','C5','C6','C7','C8','C9','C10','C11','C12','C13','TE'];
   const realKg = {};
   ORDEN.forEach(eq => realKg[eq] = 0);
   bachs.filter(b => b.fecha === fechaOp && b.peso)
        .forEach(b => { if(realKg.hasOwnProperty(b.equipo)) realKg[b.equipo] += (b.peso || 0); });
 
-  // Meta diaria por equipo: CAP_MAX_KGH (kg/h) × 24 h ÷ 1000 = t/día
+  // Meta diaria por equipo: CAP (kg/h) × 24 h ÷ 1000 = t/día
   const metaT = {};
-  ORDEN.forEach(eq => { metaT[eq] = (CAP_MAX_KGH[eq] || 0) * 24 / 1000; });
+  ORDEN.forEach(eq => { metaT[eq] = (CAP[eq] || 0) * 24 / 1000; });
   const MAX_META = Math.max(...ORDEN.map(eq => metaT[eq]));
+  if(MAX_META <= 0){ container.innerHTML = '<div style="color:var(--text3);font-size:12px;padding:8px;">Sin datos de capacidad</div>'; return; }
 
   // Helpers de color (tema oscuro)
   function barCol(pct){ return pct>100?'#00E87A':pct>=75?'#00C8FF':'#FF3B5C'; }
-  function inkCol(pct){ return pct>=75?'#042C53':'#FFFFFF'; } // contraste dentro de la barra
+  function inkCol(pct){ return pct>=75?'#042C53':'#FFFFFF'; }
   function pctCol(pct){ return pct>100?'#00E87A':pct>=75?'#00C8FF':'#FF3B5C'; }
 
   container.innerHTML = ORDEN.map(eq => {
     const mT    = metaT[eq] || 0;
-    const rT    = realKg[eq] / 1000;          // kg → t
+    const rT    = realKg[eq] / 1000;
     const pct   = mT > 0 ? (rT / mT * 100) : 0;
     const metaW = (mT / MAX_META) * 100;
-    const realW = Math.min((rT / MAX_META) * 100, metaW); // nunca supera la meta → sin desborde
+    const realW = Math.min((rT / MAX_META) * 100, metaW);
     const mark75= metaW * 0.75;
     const bc=barCol(pct), ic=inkCol(pct), pc=pctCol(pct);
-    const textInside = (realW / 100 * 300) > 54; // ~300px área útil de barra
+    const textInside = (realW / 100 * 300) > 54;
 
     return `
 <div style="display:grid;grid-template-columns:32px 1fr 44px;align-items:center;gap:7px;">

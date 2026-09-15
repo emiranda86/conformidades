@@ -1469,46 +1469,41 @@ tr.clickable-row:hover td { background: var(--surface2); }
           <!-- ── SELECTOR DE TEMA ──────────────────────────────────── -->
           <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px 22px;margin-bottom:20px;">
             <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px;">🎨 Tema de color</div>
-            <div style="font-size:12px;color:var(--text3);margin-bottom:16px;">El tema se guarda automáticamente y se aplica a toda la aplicación.</div>
-            <div style="display:flex;gap:14px;flex-wrap:wrap;">
-
-              <!-- PACÍFICO -->
+            <div style="font-size:12px;color:var(--text3);margin-bottom:16px;">Elige el esquema visual. El tema se guarda automáticamente.</div>
+            <div style="display:flex;gap:12px;flex-wrap:wrap;">
+              <!-- Tarjetas de tema -->
               <button class="theme-btn" data-theme="pacifico" onclick="applyTheme('pacifico')"
-                style="display:flex;gap:12px;align-items:center;padding:14px 18px;border-radius:12px;border:2px solid var(--border);background:var(--surface2);cursor:pointer;transition:all .18s;text-align:left;">
-                <!-- Mini-preview del tema -->
-                <div style="width:56px;height:44px;border-radius:7px;background:#042C53;border:1px solid #1E3352;padding:5px;display:flex;flex-direction:column;gap:3px;flex-shrink:0;">
-                  <div style="height:5px;width:70%;background:#E8F4FF;border-radius:2px;"></div>
-                  <div style="height:4px;width:45%;background:#8AAAC8;border-radius:2px;"></div>
-                  <div style="display:flex;gap:3px;margin-top:2px;">
-                    <div style="height:9px;flex:1;background:#00C8FF;border-radius:2px;"></div>
-                    <div style="height:9px;flex:1;background:#00E87A;border-radius:2px;"></div>
-                    <div style="height:9px;flex:1;background:#FF3B5C;border-radius:2px;"></div>
-                  </div>
+                style="display:flex;flex-direction:column;gap:8px;align-items:center;padding:14px 18px;border-radius:12px;border:2px solid var(--border);background:var(--surface2);cursor:pointer;transition:all .2s;min-width:120px;">
+                <div style="display:flex;gap:5px;">
+                  <span style="width:22px;height:22px;border-radius:50%;background:#042C53;border:2px solid #1E3352;"></span>
+                  <span style="width:22px;height:22px;border-radius:50%;background:#00C8FF;"></span>
+                  <span style="width:22px;height:22px;border-radius:50%;background:#00E87A;"></span>
                 </div>
-                <div>
-                  <div style="font-size:12.5px;font-weight:700;color:var(--text);">🌊 Pacífico</div>
-                  <div style="font-size:10.5px;color:var(--text3);margin-top:2px;">Navy oscuro · original</div>
-                </div>
+                <span style="font-size:12px;font-weight:600;color:var(--text);">🌊 Pacífico</span>
+                <span style="font-size:10px;color:var(--text3);">Navy oscuro</span>
               </button>
 
-              <!-- CORPORATIVO -->
-              <button class="theme-btn" data-theme="corporativo" onclick="applyTheme('corporativo')"
-                style="display:flex;gap:12px;align-items:center;padding:14px 18px;border-radius:12px;border:2px solid var(--border);background:var(--surface2);cursor:pointer;transition:all .18s;text-align:left;">
-                <div style="width:56px;height:44px;border-radius:7px;background:#E9EDF2;border:1px solid #C6D0DC;padding:5px;display:flex;flex-direction:column;gap:3px;flex-shrink:0;">
-                  <div style="height:5px;width:70%;background:#10233A;border-radius:2px;"></div>
-                  <div style="height:4px;width:45%;background:#3C5372;border-radius:2px;"></div>
-                  <div style="display:flex;gap:3px;margin-top:2px;">
-                    <div style="height:9px;flex:1;background:#0F5FBF;border-radius:2px;"></div>
-                    <div style="height:9px;flex:1;background:#0E7C4A;border-radius:2px;"></div>
-                    <div style="height:9px;flex:1;background:#B4232A;border-radius:2px;"></div>
-                  </div>
+              <button class="theme-btn" data-theme="ejecutivo" onclick="applyTheme('ejecutivo')"
+                style="display:flex;flex-direction:column;gap:8px;align-items:center;padding:14px 18px;border-radius:12px;border:2px solid var(--border);background:var(--surface2);cursor:pointer;transition:all .2s;min-width:120px;">
+                <div style="display:flex;gap:5px;">
+                  <span style="width:22px;height:22px;border-radius:50%;background:#1C2B3C;border:2px solid #2E3F58;"></span>
+                  <span style="width:22px;height:22px;border-radius:50%;background:#4A9EF5;"></span>
+                  <span style="width:22px;height:22px;border-radius:50%;background:#2DD4A0;"></span>
                 </div>
-                <div>
-                  <div style="font-size:12.5px;font-weight:700;color:var(--text);">📊 Corporativo</div>
-                  <div style="font-size:10.5px;color:var(--text3);margin-top:2px;">Gris claro · estilo Power BI</div>
-                </div>
+                <span style="font-size:12px;font-weight:600;color:var(--text);">🏢 Ejecutivo</span>
+                <span style="font-size:10px;color:var(--text3);">Slate profesional</span>
               </button>
 
+              <button class="theme-btn" data-theme="gerencial" onclick="applyTheme('gerencial')"
+                style="display:flex;flex-direction:column;gap:8px;align-items:center;padding:14px 18px;border-radius:12px;border:2px solid var(--border);background:var(--surface2);cursor:pointer;transition:all .2s;min-width:120px;">
+                <div style="display:flex;gap:5px;">
+                  <span style="width:22px;height:22px;border-radius:50%;background:#EEF2F8;border:2px solid #D4DDE8;"></span>
+                  <span style="width:22px;height:22px;border-radius:50%;background:#1A56DB;"></span>
+                  <span style="width:22px;height:22px;border-radius:50%;background:#1A7A4A;"></span>
+                </div>
+                <span style="font-size:12px;font-weight:600;color:var(--text);">📋 Gerencial</span>
+                <span style="font-size:10px;color:var(--text3);">Claro elegante</span>
+              </button>
             </div>
           </div>
           <!-- ── / SELECTOR DE TEMA ────────────────────────────────── -->
@@ -1963,67 +1958,25 @@ function renderTimelineDebounced() {
 
 
 // ── TEMAS DE COLOR ─────────────────────────────────────────────────
-// Usa setProperty en :root para máxima compatibilidad y prioridad
-const THEME_VARS = {
-  // ── PACÍFICO · el tema original (navy oscuro) ──────────────────
-  pacifico: {
-    '--bg':'#042C53','--bg2':'#061E38','--surface':'#0C2D4F','--surface2':'#122744',
-    '--border':'#1E3352','--border2':'#2A4466',
-    '--text':'#E8F4FF','--text2':'#8AAAC8','--text3':'#4A6A8A',
-    '--accent':'#00C8FF','--green':'#00E87A','--amber':'#FACC15','--red':'#FF3B5C',
-    // Tokens específicos para gráficos y barras
-    '--chart-grid':'#1E3352','--chart-label':'#8AAAC8','--chart-title':'#E8F4FF',
-    '--bar-track':'#0C2D4F','--bar-meta':'#1E3352','--bar-ink-light':'#042C53',
-    '--tick-line':'rgba(255,255,255,0.20)',
-  },
-  // ── CORPORATIVO · gris claro estilo Power BI ───────────────────
-  // Fondo gris suave, texto azul-tinta oscuro (contraste AAA),
-  // acentos saturados Power BI que resaltan sobre gris claro.
-  corporativo: {
-    '--bg':'#E9EDF2',        // gris azulado claro — NO blanco
-    '--bg2':'#DFE5EC',       // gris un punto más oscuro
-    '--surface':'#FFFFFF',   // tarjetas blancas sobre el gris → separación clara
-    '--surface2':'#F2F5F9',  // superficie secundaria
-    '--border':'#C6D0DC',    // borde visible sobre blanco y sobre gris
-    '--border2':'#9BAABC',   // borde acentuado
-    '--text':'#10233A',      // azul tinta casi negro — contraste 14:1 sobre blanco
-    '--text2':'#3C5372',     // secundario — contraste 8:1
-    '--text3':'#5C7189',     // terciario — contraste 4.8:1 (mínimo AA)
-    '--accent':'#0F5FBF',    // azul Power BI
-    '--green':'#0E7C4A',     // verde oscuro saturado
-    '--amber':'#B45309',     // ámbar/siena oscuro
-    '--red':'#B4232A',       // rojo oscuro
-    // Tokens de gráficos ajustados al fondo claro
-    '--chart-grid':'#D3DCE6','--chart-label':'#3C5372','--chart-title':'#10233A',
-    '--bar-track':'#EDF1F6','--bar-meta':'#CED8E4','--bar-ink-light':'#FFFFFF',
-    '--tick-line':'rgba(16,35,58,0.28)',
-  }
+const THEMES = {
+  pacifico:  { label:'🌊 Pacífico',  class:'theme-pacifico',  preview:['#042C53','#00C8FF','#00E87A'] },
+  ejecutivo: { label:'🏢 Ejecutivo', class:'theme-ejecutivo', preview:['#1C2B3C','#4A9EF5','#2DD4A0'] },
+  gerencial: { label:'📋 Gerencial', class:'theme-gerencial', preview:['#EEF2F8','#1A56DB','#1A7A4A'] },
 };
 
-// Lee un token del tema activo en tiempo de render (para Chart.js)
-function tk(name, fallback){
-  const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-  return v || fallback || '';
-}
-
 function applyTheme(name){
-  const vars = THEME_VARS[name];
-  if(!vars){ console.warn('Tema desconocido:', name); return; }
-  // Aplicar directamente en :root via setProperty — máxima prioridad
-  const root = document.documentElement;
-  Object.entries(vars).forEach(([k,v]) => root.style.setProperty(k, v));
+  const body = document.body;
+  // Quitar todos los temas anteriores
+  Object.values(THEMES).forEach(t => body.classList.remove(t.class));
+  if(THEMES[name]) body.classList.add(THEMES[name].class);
   localStorage.setItem('smf_theme', name);
-  // Resaltar botón activo
+  // Re-renderizar dashboard y tarjetas activas para que charts actualicen colores
+  try { renderDashboard(); } catch(e){}
+  try { renderBachadasCards(); } catch(e){}
+  // Actualizar estado visual de los botones del selector
   document.querySelectorAll('.theme-btn').forEach(btn=>{
-    const active = btn.dataset.theme === name;
-    btn.style.borderColor = active ? vars['--accent'] : '';
-    btn.style.boxShadow   = active ? ('0 0 0 2px ' + vars['--accent'] + '44') : '';
+    btn.classList.toggle('theme-btn-active', btn.dataset.theme===name);
   });
-  // Re-renderizar dashboard para actualizar colores de gráficos
-  setTimeout(()=>{
-    try{ renderDashboard(); }catch(e){}
-    try{ renderBachadasCards(); }catch(e){}
-  }, 80);
 }
 
 function loadSavedTheme(){
@@ -4095,7 +4048,7 @@ function renderEstadoEquipos(bachs, evs) {
   const badge = document.getElementById('eq-status-badge');
   if(badge) badge.textContent = nOperativos + ' de ' + FLOTA.length + ' operativos';
 
-  const COLORS = [tk('--accent','#00C8FF'), tk('--amber','#FF9500'), tk('--red','#FF3B5C'), tk('--border2','#2A4466')];
+  const COLORS = ['#00C8FF','#FF9500','#FF3B5C','#2A4466'];
   const datos  = [nCongel, nEvOp, nMant, nLibre];
   // Valor incluido en el label → color de texto hereda de labels.color, sin generateLabels
   const labels = [
@@ -4117,10 +4070,10 @@ function renderEstadoEquipos(bachs, evs) {
       ctx.save();
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.font = "bold 28px 'Syne',sans-serif";
-      ctx.fillStyle = tk('--chart-title','#E8F4FF');
+      ctx.fillStyle = '#E8F4FF';
       ctx.fillText(nOperativos, cx, cy - 10);
       ctx.font = "10px 'DM Sans',sans-serif";
-      ctx.fillStyle = tk('--chart-label','#8AAAC8');
+      ctx.fillStyle = '#8AAAC8';
       ctx.fillText('de ' + FLOTA.length + ' equipos', cx, cy + 10);
       ctx.restore();
     }
@@ -4174,7 +4127,7 @@ function renderEstadoEquipos(bachs, evs) {
           position: 'bottom',
           align: 'end',
           labels: {
-            color: tk('--chart-label','#8AAAC8'),
+            color: '#8AAAC8',
             font: { size: 10.5, family: "'DM Sans',sans-serif" },
             boxWidth: 10, boxHeight: 10,
             padding: 7,
@@ -4615,13 +4568,13 @@ function renderProduccionBarras(bachs, capKgh) {
     return `
 <div style="display:grid;grid-template-columns:32px 1fr 44px;align-items:center;gap:7px;">
   <span style="font-size:11px;color:var(--text2);text-align:right;">${eq}</span>
-  <div style="position:relative;height:20px;border-radius:3px;overflow:hidden;background:${C_TRACK};border:1px solid ${C_BORDER};">
-    <div style="position:absolute;left:0;top:0;height:100%;width:${metaW.toFixed(2)}%;background:${C_META};border-radius:3px;"></div>
+  <div style="position:relative;height:20px;border-radius:3px;overflow:hidden;background:#0C2D4F;border:1px solid #1E3352;">
+    <div style="position:absolute;left:0;top:0;height:100%;width:${metaW.toFixed(2)}%;background:#1E3352;border-radius:3px;"></div>
     <div style="position:absolute;left:0;top:0;height:100%;width:${realW.toFixed(2)}%;background:${bc};border-radius:3px;display:flex;align-items:center;overflow:hidden;">
       ${textInside?`<span style="padding-left:7px;font-size:10.5px;font-weight:600;color:${ic};white-space:nowrap;font-family:var(--font-mono);">${rT.toFixed(1)} t</span>`:''}
     </div>
     ${!textInside?`<span style="position:absolute;left:calc(${realW.toFixed(2)}% + 4px);top:50%;transform:translateY(-50%);font-size:10.5px;font-weight:600;color:${bc};white-space:nowrap;font-family:var(--font-mono);">${rT.toFixed(1)} t</span>`:''}
-    <div style="position:absolute;left:${mark75.toFixed(2)}%;top:3px;height:calc(100% - 6px);width:1.5px;background:${C_TICK};border-radius:1px;"></div>
+    <div style="position:absolute;left:${mark75.toFixed(2)}%;top:3px;height:calc(100% - 6px);width:1.5px;background:rgba(255,255,255,0.2);border-radius:1px;"></div>
   </div>
   <span style="font-size:11px;font-weight:600;color:${pc};text-align:right;">${pct.toFixed(0)}%</span>
 </div>`;

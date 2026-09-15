@@ -3360,9 +3360,17 @@ function renderDashboard(){
   const mtbf=nFallas>0?(totalOpHours/nFallas):totalOpHours;
   // MTTR = tiempo medio de reparación (horas de falla / número de fallas)
   const mttr=nFallas>0?(tFallas/nFallas):0;
-  // Disponibilidad = horas operativas reales / (horas operativas + horas de falla)
-  const horasProgramadas = totalOpHours + tFallas;
-  const disponibilidad=horasProgramadas>0?Math.min(100,(totalOpHours/horasProgramadas)*100):100;
+  // ── DISPONIBILIDAD (criterio de Mantenimiento) ──────────────────────
+  // La disponibilidad mide si el equipo estuvo apto para operar cuando se
+  // le requirió. Las paradas por FALTA DE MATERIA PRIMA son externas al
+  // área (responsabilidad de Producción/Logística) y por tanto se EXCLUYEN
+  // del tiempo requerido en lugar de contarse como indisponibilidad.
+  const horasSinMP = evs.filter(e => e.tipo === 'sin_produccion')
+                        .reduce((s,e) => s + durHReal(e), 0);
+  // Tiempo requerido = horas operativas + fallas (sin MP ya no penaliza)
+  const horasProgramadas = totalOpHours + horasSinMP + tFallas;
+  const horasDisponibles = totalOpHours + horasSinMP; // el equipo estaba apto
+  const disponibilidad=horasProgramadas>0?Math.min(100,(horasDisponibles/horasProgramadas)*100):100;
   const confiabilidad=nFallas>0?Math.min(100,(1-nFallas/(bachs.length+nFallas))*100):bachs.length>0?100:0;
   const rendimiento=avgTcong&&avgTcong>0?Math.min(100,(6/avgTcong)*100):100; // referencia ~6h ideal
 
@@ -3959,17 +3967,23 @@ function renderEstadoEquipos(bachs, evs) {
   if(charts[id]) charts[id].destroy();
 
   const FLOTA = ['C1','C2','C3','C4','C5','C6','C7','C8','C9','C10','C11','C12','C13','TE'];
-  const EV_OP   = ['carga_descarga','descongelamiento'];
-  const EV_MANT = ['programada','no_programada','sin_produccion','fin_proceso'];
+  // Eventos operativos del ciclo normal de congelamiento
+  const EV_OP   = ['carga_descarga','descongelamiento','fin_proceso'];
+  // Paradas por MANTENIMIENTO (responsabilidad del área): solo programada y falla
+  const EV_MANT = ['programada','no_programada'];
+  // Parada por falta de materia prima — responsabilidad de Producción, NO de Mantenimiento
+  const EV_SINMP = ['sin_produccion'];
 
-  let nCongel=0, nEvOp=0, nMant=0, nLibre=0;
+  let nCongel=0, nEvOp=0, nMant=0, nSinMP=0, nLibre=0;
   FLOTA.forEach(eq=>{
     const tieneBach  = bachs.some(b=>b.equipo===eq && b.estado==='pendiente');
     const tieneEvOp  = evs.some(e=>e.equipo===eq && e.estado==='abierto' && EV_OP.includes(e.tipo));
     const tieneEvMnt = evs.some(e=>e.equipo===eq && e.estado==='abierto' && EV_MANT.includes(e.tipo));
+    const tieneSinMP = evs.some(e=>e.equipo===eq && e.estado==='abierto' && EV_SINMP.includes(e.tipo));
     if(tieneBach)        nCongel++;
     else if(tieneEvOp)   nEvOp++;
-    else if(tieneEvMnt)  nMant++;
+    else if(tieneEvMnt)  nMant++;      // solo mantenimiento real
+    else if(tieneSinMP)  nSinMP++;     // categoría propia
     else                 nLibre++;
   });
 
@@ -3977,13 +3991,14 @@ function renderEstadoEquipos(bachs, evs) {
   const badge = document.getElementById('eq-status-badge');
   if(badge) badge.textContent = nOperativos + ' de ' + FLOTA.length + ' operativos';
 
-  const COLORS = ['#00C8FF','#FF9500','#FF3B5C','#2A4466'];
-  const datos  = [nCongel, nEvOp, nMant, nLibre];
+  const COLORS = ['#00C8FF','#FF9500','#FF3B5C','#A855F7','#2A4466'];
+  const datos  = [nCongel, nEvOp, nMant, nSinMP, nLibre];
   // Valor incluido en el label → color de texto hereda de labels.color, sin generateLabels
   const labels = [
     'En congelamiento',
     'C/D · Descongelamiento',
     'Mantenimiento',
+    'Sin materia prima',
     'Sin actividad'
   ];
 

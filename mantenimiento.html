@@ -159,6 +159,51 @@ body.sidebar-collapsed .sidebar:hover{transform:translateX(0);box-shadow:4px 0 2
 
 /* TABLE */
 .table-wrap{overflow-x:auto;border-radius:12px;border:1px solid var(--border);}
+
+/* ═══ TARJETAS MÓVILES (Registros y Eventos) ═══════════════════════
+   En pantallas pequeñas la tabla obliga a desplazar horizontalmente.
+   Estas tarjetas muestran la misma información adaptada al ancho.
+═══════════════════════════════════════════════════════════════════ */
+.cards-wrap{display:none;flex-direction:column;gap:10px;}
+.rc{position:relative;background:var(--surface);border:1px solid var(--border);
+    border-radius:10px;padding:12px 14px 12px 17px;overflow:hidden;}
+.rc-bar{position:absolute;left:0;top:0;bottom:0;width:3px;}
+.rc-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:11px;gap:8px;}
+.rc-eq{font-size:15px;font-weight:700;color:var(--text);}
+.rc-sub{font-size:12px;color:var(--text2);margin-left:6px;}
+.rc-estado{font-size:10.5px;font-weight:600;padding:3px 9px;border-radius:20px;white-space:nowrap;flex-shrink:0;}
+.rc-ok{background:#00e87a22;color:var(--success);}
+.rc-pend{background:#facc1522;color:#facc15;}
+.rc-abierto{background:#ff3b5c22;color:var(--danger);}
+/* Línea de tiempo */
+.rc-tl{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+.rc-tl-pt{text-align:center;flex-shrink:0;}
+.rc-tl-h{font-size:13px;font-family:'DM Mono',monospace;color:var(--text);margin:0;line-height:1.3;}
+.rc-tl-l{font-size:9.5px;color:var(--text3);margin:0;line-height:1.3;}
+.rc-tl-bar{flex:1;height:3px;border-radius:2px;background:var(--border);}
+.rc-tl-dur{font-size:12px;font-family:'DM Mono',monospace;margin:0;line-height:1.3;}
+/* Fila de datos en una sola línea */
+.rc-data{display:flex;align-items:center;justify-content:space-between;gap:3px;
+  font-size:11px;color:var(--text2);font-family:'DM Mono',monospace;white-space:nowrap;
+  padding:7px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border);margin-bottom:10px;}
+.rc-data span{display:inline-flex;align-items:center;gap:3px;}
+.rc-obs{font-size:11px;color:var(--text3);margin-bottom:10px;padding:6px 8px;
+  background:var(--surface2);border-radius:6px;white-space:normal;line-height:1.45;}
+.rc-btns{display:flex;gap:6px;}
+.rc-btn{flex:1;font-size:12px;padding:7px 0;border-radius:8px;border:1px solid var(--border);
+  background:var(--surface2);color:var(--text2);cursor:pointer;font-family:'DM Sans',sans-serif;min-height:34px;}
+.rc-btn:active{transform:scale(.97);}
+.rc-btn-del{flex:0 0 46px;color:var(--danger);border-color:#ff3b5c33;}
+.rc-empty{text-align:center;padding:34px 0;color:var(--text3);font-size:13px;}
+.rc-more{text-align:center;padding:4px 0 2px;}
+
+/* Switch: tarjetas en móvil, tabla en escritorio */
+@media(max-width:768px){
+  #tab-cong-registros .table-wrap,
+  #tab-cong-eventos   .table-wrap{display:none;}
+  .cards-wrap{display:flex;}
+}
+
 table{width:100%;border-collapse:collapse;font-size:12.5px;}
 thead{background:var(--surface2);}
 th{padding:11px 14px;text-align:left;font-size:10.5px;font-weight:600;color:var(--text2);letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;}
@@ -984,6 +1029,7 @@ tr.clickable-row:hover td { background: var(--surface2); }
               <tbody id="tbody-bachadas"></tbody>
             </table>
           </div>
+          <div class="cards-wrap" id="cards-bachadas"></div>
         </div>
 
         <!-- EVENTOS -->
@@ -1044,6 +1090,7 @@ tr.clickable-row:hover td { background: var(--surface2); }
               <tbody id="tbody-eventos"></tbody>
             </table>
           </div>
+          <div class="cards-wrap" id="cards-eventos"></div>
         </div>
 
         <!-- DASHBOARD -->
@@ -2895,7 +2942,7 @@ function renderBachadasData(bachs){
       counter.textContent = `${total} registro${total!==1?'s':''} en total`;
     }
   }
-  if(!bachs.length){tbody.innerHTML='<tr><td colspan="14" style="text-align:center;color:var(--text3);padding:28px;">No hay registros que coincidan con los filtros</td></tr>';return;}
+  if(!bachs.length){tbody.innerHTML='<tr><td colspan="14" style="text-align:center;color:var(--text3);padding:28px;">No hay registros que coincidan con los filtros</td></tr>';renderCardsBachadas([],0);return;}
 
   // ORDENAR: fecha DESC → turno (Día=0 antes Noche=1) → hora inicio ASC
   bachs = bachs.slice().sort((a,b) => {
@@ -2948,6 +2995,9 @@ function renderBachadasData(bachs){
       </td>
     </tr>`).join('');
 
+  // Tarjetas para móvil (mismo conjunto ya paginado)
+  renderCardsBachadas(bachs, _totalFiltrado);
+
   // Botón "Ver más" si quedan registros por mostrar
   const restantes = _totalFiltrado - bachs.length;
   if(restantes > 0){
@@ -2975,6 +3025,142 @@ function verMasBachadas(){
 const PAGE_SIZE = 60;
 let _bachPage = 1;
 let _evPage   = 1;
+
+
+// ════════════════════════════════════════════════════════════════
+// TARJETAS MÓVILES — Registros de bachadas
+// Misma información que la tabla, adaptada al ancho del teléfono.
+// ════════════════════════════════════════════════════════════════
+function nombreCorto(n){
+  if(!n) return '—';
+  const p = String(n).trim().split(/\s+/);
+  if(p.length === 1) return p[0];
+  return p[0].charAt(0).toUpperCase() + '. ' + p[p.length-1];
+}
+function fechaCorta(f){
+  if(!f) return '—';
+  const x = String(f).split('-');
+  return x.length === 3 ? (x[2] + '-' + x[1]) : f;
+}
+
+function renderCardsBachadas(bachs, totalFiltrado){
+  const cont = document.getElementById('cards-bachadas');
+  if(!cont) return;
+  if(!bachs.length){
+    cont.innerHTML = '<div class="rc-empty">No hay registros que coincidan con los filtros</div>';
+    return;
+  }
+
+  cont.innerHTML = bachs.map(b => {
+    const cerrado = b.estado === 'cerrado';
+    const barra   = cerrado ? 'var(--success)' : '#facc15';
+    const clsEst  = cerrado ? 'rc-ok' : 'rc-pend';
+    const txtEst  = cerrado ? 'Cerrado' : 'En proceso';
+    const durTxt  = b.tcong != null ? hoursToStr(b.tcong) : '—';
+    const durCol  = cerrado ? 'var(--success)' : '#facc15';
+    const finTxt  = b.fin || '—';
+    const barFin  = cerrado ? barra : 'var(--border)';
+    const pesoT   = ((b.peso || 0) / 1000).toFixed(2);
+    const turnoIn = (b.turno || '').charAt(0).toUpperCase();
+    const tempTxt = (b.temp != null && b.temp !== '') ? (b.temp + '\u00b0') : '—';
+
+    return '<div class="rc">' +
+      '<div class="rc-bar" style="background:' + barra + ';"></div>' +
+      '<div class="rc-head">' +
+        '<div><span class="rc-eq">' + (b.equipo === 'TE' ? 'Túnel' : b.equipo) + '</span>' +
+        '<span class="rc-sub">Bach #' + (b.bach || '?') + ' · ' + (b.producto || '—') + '</span></div>' +
+        '<span class="rc-estado ' + clsEst + '">' + txtEst + '</span>' +
+      '</div>' +
+      '<div class="rc-tl">' +
+        '<div class="rc-tl-pt"><p class="rc-tl-h">' + (b.inicio || '—') + '</p><p class="rc-tl-l">inicio</p></div>' +
+        '<div class="rc-tl-bar" style="background:' + barra + ';"></div>' +
+        '<div class="rc-tl-pt"><p class="rc-tl-dur" style="color:' + durCol + ';">' + durTxt + '</p>' +
+          '<p class="rc-tl-l">' + (cerrado ? 'congel.' : 'transcurr.') + '</p></div>' +
+        '<div class="rc-tl-bar" style="background:' + barFin + ';"></div>' +
+        '<div class="rc-tl-pt"><p class="rc-tl-h" style="' + (cerrado ? '' : 'color:var(--text3);') + '">' + finTxt + '</p><p class="rc-tl-l">fin</p></div>' +
+      '</div>' +
+      '<div class="rc-data">' +
+        '<span title="Fecha y turno">\u{1F4C5} ' + fechaCorta(b.fecha) + ' ' + turnoIn + '</span>' +
+        '<span title="Aros">\u{1F4E6} ' + (b.aros || '—') + '</span>' +
+        '<span title="Peso">\u2696\uFE0F ' + pesoT + 't</span>' +
+        '<span title="Temperatura de salida">\u{1F321}\uFE0F ' + tempTxt + '</span>' +
+        '<span title="Técnico: ' + (b.tecnico || '') + '">\u{1F464} ' + nombreCorto(b.tecnico) + '</span>' +
+      '</div>' +
+      (b.obs ? '<div class="rc-obs">' + b.obs + '</div>' : '') +
+      '<div class="rc-btns">' +
+        '<button class="rc-btn" onclick="openBachadaModal(' + b.id + ')">\u270F\uFE0F Editar</button>' +
+        '<button class="rc-btn rc-btn-del" onclick="delBachada(' + b.id + ')">\u{1F5D1}</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+
+  const rest = totalFiltrado - bachs.length;
+  if(rest > 0){
+    cont.innerHTML += '<div class="rc-more"><button class="rc-btn" onclick="verMasBachadas()" style="width:100%;">' +
+      '▼ Ver ' + Math.min(rest, PAGE_SIZE) + ' más <span style="color:var(--text3);font-size:10.5px;">(' + rest + ' restantes)</span></button></div>';
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+// TARJETAS MÓVILES — Eventos / Paradas
+// ════════════════════════════════════════════════════════════════
+function renderCardsEventos(evs, totalFiltrado){
+  const cont = document.getElementById('cards-eventos');
+  if(!cont) return;
+  if(!evs.length){
+    cont.innerHTML = '<div class="rc-empty">Sin eventos que coincidan con los filtros</div>';
+    return;
+  }
+
+  const COLOR_EV = {
+    carga_descarga:'#ff9500', descongelamiento:'var(--accent)', sin_produccion:'#a855f7',
+    programada:'var(--success)', no_programada:'var(--danger)', fin_proceso:'#8aaac8'
+  };
+
+  cont.innerHTML = evs.map(e => {
+    const cerrado = e.estado === 'cerrado';
+    const barra   = COLOR_EV[e.tipo] || 'var(--text3)';
+    const clsEst  = cerrado ? 'rc-ok' : 'rc-abierto';
+    const txtEst  = cerrado ? 'Cerrado' : 'Abierto';
+    const durTxt  = (e.durH != null) ? hoursToStr(e.durH) : '—';
+    const finTxt  = (e.fin && cerrado) ? e.fin : '—';
+    const barFin  = cerrado ? barra : 'var(--border)';
+
+    return '<div class="rc">' +
+      '<div class="rc-bar" style="background:' + barra + ';"></div>' +
+      '<div class="rc-head">' +
+        '<div><span class="rc-eq">' + (e.equipo === 'TE' ? 'Túnel' : e.equipo) + '</span>' +
+        '<span class="rc-sub">' + (e.tipoLabel || e.tipo) + '</span></div>' +
+        '<span class="rc-estado ' + clsEst + '">' + txtEst + '</span>' +
+      '</div>' +
+      '<div class="rc-tl">' +
+        '<div class="rc-tl-pt"><p class="rc-tl-h">' + (e.inicio || '—') + '</p><p class="rc-tl-l">inicio</p></div>' +
+        '<div class="rc-tl-bar" style="background:' + barra + ';"></div>' +
+        '<div class="rc-tl-pt"><p class="rc-tl-dur" style="color:' + barra + ';">' + durTxt + '</p>' +
+          '<p class="rc-tl-l">' + (cerrado ? 'duración' : 'transcurr.') + '</p></div>' +
+        '<div class="rc-tl-bar" style="background:' + barFin + ';"></div>' +
+        '<div class="rc-tl-pt"><p class="rc-tl-h" style="' + (cerrado ? '' : 'color:var(--text3);') + '">' + finTxt + '</p><p class="rc-tl-l">fin</p></div>' +
+      '</div>' +
+      '<div class="rc-data">' +
+        '<span title="Fecha de inicio">\u{1F4C5} ' + fechaCorta(e.fechaIni) + '</span>' +
+        '<span title="Turno">\u{1F552} ' + (e.turno || '—') + '</span>' +
+        '<span title="Técnico: ' + (e.tecnico || '') + '">\u{1F464} ' + nombreCorto(e.tecnico) + '</span>' +
+      '</div>' +
+      (e.desc ? '<div class="rc-obs"><b style="color:var(--text2);">Descripción:</b> ' + e.desc + '</div>' : '') +
+      (e.accion ? '<div class="rc-obs"><b style="color:var(--text2);">Acción:</b> ' + e.accion + '</div>' : '') +
+      '<div class="rc-btns">' +
+        '<button class="rc-btn" onclick="openEventoModal(' + e.id + ')">\u270F\uFE0F Editar</button>' +
+        '<button class="rc-btn rc-btn-del" onclick="delEvento(' + e.id + ')">\u{1F5D1}</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+
+  const rest = totalFiltrado - evs.length;
+  if(rest > 0){
+    cont.innerHTML += '<div class="rc-more"><button class="rc-btn" onclick="verMasEventos()" style="width:100%;">' +
+      '▼ Ver ' + Math.min(rest, PAGE_SIZE) + ' más <span style="color:var(--text3);font-size:10.5px;">(' + rest + ' restantes)</span></button></div>';
+  }
+}
 
 // ======== FILTRAR BACHADAS ========
 function filtrarBachadas(resetPage){
@@ -3268,6 +3454,7 @@ function filtrarEventos(resetPage){
   if(!tbody)return;
   if(!evs.length){
     tbody.innerHTML='<tr><td colspan="11" style="text-align:center;color:var(--text3);padding:28px;">' + (totalAll===0 ? 'Sin eventos registrados' : 'Sin eventos que coincidan con los filtros') + '</td></tr>';
+    renderCardsEventos([],0);
     return;
   }
   // ── PAGINACIÓN ──────────────────────────────────────────────
@@ -3295,6 +3482,8 @@ function filtrarEventos(resetPage){
         </div>
       </td>
     </tr>`).join('');
+
+  renderCardsEventos(evs, _totalEvFiltrado);
 
   const restEv = _totalEvFiltrado - evs.length;
   if(restEv > 0){

@@ -1465,6 +1465,48 @@ tr.clickable-row:hover td { background: var(--surface2); }
 
         <!-- CONFIG (dentro del proceso) -->
         <div class="tab-content" id="tab-cong-config">
+
+          <!-- ── SELECTOR DE TEMA ──────────────────────────────────── -->
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px 22px;margin-bottom:20px;">
+            <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px;">🎨 Tema de color</div>
+            <div style="font-size:12px;color:var(--text3);margin-bottom:16px;">Elige el esquema visual. El tema se guarda automáticamente.</div>
+            <div style="display:flex;gap:12px;flex-wrap:wrap;">
+              <!-- Tarjetas de tema -->
+              <button class="theme-btn" data-theme="pacifico" onclick="applyTheme('pacifico')"
+                style="display:flex;flex-direction:column;gap:8px;align-items:center;padding:14px 18px;border-radius:12px;border:2px solid var(--border);background:var(--surface2);cursor:pointer;transition:all .2s;min-width:120px;">
+                <div style="display:flex;gap:5px;">
+                  <span style="width:22px;height:22px;border-radius:50%;background:#042C53;border:2px solid #1E3352;"></span>
+                  <span style="width:22px;height:22px;border-radius:50%;background:#00C8FF;"></span>
+                  <span style="width:22px;height:22px;border-radius:50%;background:#00E87A;"></span>
+                </div>
+                <span style="font-size:12px;font-weight:600;color:var(--text);">🌊 Pacífico</span>
+                <span style="font-size:10px;color:var(--text3);">Navy oscuro</span>
+              </button>
+
+              <button class="theme-btn" data-theme="ejecutivo" onclick="applyTheme('ejecutivo')"
+                style="display:flex;flex-direction:column;gap:8px;align-items:center;padding:14px 18px;border-radius:12px;border:2px solid var(--border);background:var(--surface2);cursor:pointer;transition:all .2s;min-width:120px;">
+                <div style="display:flex;gap:5px;">
+                  <span style="width:22px;height:22px;border-radius:50%;background:#1C2B3C;border:2px solid #2E3F58;"></span>
+                  <span style="width:22px;height:22px;border-radius:50%;background:#4A9EF5;"></span>
+                  <span style="width:22px;height:22px;border-radius:50%;background:#2DD4A0;"></span>
+                </div>
+                <span style="font-size:12px;font-weight:600;color:var(--text);">🏢 Ejecutivo</span>
+                <span style="font-size:10px;color:var(--text3);">Slate profesional</span>
+              </button>
+
+              <button class="theme-btn" data-theme="gerencial" onclick="applyTheme('gerencial')"
+                style="display:flex;flex-direction:column;gap:8px;align-items:center;padding:14px 18px;border-radius:12px;border:2px solid var(--border);background:var(--surface2);cursor:pointer;transition:all .2s;min-width:120px;">
+                <div style="display:flex;gap:5px;">
+                  <span style="width:22px;height:22px;border-radius:50%;background:#EEF2F8;border:2px solid #D4DDE8;"></span>
+                  <span style="width:22px;height:22px;border-radius:50%;background:#1A56DB;"></span>
+                  <span style="width:22px;height:22px;border-radius:50%;background:#1A7A4A;"></span>
+                </div>
+                <span style="font-size:12px;font-weight:600;color:var(--text);">📋 Gerencial</span>
+                <span style="font-size:10px;color:var(--text3);">Claro elegante</span>
+              </button>
+            </div>
+          </div>
+          <!-- ── / SELECTOR DE TEMA ────────────────────────────────── -->
           <div class="tabs" style="margin-bottom:18px;" id="cfg-subtabs">
             <div class="tab active" onclick="showSubTab('cfg','tecnicos')">👷 Técnicos</div>
             <div class="tab" onclick="showSubTab('cfg','productos')">🐟 Productos</div>
@@ -1914,6 +1956,34 @@ function renderTimelineDebounced() {
   }, 350);
 }
 
+
+// ── TEMAS DE COLOR ─────────────────────────────────────────────────
+const THEMES = {
+  pacifico:  { label:'🌊 Pacífico',  class:'theme-pacifico',  preview:['#042C53','#00C8FF','#00E87A'] },
+  ejecutivo: { label:'🏢 Ejecutivo', class:'theme-ejecutivo', preview:['#1C2B3C','#4A9EF5','#2DD4A0'] },
+  gerencial: { label:'📋 Gerencial', class:'theme-gerencial', preview:['#EEF2F8','#1A56DB','#1A7A4A'] },
+};
+
+function applyTheme(name){
+  const body = document.body;
+  // Quitar todos los temas anteriores
+  Object.values(THEMES).forEach(t => body.classList.remove(t.class));
+  if(THEMES[name]) body.classList.add(THEMES[name].class);
+  localStorage.setItem('smf_theme', name);
+  // Re-renderizar dashboard y tarjetas activas para que charts actualicen colores
+  try { renderDashboard(); } catch(e){}
+  try { renderBachadasCards(); } catch(e){}
+  // Actualizar estado visual de los botones del selector
+  document.querySelectorAll('.theme-btn').forEach(btn=>{
+    btn.classList.toggle('theme-btn-active', btn.dataset.theme===name);
+  });
+}
+
+function loadSavedTheme(){
+  const saved = localStorage.getItem('smf_theme') || 'pacifico';
+  applyTheme(saved);
+}
+
 function startListeners() {
   stopListeners();
 
@@ -2060,6 +2130,7 @@ window.addEventListener('load', function() {
     startListeners();
     navigate('home');
     setDefaultDates();
+    loadSavedTheme();
     setTimeout(renderBachadasCards, 600);
   }
 });

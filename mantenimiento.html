@@ -1139,8 +1139,8 @@ tr.clickable-row:hover td { background: var(--surface2); }
                   <div class="pbi-card-title">🔄 Estado de equipos · tiempo real</div>
                   <div class="pbi-card-badge" id="eq-status-badge">14 equipos</div>
                 </div>
-                <div style="position:relative;height:290px;"><canvas id="chart-estado-equipos"></canvas></div>
-                <div id="eq-legend" style="display:flex;flex-wrap:wrap;justify-content:center;gap:10px 16px;padding:12px 8px 4px;border-top:1px solid var(--border);margin-top:8px;"></div>
+                <div style="position:relative;height:225px;"><canvas id="chart-estado-equipos"></canvas></div>
+                <div id="eq-legend" style="display:flex;flex-wrap:wrap;justify-content:center;gap:6px 12px;padding:8px 6px 0;"></div>
               </div>
 
               <!-- Superior derecha: Bachadas vs Tiempo (barras apiladas Opción B) -->
@@ -4066,7 +4066,8 @@ function renderEstadoEquipos(bachs, evs) {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      cutout: '58%',
+      cutout: '56%',
+      layout: { padding: { top: 2, bottom: 2, left: 2, right: 2 } },
       plugins: {
         legend: { display: false },  // leyenda renderizada como HTML debajo
         tooltip: {
@@ -4086,10 +4087,12 @@ function renderEstadoEquipos(bachs, evs) {
   // Fuera del canvas → la dona aprovecha todo el alto disponible
   const leg = document.getElementById('eq-legend');
   if(leg){
+    // Etiquetas cortas para que la leyenda quepa en 2 líneas compactas
+    const short = ['Congelando','C/D · Descong.','Mantenim.','Sin MP','Inactivo'];
     leg.innerHTML = labels.map((lb, i) => `
-      <span style="display:inline-flex;align-items:center;gap:6px;font-size:11px;color:#8AAAC8;white-space:nowrap;">
-        <span style="width:10px;height:10px;border-radius:50%;background:${COLORS[i]};display:inline-block;flex-shrink:0;"></span>
-        ${lb}
+      <span title="${lb}" style="display:inline-flex;align-items:center;gap:5px;font-size:10px;color:#8AAAC8;white-space:nowrap;">
+        <span style="width:8px;height:8px;border-radius:50%;background:${COLORS[i]};display:inline-block;flex-shrink:0;"></span>
+        ${short[i] || lb}
         <b style="color:#E8F4FF;font-weight:600;">${datos[i]}</b>
       </span>`).join('');
   }

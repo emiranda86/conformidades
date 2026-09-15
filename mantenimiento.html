@@ -160,6 +160,20 @@ body.sidebar-collapsed .sidebar:hover{transform:translateX(0);box-shadow:4px 0 2
 /* TABLE */
 .table-wrap{overflow-x:auto;border-radius:12px;border:1px solid var(--border);}
 
+/* ═══ GRID DE FILTROS ══════════════════════════════════════════════
+   En móvil: Desde+Hasta en una línea, Equipo+Estado/Turno en otra,
+   y los campos de texto largo (Tipo de evento, Producto) completos.
+═══════════════════════════════════════════════════════════════════ */
+@media(max-width:768px){
+  .filt-grid{display:grid !important;grid-template-columns:1fr 1fr;gap:10px;}
+  .filt-grid .filt-half{grid-column:span 1;min-width:0;}
+  .filt-grid .filt-full{grid-column:1 / -1;min-width:0;}
+  .filt-grid .field input,
+  .filt-grid .field select{width:100%;min-width:0;font-size:13px;}
+  .filt-grid .field label{font-size:10px;}
+}
+
+
 /* ═══ TARJETAS MÓVILES (Registros y Eventos) ═══════════════════════
    En pantallas pequeñas la tabla obliga a desplazar horizontalmente.
    Estas tarjetas muestran la misma información adaptada al ancho.
@@ -1043,10 +1057,12 @@ tr.clickable-row:hover td { background: var(--surface2); }
           <!-- Filtros de Eventos -->
           <div class="card mb-4 no-print">
             <div class="card-title">🔍 Filtros</div>
-            <div class="form-grid">
-              <div class="field"><label>Desde</label><input type="date" id="ev-from" onchange="filtrarEventos(true)"></div>
-              <div class="field"><label>Hasta</label><input type="date" id="ev-to" onchange="filtrarEventos(true)"></div>
-              <div class="field"><label>Equipo</label>
+            <div class="form-grid filt-grid">
+              <!-- Fila 1: Desde + Hasta -->
+              <div class="field filt-half"><label>Desde</label><input type="date" id="ev-from" onchange="filtrarEventos(true)"></div>
+              <div class="field filt-half"><label>Hasta</label><input type="date" id="ev-to" onchange="filtrarEventos(true)"></div>
+              <!-- Fila 2: Equipo + Estado -->
+              <div class="field filt-half"><label>Equipo</label>
                 <select id="ev-equipo" onchange="filtrarEventos(true)">
                   <option value="">Todos</option>
                   <option value="C1">Congelador 1</option><option value="C2">Congelador 2</option><option value="C3">Congelador 3</option>
@@ -1055,7 +1071,15 @@ tr.clickable-row:hover td { background: var(--surface2); }
                   <option value="C10">Congelador 10</option><option value="C11">Congelador 11</option><option value="C12">Congelador 12</option><option value="C13">Congelador 13</option><option value="TE">Túnel Estático</option>
                 </select>
               </div>
-              <div class="field"><label>Tipo de Evento</label>
+              <div class="field filt-half"><label>Estado</label>
+                <select id="ev-estado" onchange="filtrarEventos(true)">
+                  <option value="">Todos</option>
+                  <option value="cerrado">Cerrado</option>
+                  <option value="abierto">Abierto</option>
+                </select>
+              </div>
+              <!-- Fila 3: Tipo de evento (ancho completo — textos largos) -->
+              <div class="field filt-full"><label>Tipo de Evento</label>
                 <select id="ev-tipo" onchange="filtrarEventos(true)">
                   <option value="">Todos</option>
                   <option value="carga_descarga">Carga / Descarga</option>
@@ -1066,14 +1090,7 @@ tr.clickable-row:hover td { background: var(--surface2); }
                   <option value="fin_proceso">Fin de Proceso</option>
                 </select>
               </div>
-              <div class="field"><label>Estado</label>
-                <select id="ev-estado" onchange="filtrarEventos(true)">
-                  <option value="">Todos</option>
-                  <option value="cerrado">Cerrado</option>
-                  <option value="abierto">Abierto</option>
-                </select>
-              </div>
-              <div class="field" style="align-self:flex-end;">
+              <div class="field filt-full">
                 <button class="btn-sm btn-ghost" onclick="limpiarFiltrosEventos()" style="width:100%;">✕ Limpiar</button>
               </div>
             </div>
@@ -1097,10 +1114,12 @@ tr.clickable-row:hover td { background: var(--surface2); }
         <div class="tab-content" id="tab-cong-dashboard">
           <div class="card mb-6" id="dash-filtros-generales">
             <div class="card-title">🔍 Filtros Generales del Dashboard</div>
-            <div class="form-grid">
-              <div class="field"><label>Desde</label><input type="date" id="dash-from" onchange="renderDashboard()"></div>
-              <div class="field"><label>Hasta</label><input type="date" id="dash-to" onchange="renderDashboard()"></div>
-              <div class="field"><label>Equipo</label>
+            <div class="form-grid filt-grid">
+              <!-- Fila 1: Desde + Hasta -->
+              <div class="field filt-half"><label>Desde</label><input type="date" id="dash-from" onchange="renderDashboard()"></div>
+              <div class="field filt-half"><label>Hasta</label><input type="date" id="dash-to" onchange="renderDashboard()"></div>
+              <!-- Fila 2: Equipo + Turno -->
+              <div class="field filt-half"><label>Equipo</label>
                 <select id="dash-equipo" onchange="renderDashboard()">
                   <option value="">Todos los congeladores</option>
                   <option value="C1">Congelador 1</option><option value="C2">Congelador 2</option><option value="C3">Congelador 3</option>
@@ -1109,12 +1128,13 @@ tr.clickable-row:hover td { background: var(--surface2); }
                   <option value="C10">Congelador 10</option><option value="C11">Congelador 11</option><option value="C12">Congelador 12</option><option value="C13">Congelador 13</option><option value="TE">Túnel Estático</option>
                 </select>
               </div>
-              <div class="field"><label>Turno</label>
+              <div class="field filt-half"><label>Turno</label>
                 <select id="dash-turno" onchange="renderDashboard()">
                   <option value="">Ambos turnos</option><option value="Día">Día (08–20h)</option><option value="Noche">Noche (20–08h)</option>
                 </select>
               </div>
-              <div class="field"><label>Producto</label><select id="dash-producto" onchange="renderDashboard()"><option value="">Todos</option></select></div>
+              <!-- Fila 3: Producto a ancho completo -->
+              <div class="field filt-full"><label>Producto</label><select id="dash-producto" onchange="renderDashboard()"><option value="">Todos</option></select></div>
             </div>
           </div>
 

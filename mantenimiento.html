@@ -1827,6 +1827,20 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
+// ════════════════════════════════════════════════════════════════
+// PERSISTENCIA OFFLINE (IndexedDB)
+// Guarda una copia local de los datos. Al reabrir el aplicativo los
+// registros se muestran de inmediato desde el disco del dispositivo
+// mientras Firebase sincroniza los cambios en segundo plano.
+// Esto elimina la espera en blanco al entrar, sobre todo en móvil.
+// ════════════════════════════════════════════════════════════════
+db.enablePersistence({ synchronizeTabs: true })
+  .then(()  => console.log('[SMF] Persistencia offline activa'))
+  .catch(err => {
+    if(err.code === 'failed-precondition')      console.warn('[SMF] Persistencia: varias pestañas abiertas');
+    else if(err.code === 'unimplemented')       console.warn('[SMF] Persistencia no soportada en este navegador');
+  });
+
 // ============================================================
 // PROTECCIÓN GLOBAL ANTI-DOBLE-CLICK
 // Envuelve cualquier handler async para prevenir doble ejecución
@@ -1955,7 +1969,7 @@ function startListeners() {
       const me = data.find(u => u._fid === currentUser._fid || u.email === currentUser.email);
       if(me) {
         currentUser = me;
-        try { sessionStorage.setItem('smf_session', JSON.stringify(me)); } catch(e) {}
+        try { guardarSesion(me); } catch(e) {}
         applyModulePerms(me);
       }
     }
@@ -2044,11 +2058,44 @@ function applyModulePerms(user){
   });
 }
 
+
+// ════════════════════════════════════════════════════════════════
+// SESIÓN PERSISTENTE (12 horas)
+// En móvil el navegador descarga la pestaña de memoria al cambiar de
+// app, y sessionStorage se borra → obligaba a iniciar sesión de nuevo.
+// localStorage sobrevive a eso. Se guarda con fecha de expiración
+// para que la sesión no quede abierta indefinidamente.
+// ════════════════════════════════════════════════════════════════
+const SESION_HORAS = 12;
+
+function guardarSesion(user){
+  const payload = { user: user, exp: Date.now() + SESION_HORAS*3600*1000 };
+  try { localStorage.setItem('smf_session', JSON.stringify(payload)); } catch(e) {}
+}
+
+function leerSesion(){
+  try {
+    const raw = localStorage.getItem('smf_session');
+    if(!raw) {
+      // Compatibilidad: migrar sesión antigua de sessionStorage si existe
+      const old = sessionStorage.getItem('smf_session');
+      if(old){ const u = JSON.parse(old); guardarSesion(u); return u; }
+      return null;
+    }
+    const p = JSON.parse(raw);
+    // Formato antiguo (sin exp): aceptarlo y re-guardarlo con expiración
+    if(!p.exp){ guardarSesion(p); return p; }
+    if(Date.now() > p.exp){ localStorage.removeItem('smf_session'); return null; }
+    // Renovar la ventana de 12h en cada apertura
+    guardarSesion(p.user);
+    return p.user;
+  } catch(e){ return null; }
+}
+
 // Restore session on page load — runs after Firebase SDK is ready
 window.addEventListener('load', function() {
   try {
-    const s = sessionStorage.getItem('smf_session');
-    if(s) { currentUser = JSON.parse(s); }
+    currentUser = leerSesion();
   } catch(e) {}
   if(currentUser) {
     applyUserUI(currentUser);
@@ -2089,7 +2136,7 @@ async function doLogin(){
     }
     const user={...rawUser, _fid:snap.docs[0].id};
     currentUser=user;
-    try{sessionStorage.setItem('smf_session',JSON.stringify(user));}catch(e){}
+    try{guardarSesion(user);}catch(e){}
     applyUserUI(user);
     // Ocultar gestión de usuarios si no es admin
     if(user.rol !== 'admin'){
@@ -2110,7 +2157,7 @@ async function doLogin(){
 }
 function doLogout(){
   currentUser=null;
-  try{sessionStorage.removeItem('smf_session');}catch(e){}
+  try{localStorage.removeItem('smf_session');sessionStorage.removeItem('smf_session');}catch(e){}
   stopListeners();
   // Limpiar campos de login
   document.getElementById('login-email').value='';

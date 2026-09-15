@@ -1958,25 +1958,46 @@ function renderTimelineDebounced() {
 
 
 // ── TEMAS DE COLOR ─────────────────────────────────────────────────
-const THEMES = {
-  pacifico:  { label:'🌊 Pacífico',  class:'theme-pacifico',  preview:['#042C53','#00C8FF','#00E87A'] },
-  ejecutivo: { label:'🏢 Ejecutivo', class:'theme-ejecutivo', preview:['#1C2B3C','#4A9EF5','#2DD4A0'] },
-  gerencial: { label:'📋 Gerencial', class:'theme-gerencial', preview:['#EEF2F8','#1A56DB','#1A7A4A'] },
+// Usa setProperty en :root para máxima compatibilidad y prioridad
+const THEME_VARS = {
+  pacifico: {
+    '--bg':'#042C53','--bg2':'#061E38','--surface':'#0C2D4F','--surface2':'#122744',
+    '--border':'#1E3352','--border2':'#2A4466',
+    '--text':'#E8F4FF','--text2':'#8AAAC8','--text3':'#4A6A8A',
+    '--accent':'#00C8FF','--green':'#00E87A','--amber':'#FACC15','--red':'#FF3B5C',
+  },
+  ejecutivo: {
+    '--bg':'#1C2B3C','--bg2':'#14202E','--surface':'#243248','--surface2':'#2A3A54',
+    '--border':'#2E3F58','--border2':'#3C526E',
+    '--text':'#E4EDF8','--text2':'#8AAAC0','--text3':'#4E6880',
+    '--accent':'#4A9EF5','--green':'#2DD4A0','--amber':'#F59E0B','--red':'#F87171',
+  },
+  gerencial: {
+    '--bg':'#EEF2F8','--bg2':'#FFFFFF','--surface':'#FFFFFF','--surface2':'#F4F7FB',
+    '--border':'#D4DDE8','--border2':'#A8BED4',
+    '--text':'#0D1C2E','--text2':'#3E5670','--text3':'#7A98B8',
+    '--accent':'#1A56DB','--green':'#1A7A4A','--amber':'#A0690B','--red':'#C0272D',
+  }
 };
 
 function applyTheme(name){
-  const body = document.body;
-  // Quitar todos los temas anteriores
-  Object.values(THEMES).forEach(t => body.classList.remove(t.class));
-  if(THEMES[name]) body.classList.add(THEMES[name].class);
+  const vars = THEME_VARS[name];
+  if(!vars){ console.warn('Tema desconocido:', name); return; }
+  // Aplicar directamente en :root via setProperty — máxima prioridad
+  const root = document.documentElement;
+  Object.entries(vars).forEach(([k,v]) => root.style.setProperty(k, v));
   localStorage.setItem('smf_theme', name);
-  // Re-renderizar dashboard y tarjetas activas para que charts actualicen colores
-  try { renderDashboard(); } catch(e){}
-  try { renderBachadasCards(); } catch(e){}
-  // Actualizar estado visual de los botones del selector
+  // Resaltar botón activo
   document.querySelectorAll('.theme-btn').forEach(btn=>{
-    btn.classList.toggle('theme-btn-active', btn.dataset.theme===name);
+    const active = btn.dataset.theme === name;
+    btn.style.borderColor = active ? vars['--accent'] : '';
+    btn.style.boxShadow   = active ? ('0 0 0 2px ' + vars['--accent'] + '44') : '';
   });
+  // Re-renderizar dashboard para actualizar colores de gráficos
+  setTimeout(()=>{
+    try{ renderDashboard(); }catch(e){}
+    try{ renderBachadasCards(); }catch(e){}
+  }, 80);
 }
 
 function loadSavedTheme(){

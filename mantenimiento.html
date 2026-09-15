@@ -165,12 +165,14 @@ body.sidebar-collapsed .sidebar:hover{transform:translateX(0);box-shadow:4px 0 2
    y los campos de texto largo (Tipo de evento, Producto) completos.
 ═══════════════════════════════════════════════════════════════════ */
 @media(max-width:768px){
-  .filt-grid{display:grid !important;grid-template-columns:1fr 1fr;gap:10px;}
-  .filt-grid .filt-half{grid-column:span 1;min-width:0;}
-  .filt-grid .filt-full{grid-column:1 / -1;min-width:0;}
+  .filt-grid{display:grid !important;grid-template-columns:1fr 1fr !important;gap:10px !important;}
+  .filt-grid > .filt-half{grid-column:span 1 !important;min-width:0;}
+  .filt-grid > .filt-full{grid-column:1 / -1 !important;min-width:0;}
+  .filt-grid .field{min-width:0;}
   .filt-grid .field input,
-  .filt-grid .field select{width:100%;min-width:0;font-size:13px;}
+  .filt-grid .field select{width:100%;min-width:0;font-size:13px;padding:8px 10px;}
   .filt-grid .field label{font-size:10px;}
+  .filt-grid button{font-size:12px;padding:9px 0;}
 }
 
 
@@ -427,8 +429,8 @@ tr:hover td{background:var(--surface2);}
     grid-template-columns: 1fr 1fr !important;
   }
 
-  /* Form grid: 1 columna */
-  .form-grid {
+  /* Form grid: 1 columna — excepto los filtros, que van a 2 */
+  .form-grid:not(.filt-grid) {
     grid-template-columns: 1fr !important;
     gap: 12px;
   }
@@ -1078,8 +1080,8 @@ tr.clickable-row:hover td { background: var(--surface2); }
                   <option value="abierto">Abierto</option>
                 </select>
               </div>
-              <!-- Fila 3: Tipo de evento (ancho completo — textos largos) -->
-              <div class="field filt-full"><label>Tipo de Evento</label>
+              <!-- Fila 3: Tipo de evento + botón Limpiar en la misma línea -->
+              <div class="field filt-half"><label>Tipo de Evento</label>
                 <select id="ev-tipo" onchange="filtrarEventos(true)">
                   <option value="">Todos</option>
                   <option value="carga_descarga">Carga / Descarga</option>
@@ -1090,7 +1092,7 @@ tr.clickable-row:hover td { background: var(--surface2); }
                   <option value="fin_proceso">Fin de Proceso</option>
                 </select>
               </div>
-              <div class="field filt-full">
+              <div class="field filt-half" style="justify-content:flex-end;">
                 <button class="btn-sm btn-ghost" onclick="limpiarFiltrosEventos()" style="width:100%;">✕ Limpiar</button>
               </div>
             </div>
@@ -1133,8 +1135,11 @@ tr.clickable-row:hover td { background: var(--surface2); }
                   <option value="">Ambos turnos</option><option value="Día">Día (08–20h)</option><option value="Noche">Noche (20–08h)</option>
                 </select>
               </div>
-              <!-- Fila 3: Producto a ancho completo -->
-              <div class="field filt-full"><label>Producto</label><select id="dash-producto" onchange="renderDashboard()"><option value="">Todos</option></select></div>
+              <!-- Fila 3: Producto + Limpiar en la misma línea -->
+              <div class="field filt-half"><label>Producto</label><select id="dash-producto" onchange="renderDashboard()"><option value="">Todos</option></select></div>
+              <div class="field filt-half" style="justify-content:flex-end;">
+                <button class="btn-sm btn-ghost" onclick="limpiarFiltrosDashboard()" style="width:100%;">✕ Limpiar</button>
+              </div>
             </div>
           </div>
 
@@ -3520,6 +3525,14 @@ function filtrarEventos(resetPage){
 function verMasEventos(){
   _evPage++;
   filtrarEventos();
+}
+
+function limpiarFiltrosDashboard(){
+  ['dash-from','dash-to','dash-equipo','dash-turno','dash-producto'].forEach(id=>{
+    const el = document.getElementById(id); if(el) el.value = '';
+  });
+  setDefaultDates();
+  renderDashboard();
 }
 
 function limpiarFiltrosEventos(){

@@ -937,7 +937,7 @@ tr.clickable-row:hover td { background: var(--surface2); }
           <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:16px;padding:14px 16px;background:var(--surface);border:1px solid var(--border);border-radius:12px;" class="no-print">
             <div style="flex:1;min-width:130px;">
               <div style="font-size:10px;font-weight:600;color:var(--text2);letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px;">Congelador</div>
-              <select id="filt-b-equipo" onchange="filtrarBachadas()" style="width:100%;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:8px 12px;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;outline:none;">
+              <select id="filt-b-equipo" onchange="filtrarBachadas(true)" style="width:100%;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:8px 12px;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;outline:none;">
                 <option value="">Todos</option>
                 <option value="C1">C1</option><option value="C2">C2</option><option value="C3">C3</option>
                 <option value="C4">C4</option><option value="C5">C5</option><option value="C6">C6</option>
@@ -947,17 +947,17 @@ tr.clickable-row:hover td { background: var(--surface2); }
             </div>
             <div style="flex:1;min-width:130px;">
               <div style="font-size:10px;font-weight:600;color:var(--text2);letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px;">Fecha</div>
-              <input type="date" id="filt-b-fecha" onchange="filtrarBachadas()" style="width:100%;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:8px 12px;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;outline:none;">
+              <input type="date" id="filt-b-fecha" onchange="filtrarBachadas(true)" style="width:100%;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:8px 12px;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;outline:none;">
             </div>
             <div style="flex:1;min-width:130px;">
               <div style="font-size:10px;font-weight:600;color:var(--text2);letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px;">Técnico</div>
-              <select id="filt-b-tecnico" onchange="filtrarBachadas()" style="width:100%;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:8px 12px;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;outline:none;">
+              <select id="filt-b-tecnico" onchange="filtrarBachadas(true)" style="width:100%;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:8px 12px;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;outline:none;">
                 <option value="">Todos</option>
               </select>
             </div>
             <div style="flex:1;min-width:130px;">
               <div style="font-size:10px;font-weight:600;color:var(--text2);letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px;">Estado</div>
-              <select id="filt-b-estado" onchange="filtrarBachadas()" style="width:100%;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:8px 12px;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;outline:none;">
+              <select id="filt-b-estado" onchange="filtrarBachadas(true)" style="width:100%;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:8px 12px;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;outline:none;">
                 <option value="">Todos</option>
                 <option value="cerrado">✅ Cerrado</option>
                 <option value="pendiente">⏳ En Proceso</option>
@@ -965,7 +965,7 @@ tr.clickable-row:hover td { background: var(--surface2); }
             </div>
             <div style="flex:1;min-width:130px;">
               <div style="font-size:10px;font-weight:600;color:var(--text2);letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px;">Buscar texto</div>
-              <input type="text" id="filt-b-texto" oninput="filtrarBachadas()" placeholder="Producto, aros..." style="width:100%;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:8px 12px;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;outline:none;">
+              <input type="text" id="filt-b-texto" oninput="filtrarBachadas(true)" placeholder="Producto, aros..." style="width:100%;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:8px 12px;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;outline:none;">
             </div>
             <div style="display:flex;gap:8px;align-items:flex-end;padding-bottom:1px;">
               <button class="btn-sm btn-ghost" onclick="limpiarFiltrosBachadas()" title="Limpiar filtros" style="padding:8px 12px;">✕ Limpiar</button>
@@ -998,10 +998,10 @@ tr.clickable-row:hover td { background: var(--surface2); }
           <div class="card mb-4 no-print">
             <div class="card-title">🔍 Filtros</div>
             <div class="form-grid">
-              <div class="field"><label>Desde</label><input type="date" id="ev-from" onchange="filtrarEventos()"></div>
-              <div class="field"><label>Hasta</label><input type="date" id="ev-to" onchange="filtrarEventos()"></div>
+              <div class="field"><label>Desde</label><input type="date" id="ev-from" onchange="filtrarEventos(true)"></div>
+              <div class="field"><label>Hasta</label><input type="date" id="ev-to" onchange="filtrarEventos(true)"></div>
               <div class="field"><label>Equipo</label>
-                <select id="ev-equipo" onchange="filtrarEventos()">
+                <select id="ev-equipo" onchange="filtrarEventos(true)">
                   <option value="">Todos</option>
                   <option value="C1">Congelador 1</option><option value="C2">Congelador 2</option><option value="C3">Congelador 3</option>
                   <option value="C4">Congelador 4</option><option value="C5">Congelador 5</option><option value="C6">Congelador 6</option>
@@ -1010,7 +1010,7 @@ tr.clickable-row:hover td { background: var(--surface2); }
                 </select>
               </div>
               <div class="field"><label>Tipo de Evento</label>
-                <select id="ev-tipo" onchange="filtrarEventos()">
+                <select id="ev-tipo" onchange="filtrarEventos(true)">
                   <option value="">Todos</option>
                   <option value="carga_descarga">Carga / Descarga</option>
                   <option value="descongelamiento">Descongelamiento</option>
@@ -1021,7 +1021,7 @@ tr.clickable-row:hover td { background: var(--surface2); }
                 </select>
               </div>
               <div class="field"><label>Estado</label>
-                <select id="ev-estado" onchange="filtrarEventos()">
+                <select id="ev-estado" onchange="filtrarEventos(true)">
                   <option value="">Todos</option>
                   <option value="cerrado">Cerrado</option>
                   <option value="abierto">Abierto</option>
@@ -1936,7 +1936,8 @@ function startListeners() {
   _listeners.push(COL.bachadas().orderBy('ts','desc').onSnapshot(snap => {
     const data = snap.docs.map(d => ({...d.data(), _fid: d.id}));
     CACHE.set('bachadas', data);
-    filtrarBachadas();
+    // Solo refrescar la tabla si la pestaña Registros está visible
+    if(document.getElementById('tab-cong-registros')?.classList.contains('active')) filtrarBachadas();
     // Actualizar portada (ligero) y dashboard/timeline (debounced)
     renderBachadasCards();
     if(document.getElementById('dash-page-3')?.classList.contains('active')) {
@@ -1950,7 +1951,7 @@ function startListeners() {
   _listeners.push(COL.eventos().orderBy('ts','desc').onSnapshot(snap => {
     const data = snap.docs.map(d => ({...d.data(), _fid: d.id}));
     CACHE.set('eventos', data);
-    renderEventos();
+    if(document.getElementById('tab-cong-eventos')?.classList.contains('active')) renderEventos();
     // Actualizar portada (ligero) y dashboard/timeline (debounced)
     renderBachadasCards();
     if(document.getElementById('dash-page-3')?.classList.contains('active')) {
@@ -2230,8 +2231,13 @@ function showTab(prefix,name){
   const tc=document.getElementById('tab-cong-'+name);
   if(tc){
     tc.classList.add('active');
+    // Render diferido: solo se construye el contenido de la pestaña visible.
+    // El setTimeout deja que el cambio de pestaña se pinte primero, así la
+    // navegación se siente instantánea aunque el render tarde unos ms.
     if(name==='dashboard') setTimeout(()=>{try{renderDashboard();}catch(e){console.warn('dashboard:',e);}},30);
-    if(name==='bachadas')  try{renderBachadasCards();}catch(e){console.warn('cards:',e);}
+    if(name==='bachadas')  setTimeout(()=>{try{renderBachadasCards();}catch(e){}},10);
+    if(name==='registros') setTimeout(()=>{try{filtrarBachadas(true);}catch(e){}},10);
+    if(name==='eventos')   setTimeout(()=>{try{filtrarEventos(true);}catch(e){}},10);
     if(name==='config'){renderTecnicos();renderProductos();renderEquiposConfig();}
   }
 }
@@ -2910,6 +2916,15 @@ function renderBachadasData(bachs){
     const creB = b.ts || '';
     return creB.localeCompare(creA);
   });
+  // ── PAGINACIÓN: renderizar solo un bloque de filas ──────────────
+  // Construir miles de <tr> bloquea el hilo principal y hace que el
+  // teléfono se sienta lento al abrir la pestaña. Mostramos un bloque
+  // y el resto bajo demanda con el botón "Ver más".
+  const _totalFiltrado = bachs.length;
+  if(_bachPage * PAGE_SIZE < _totalFiltrado){
+    bachs = bachs.slice(0, _bachPage * PAGE_SIZE);
+  }
+
   tbody.innerHTML=bachs.map(b=>`
     <tr class="clickable-row" id="fila-b-${b.id}" onclick="verDetalleBachada(${b.id},event)">
       <td><span class="badge badge-blue">${b.equipo}</span></td>
@@ -2932,10 +2947,38 @@ function renderBachadasData(bachs){
         </div>
       </td>
     </tr>`).join('');
+
+  // Botón "Ver más" si quedan registros por mostrar
+  const restantes = _totalFiltrado - bachs.length;
+  if(restantes > 0){
+    tbody.innerHTML += `
+    <tr><td colspan="14" style="text-align:center;padding:14px;">
+      <button class="btn-sm btn-ghost" onclick="verMasBachadas()" style="padding:9px 22px;">
+        ▼ Ver ${Math.min(restantes, PAGE_SIZE)} registros más
+        <span style="color:var(--text3);font-size:11px;margin-left:6px;">(${restantes} restantes)</span>
+      </button>
+    </td></tr>`;
+  }
 }
 
+// Cargar el siguiente bloque de filas
+function verMasBachadas(){
+  _bachPage++;
+  filtrarBachadas();
+}
+
+// ════════════════════════════════════════════════════════════════
+// PAGINACIÓN DE TABLAS
+// Renderizar miles de filas de golpe bloquea el navegador, sobre todo
+// en móvil. Mostramos bloques de PAGE_SIZE y el resto bajo demanda.
+// ════════════════════════════════════════════════════════════════
+const PAGE_SIZE = 60;
+let _bachPage = 1;
+let _evPage   = 1;
+
 // ======== FILTRAR BACHADAS ========
-function filtrarBachadas(){
+function filtrarBachadas(resetPage){
+  if(resetPage) _bachPage = 1;
   let bachs = DB.get('bachadas', []);
   const equipo  = document.getElementById('filt-b-equipo')?.value || '';
   const fecha   = document.getElementById('filt-b-fecha')?.value || '';
@@ -3190,7 +3233,8 @@ function renderEventos(){
   filtrarEventos();
 }
 
-function filtrarEventos(){
+function filtrarEventos(resetPage){
+  if(resetPage) _evPage = 1;
   let evs=DB.get('eventos',[]).slice();
   const totalAll = evs.length;
 
@@ -3226,6 +3270,12 @@ function filtrarEventos(){
     tbody.innerHTML='<tr><td colspan="11" style="text-align:center;color:var(--text3);padding:28px;">' + (totalAll===0 ? 'Sin eventos registrados' : 'Sin eventos que coincidan con los filtros') + '</td></tr>';
     return;
   }
+  // ── PAGINACIÓN ──────────────────────────────────────────────
+  const _totalEvFiltrado = evs.length;
+  if(_evPage * PAGE_SIZE < _totalEvFiltrado){
+    evs = evs.slice(0, _evPage * PAGE_SIZE);
+  }
+
   tbody.innerHTML=evs.map(e=>`
     <tr class="clickable-row" id="fila-e-${e.id}" onclick="verDetalleEvento(${e.id},event)">
       <td><span class="badge badge-blue">${e.equipo}</span></td>
@@ -3245,6 +3295,22 @@ function filtrarEventos(){
         </div>
       </td>
     </tr>`).join('');
+
+  const restEv = _totalEvFiltrado - evs.length;
+  if(restEv > 0){
+    tbody.innerHTML += `
+    <tr><td colspan="11" style="text-align:center;padding:14px;">
+      <button class="btn-sm btn-ghost" onclick="verMasEventos()" style="padding:9px 22px;">
+        ▼ Ver ${Math.min(restEv, PAGE_SIZE)} eventos más
+        <span style="color:var(--text3);font-size:11px;margin-left:6px;">(${restEv} restantes)</span>
+      </button>
+    </td></tr>`;
+  }
+}
+
+function verMasEventos(){
+  _evPage++;
+  filtrarEventos();
 }
 
 function limpiarFiltrosEventos(){

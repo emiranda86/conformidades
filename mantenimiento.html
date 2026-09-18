@@ -160,6 +160,68 @@ body.sidebar-collapsed .sidebar:hover{transform:translateX(0);box-shadow:4px 0 2
 /* TABLE */
 .table-wrap{overflow-x:auto;border-radius:12px;border:1px solid var(--border);}
 
+/* ═══ PANTALLA DE SALA (modo mural) ═══════════════════════════════ */
+.sala-toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;
+  margin-bottom:14px;flex-wrap:wrap;}
+.sala-screen{background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:16px;}
+.sl-top{display:flex;justify-content:space-between;align-items:center;
+  padding-bottom:12px;border-bottom:1px solid var(--border);margin-bottom:14px;gap:12px;flex-wrap:wrap;}
+.sl-title{font-family:'Syne',sans-serif;font-size:19px;font-weight:700;color:var(--text);}
+.sl-sub{font-size:12px;color:var(--text2);margin-top:2px;}
+.sl-clock{font-family:'DM Mono',monospace;font-size:28px;font-weight:500;color:var(--text);line-height:1;}
+.sl-date{font-size:12px;color:var(--text2);text-align:right;margin-top:3px;}
+/* KPIs */
+.sl-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;}
+.sl-kpi{background:var(--surface);border-radius:12px;padding:13px 15px;}
+.sl-kpi-l{font-size:10.5px;color:var(--text2);letter-spacing:.09em;text-transform:uppercase;margin:0;}
+.sl-kpi-v{font-family:'DM Mono',monospace;font-size:27px;font-weight:500;margin:3px 0 0;line-height:1.1;}
+.sl-kpi-n{font-size:11px;color:var(--text2);margin:6px 0 0;}
+.sl-bar{height:5px;background:var(--border);border-radius:3px;margin-top:8px;overflow:hidden;}
+.sl-bar > div{height:100%;border-radius:3px;transition:width .5s;}
+/* Cuerpo */
+.sl-body{display:grid;grid-template-columns:1fr 260px;gap:12px;}
+.sl-lbl{font-size:11px;color:var(--text2);letter-spacing:.09em;text-transform:uppercase;margin:0 0 8px;}
+.sl-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;}
+/* Tarjeta de equipo */
+.sl-eq{background:var(--surface);border-radius:11px;padding:9px 10px;border:2px solid transparent;}
+.sl-eq.w{border-color:#facc15;}
+.sl-eq.d{border-color:var(--danger);}
+.sl-eq.off{opacity:.42;}
+.sl-eq-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;gap:4px;}
+.sl-eq-n{font-size:14px;font-weight:700;color:var(--text);}
+.sl-eq-t{font-size:9.5px;padding:2px 6px;border-radius:20px;font-family:'DM Mono',monospace;white-space:nowrap;}
+.sl-eq-b{height:4px;background:var(--border);border-radius:2px;overflow:hidden;margin-bottom:5px;}
+.sl-eq-b > div{height:100%;transition:width .5s;}
+.sl-eq-s{font-size:10.5px;margin:0;line-height:1.35;}
+.sl-eq-m{font-size:9.5px;color:var(--text3);margin:2px 0 0;line-height:1.3;}
+/* Alertas */
+.sl-alert{border-radius:11px;padding:10px 12px;margin-bottom:8px;border:1px solid;}
+.sl-alert-h{display:flex;align-items:center;gap:6px;margin-bottom:4px;}
+.sl-alert-t{font-size:11.5px;font-weight:700;}
+.sl-alert-d{font-size:10.5px;color:var(--text2);margin:0;line-height:1.5;}
+.sl-alert-w{font-size:9.5px;color:var(--text3);margin:4px 0 0;}
+.sl-voice{background:var(--surface);border-radius:11px;padding:10px 12px;margin-top:12px;}
+.sl-none{font-size:11.5px;color:var(--text3);text-align:center;padding:22px 0;}
+/* Modo kiosco: pantalla completa sin distracciones */
+body.kiosco .sidebar, body.kiosco .topbar, body.kiosco .tabs,
+body.kiosco .sala-toolbar, body.kiosco .page-header{display:none !important;}
+body.kiosco .main, body.kiosco .content{padding:0 !important;margin:0 !important;max-width:none !important;}
+body.kiosco .sala-screen{border:none;border-radius:0;min-height:100vh;padding:20px 24px;}
+body.kiosco .sl-clock{font-size:34px;}
+body.kiosco .sl-kpi-v{font-size:33px;}
+body.kiosco .sl-eq-n{font-size:16px;}
+body.kiosco .sl-title{font-size:23px;}
+.kiosco-exit{position:fixed;top:12px;right:14px;z-index:9999;font-size:11px;padding:6px 13px;
+  border-radius:8px;border:1px solid var(--border2);background:var(--surface);color:var(--text2);
+  cursor:pointer;opacity:.25;transition:opacity .2s;}
+.kiosco-exit:hover{opacity:1;}
+@media(max-width:900px){
+  .sl-kpis{grid-template-columns:1fr 1fr;}
+  .sl-body{grid-template-columns:1fr;}
+  .sl-grid{grid-template-columns:repeat(3,1fr);}
+}
+
+
 /* ═══ GRID DE FILTROS ══════════════════════════════════════════════
    En móvil: Desde+Hasta en una línea, Equipo+Estado/Turno en otra,
    y los campos de texto largo (Tipo de evento, Producto) completos.
@@ -968,7 +1030,7 @@ tr.clickable-row:hover td { background: var(--surface2); }
           <div class="tab" onclick="showTab('cong','registros')">📋 Registros</div>
           <div class="tab" onclick="showTab('cong','eventos')">⏸ Eventos / Paradas</div>
           <div class="tab" onclick="showTab('cong','dashboard')">📊 Dashboard</div>
-          <div class="tab" onclick="showTab('cong','reportes')">🖨 Reportes</div>
+          <div class="tab" onclick="showTab('cong','sala')">📺 Pantalla Sala</div>
           <div class="tab" onclick="showTab('cong','config')">⚙️ Configuración</div>
         </div>
 
@@ -1503,39 +1565,20 @@ tr.clickable-row:hover td { background: var(--surface2); }
 
         </div>
 
-        <!-- REPORTES -->
-        <div class="tab-content" id="tab-cong-reportes">
-          <div class="card mb-6">
-            <div class="card-title">🖨 Generación de Reportes</div>
-            <div class="form-grid">
-              <div class="field"><label>Tipo</label>
-                <select id="rep-tipo">
-                  <option value="produccion">Producción por período</option>
-                  <option value="eficiencia">Eficiencia de Equipos</option>
-                  <option value="paradas">Registro de Eventos / Paradas</option>
-                  <option value="mantenimiento">Indicadores de Mantenimiento (MTBF/MTTR/Disp.)</option>
-                </select>
-              </div>
-              <div class="field"><label>Desde</label><input type="date" id="rep-from"></div>
-              <div class="field"><label>Hasta</label><input type="date" id="rep-to"></div>
-              <div class="field"><label>Equipo</label>
-                <select id="rep-equipo">
-                  <option value="">Todos</option>
-                  <option value="C1">Congelador 1</option><option value="C2">Congelador 2</option><option value="C3">Congelador 3</option>
-                  <option value="C4">Congelador 4</option><option value="C5">Congelador 5</option><option value="C6">Congelador 6</option>
-                  <option value="C7">Congelador 7</option><option value="C8">Congelador 8</option><option value="C9">Congelador 9</option>
-                  <option value="C10">Congelador 10</option><option value="C11">Congelador 11</option><option value="C12">Congelador 12</option><option value="C13">Congelador 13</option><option value="TE">Túnel Estático</option>
-                </select>
-              </div>
+        <!-- PANTALLA DE SALA (reemplaza Reportes) -->
+        <div class="tab-content" id="tab-cong-sala">
+          <div class="sala-toolbar no-print">
+            <div>
+              <span style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;">📺 Pantalla de Sala</span>
+              <span style="font-size:12px;color:var(--text2);margin-left:10px;">Vista mural para sala de procesos · actualización en vivo</span>
             </div>
-            <div style="margin-top:18px;display:flex;gap:10px;">
-              <button class="btn-sm btn-accent" onclick="generarReporte()">📊 Generar</button>
-              <button class="btn-sm btn-ghost" onclick="window.print()">🖨 Imprimir</button>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+              <button class="btn-sm" id="btn-voz" onclick="toggleVozSala()" title="Activar o silenciar las alarmas por voz">🔊 Voz: ON</button>
+              <button class="btn-sm btn-accent" onclick="entrarKiosco()">⛶ Pantalla completa</button>
             </div>
           </div>
-          <div id="reporte-content"></div>
+          <div id="sala-screen" class="sala-screen"></div>
         </div>
-
         <!-- CONFIG (dentro del proceso) -->
         <div class="tab-content" id="tab-cong-config">
           <div class="tabs" style="margin-bottom:18px;" id="cfg-subtabs">
@@ -2012,6 +2055,7 @@ function startListeners() {
     if(document.getElementById('tab-cong-registros')?.classList.contains('active')) filtrarBachadas();
     // Actualizar portada (ligero) y dashboard/timeline (debounced)
     renderBachadasCards();
+    if(document.getElementById('tab-cong-sala')?.classList.contains('active')) { try{renderSala();}catch(e){} }
     if(document.getElementById('dash-page-3')?.classList.contains('active')) {
       renderTimelineDebounced();
     } else if(document.querySelector('.dash-page.active')) {
@@ -2026,6 +2070,7 @@ function startListeners() {
     if(document.getElementById('tab-cong-eventos')?.classList.contains('active')) renderEventos();
     // Actualizar portada (ligero) y dashboard/timeline (debounced)
     renderBachadasCards();
+    if(document.getElementById('tab-cong-sala')?.classList.contains('active')) { try{renderSala();}catch(e){} }
     if(document.getElementById('dash-page-3')?.classList.contains('active')) {
       renderTimelineDebounced();
     } else if(document.querySelector('.dash-page.active')) {
@@ -2288,7 +2333,7 @@ function showToast(msg, type='info'){
 }
 
 function showTab(prefix,name){
-  const order=['bachadas','registros','eventos','dashboard','reportes','config'];
+  const order=['bachadas','registros','eventos','dashboard','sala','config'];
   // Activar el botón de tab correcto
   const tabsEl=document.getElementById('cong-tabs');
   if(tabsEl){
@@ -2310,6 +2355,7 @@ function showTab(prefix,name){
     if(name==='bachadas')  setTimeout(()=>{try{renderBachadasCards();}catch(e){}},10);
     if(name==='registros') setTimeout(()=>{try{filtrarBachadas(true);}catch(e){}},10);
     if(name==='eventos')   setTimeout(()=>{try{filtrarEventos(true);}catch(e){}},10);
+    if(name==='sala')      setTimeout(()=>{try{startSala();}catch(e){console.warn('sala:',e);}},10);
     if(name==='config'){renderTecnicos();renderProductos();renderEquiposConfig();}
   }
 }
@@ -3185,6 +3231,247 @@ function renderCardsEventos(evs, totalFiltrado){
     cont.innerHTML += '<div class="rc-more"><button class="rc-btn" onclick="verMasEventos()" style="width:100%;">' +
       '▼ Ver ' + Math.min(rest, PAGE_SIZE) + ' más <span style="color:var(--text3);font-size:10.5px;">(' + rest + ' restantes)</span></button></div>';
   }
+}
+
+
+// ════════════════════════════════════════════════════════════════
+// PANTALLA DE SALA — vista mural + alarmas por voz
+// Pensada para una TV en sala de procesos. Se refresca sola y
+// anuncia por parlante cuando un equipo se acerca a su descarga.
+// ════════════════════════════════════════════════════════════════
+let _salaTimer   = null;
+let _vozActiva   = true;
+const _yaAnunciado = new Set();   // evita repetir el mismo aviso
+const AVISO_MIN    = 10;          // minutos de anticipación
+
+function hablarSala(texto){
+  if(!_vozActiva || !('speechSynthesis' in window)) return;
+  try{
+    const u = new SpeechSynthesisUtterance(texto);
+    u.lang = 'es-PE'; u.rate = 0.92; u.pitch = 1; u.volume = 1;
+    const v = speechSynthesis.getVoices().find(x => x.lang && x.lang.startsWith('es'));
+    if(v) u.voice = v;
+    speechSynthesis.speak(u);
+  }catch(e){}
+}
+
+function toggleVozSala(){
+  _vozActiva = !_vozActiva;
+  const b = document.getElementById('btn-voz');
+  if(b){ b.textContent = _vozActiva ? '🔊 Voz: ON' : '🔇 Voz: OFF'; }
+  if(!_vozActiva && 'speechSynthesis' in window) speechSynthesis.cancel();
+  try{ localStorage.setItem('smf_voz', _vozActiva ? '1' : '0'); }catch(e){}
+}
+
+function entrarKiosco(){
+  document.body.classList.add('kiosco');
+  if(!document.getElementById('kiosco-exit')){
+    const b = document.createElement('button');
+    b.id = 'kiosco-exit'; b.className = 'kiosco-exit';
+    b.textContent = '✕ Salir (Esc)';
+    b.onclick = salirKiosco;
+    document.body.appendChild(b);
+  }
+  const el = document.documentElement;
+  if(el.requestFullscreen) el.requestFullscreen().catch(()=>{});
+  renderSala();
+}
+
+function salirKiosco(){
+  document.body.classList.remove('kiosco');
+  const b = document.getElementById('kiosco-exit'); if(b) b.remove();
+  if(document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(()=>{});
+}
+
+document.addEventListener('keydown', e => {
+  if(e.key === 'Escape' && document.body.classList.contains('kiosco')) salirKiosco();
+});
+
+// ── Render principal ────────────────────────────────────────────
+function renderSala(){
+  const cont = document.getElementById('sala-screen');
+  if(!cont) return;
+
+  const bachs = DB.get('bachadas', []);
+  const evs   = DB.get('eventos',  []);
+  const ahora = new Date();
+
+  // Día operativo (arranca 08:00) y turno en curso
+  const h = ahora.getHours();
+  const dOp = new Date(ahora);
+  if(h < 8) dOp.setDate(dOp.getDate() - 1);
+  const fechaOp = dOp.toISOString().slice(0,10);
+  const turno   = (h >= 8 && h < 20) ? 'Día' : 'Noche';
+
+  // Producción del día operativo
+  const delDia  = bachs.filter(b => b.fecha === fechaOp);
+  const kgDia   = delDia.reduce((s,b) => s + (b.peso||0), 0);
+  const tDia    = kgDia / 1000;
+  const kgTurno = delDia.filter(b => b.turno === turno).reduce((s,b)=>s+(b.peso||0),0);
+  const tTurno  = kgTurno / 1000;
+
+  const META_DIA   = 130.9;
+  const META_TURNO = META_DIA / 2;
+
+  // Avance esperado según las horas ya corridas del turno
+  const hIni = (turno === 'Día') ? 8 : 20;
+  let hCorridas = h - hIni; if(hCorridas < 0) hCorridas += 24;
+  const fracTurno = Math.min(1, Math.max(0.01, (hCorridas + ahora.getMinutes()/60) / 12));
+  const espTurno  = META_TURNO * fracTurno;
+  const pctTurno  = espTurno > 0 ? (tTurno/espTurno*100) : 0;
+  const pctDia    = tDia / META_DIA * 100;
+
+  // Estado por equipo
+  const EV_OP = ['carga_descarga','descongelamiento'];
+  const alertas = [];
+  const tarjetas = ORDEN_EQ.map(eq => {
+    const bach = bachs.find(b => b.equipo===eq && b.estado==='pendiente');
+    const ev   = evs.find(e => e.equipo===eq && e.estado==='abierto' && e.tipo!=='fin_proceso');
+    const lim  = getLimitesEGC(eq) || {min:3,max:3};
+
+    if(bach){
+      const th  = tiempoTranscurridoH(bach.fecha, bach.inicio);
+      const pct = Math.min(100, th/lim.min*100);
+      const minFalta = Math.round((lim.min - th) * 60);
+      const excedido = th > lim.max;
+      const proximo  = !excedido && minFalta <= AVISO_MIN && minFalta > -60;
+
+      if(proximo && !_yaAnunciado.has('prox-'+bach.id)){
+        _yaAnunciado.add('prox-'+bach.id);
+        hablarSala(`${nomVoz(eq)} está próximo a llegar a su tiempo de descarga. Se recomienda verificar temperatura de producto para su descarga.`);
+      }
+      if(excedido && !_yaAnunciado.has('exc-'+bach.id)){
+        _yaAnunciado.add('exc-'+bach.id);
+        hablarSala(`Atención. ${nomVoz(eq)} ha superado su tiempo máximo de congelamiento.`);
+      }
+      if(proximo) alertas.push({c:'#facc15',i:'🔔',t:eq+' · descarga próxima',
+        d:'Verificar temperatura de producto antes de descargar'});
+      if(excedido) alertas.push({c:'var(--danger)',i:'⏰',t:eq+' · tiempo excedido',
+        d:'Supera '+hoursToStr(lim.max)+' de congelamiento'});
+
+      const col = excedido ? 'var(--danger)' : proximo ? '#facc15' : 'var(--accent)';
+      const cls = excedido ? 'sl-eq d' : proximo ? 'sl-eq w' : 'sl-eq';
+      const txt = excedido ? '⏰ Tiempo excedido' : proximo ? '🔔 Próximo a descarga' : 'Congelando';
+      return `<div class="${cls}">
+        <div class="sl-eq-h"><span class="sl-eq-n">${eq}</span>
+          <span class="sl-eq-t" style="background:${col}22;color:${col};">${hoursToStr(th)}</span></div>
+        <div class="sl-eq-b"><div style="width:${pct.toFixed(0)}%;background:${col};"></div></div>
+        <p class="sl-eq-s" style="color:${col};">${txt}</p>
+        <p class="sl-eq-m">Bach #${bach.bach||'?'} · ${bach.inicio||''}</p></div>`;
+    }
+
+    if(ev){
+      const th = tiempoTranscurridoH(ev.fechaIni, ev.inicio);
+      const esOp = EV_OP.includes(ev.tipo);
+      const col = ev.tipo==='no_programada' ? 'var(--danger)'
+                : ev.tipo==='sin_produccion' ? '#a855f7'
+                : ev.tipo==='programada' ? 'var(--success)' : '#ff9500';
+      // C/D que se alarga
+      if(ev.tipo==='carga_descarga' && th>0.5 && !_yaAnunciado.has('cd-'+ev.id)){
+        _yaAnunciado.add('cd-'+ev.id);
+        hablarSala(`${nomVoz(eq)} lleva ${Math.round(th*60)} minutos en carga y descarga. El tiempo objetivo es de treinta minutos.`);
+      }
+      // Parada larga por falla
+      if(ev.tipo==='no_programada' && th>1 && !_yaAnunciado.has('fa-'+ev.id)){
+        _yaAnunciado.add('fa-'+ev.id);
+        hablarSala(`${nomVoz(eq)} lleva ${hoursToStr(th)} parado por falla.`);
+      }
+      if(ev.tipo==='no_programada' && th>1) alertas.push({c:'var(--danger)',i:'⚠',
+        t:eq+' · parada prolongada', d:hoursToStr(th)+' sin operar — '+(ev.desc||'falla')});
+
+      return `<div class="sl-eq ${ev.tipo==='no_programada'?'d':''}">
+        <div class="sl-eq-h"><span class="sl-eq-n">${eq}</span>
+          <span class="sl-eq-t" style="background:${col}22;color:${col};">${hoursToStr(th)}</span></div>
+        <div class="sl-eq-b"><div style="width:${Math.min(100,th/2*100).toFixed(0)}%;background:${col};"></div></div>
+        <p class="sl-eq-s" style="color:${col};">${TIPOSEV[ev.tipo]||ev.tipo}</p>
+        <p class="sl-eq-m">Desde ${ev.inicio||''}</p></div>`;
+    }
+
+    return `<div class="sl-eq off">
+      <div class="sl-eq-h"><span class="sl-eq-n">${eq}</span><span class="sl-eq-t" style="color:var(--text3);">—</span></div>
+      <div class="sl-eq-b"></div>
+      <p class="sl-eq-s" style="color:var(--text3);">Sin actividad</p>
+      <p class="sl-eq-m">&nbsp;</p></div>`;
+  });
+
+  // Aviso horario si el turno va por debajo de la meta
+  const claveHora = fechaOp+'-'+turno+'-'+h;
+  if(pctTurno < 90 && hCorridas >= 1 && !_yaAnunciado.has('meta-'+claveHora)){
+    _yaAnunciado.add('meta-'+claveHora);
+    hablarSala(`El turno lleva ${Math.round(pctTurno)} por ciento del avance esperado. Faltan ${(espTurno-tTurno).toFixed(1)} toneladas.`);
+  }
+  if(pctTurno < 90 && hCorridas >= 1) alertas.push({c:'#ff9500',i:'📉',t:'Turno bajo meta',
+    d:Math.round(pctTurno)+'% del avance esperado — faltan '+(espTurno-tTurno).toFixed(1)+' t'});
+
+  const nCong  = bachs.filter(b=>b.estado==='pendiente').length;
+  const nEv    = evs.filter(e=>e.estado==='abierto' && e.tipo!=='fin_proceso').length;
+  const colDia = pctDia>=100?'var(--success)':pctDia>=75?'var(--accent)':'var(--danger)';
+  const colTur = pctTurno>=100?'var(--success)':pctTurno>=90?'#facc15':'var(--danger)';
+
+  cont.innerHTML = `
+    <div class="sl-top">
+      <div><div class="sl-title">❄️ Congelamiento en vivo</div>
+        <div class="sl-sub">Turno ${turno} · ${turno==='Día'?'08:00–20:00':'20:00–08:00'}</div></div>
+      <div><div class="sl-clock">${ahora.toLocaleTimeString('es-PE',{hour:'2-digit',minute:'2-digit'})}</div>
+        <div class="sl-date">${ahora.toLocaleDateString('es-PE',{weekday:'short',day:'2-digit',month:'short'})}</div></div>
+    </div>
+
+    <div class="sl-kpis">
+      <div class="sl-kpi"><p class="sl-kpi-l">Producido hoy</p>
+        <p class="sl-kpi-v" style="color:${colDia};">${tDia.toFixed(1)} t</p>
+        <div class="sl-bar"><div style="width:${Math.min(100,pctDia)}%;background:${colDia};"></div></div>
+        <p class="sl-kpi-n">${pctDia.toFixed(0)}% de ${META_DIA} t</p></div>
+
+      <div class="sl-kpi"><p class="sl-kpi-l">Turno ${turno}</p>
+        <p class="sl-kpi-v" style="color:${colTur};">${tTurno.toFixed(1)} t</p>
+        <div class="sl-bar"><div style="width:${Math.min(100,pctTurno)}%;background:${colTur};"></div></div>
+        <p class="sl-kpi-n" style="color:${colTur};">${pctTurno.toFixed(0)}% del avance esperado</p></div>
+
+      <div class="sl-kpi"><p class="sl-kpi-l">En congelamiento</p>
+        <p class="sl-kpi-v" style="color:var(--accent);">${nCong}<span style="font-size:15px;color:var(--text2);">/14</span></p>
+        <p class="sl-kpi-n">${nEv} en evento · ${14-nCong-nEv} sin actividad</p></div>
+
+      <div class="sl-kpi"><p class="sl-kpi-l">Bachadas hoy</p>
+        <p class="sl-kpi-v">${delDia.length}</p>
+        <p class="sl-kpi-n">Ritmo ${(delDia.length/Math.max(1,hCorridas+ (turno==='Noche'?12:0))).toFixed(1)}/h</p></div>
+    </div>
+
+    <div class="sl-body">
+      <div><p class="sl-lbl">Equipos</p><div class="sl-grid">${tarjetas.join('')}</div></div>
+      <div><p class="sl-lbl">Alertas</p>
+        ${alertas.length ? alertas.map(a=>`
+          <div class="sl-alert" style="background:${a.c}12;border-color:${a.c}44;">
+            <div class="sl-alert-h"><span style="color:${a.c};">${a.i}</span>
+              <span class="sl-alert-t" style="color:${a.c};">${a.t}</span></div>
+            <p class="sl-alert-d">${a.d}</p></div>`).join('')
+          : '<div class="sl-none">✅ Sin alertas activas</div>'}
+        <div class="sl-voice">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-size:11px;color:var(--text2);">🔊 Alarmas por voz</span>
+            <span style="font-size:10px;padding:2px 8px;border-radius:20px;background:${_vozActiva?'#00e87a22':'#ff3b5c22'};color:${_vozActiva?'var(--success)':'var(--danger)'};">${_vozActiva?'ON':'OFF'}</span>
+          </div>
+          <p style="margin:6px 0 0;font-size:10px;color:var(--text3);line-height:1.5;">Aviso ${AVISO_MIN} min antes del tiempo de descarga</p>
+        </div>
+      </div>
+    </div>`;
+}
+
+// Nombre legible para la voz
+function nomVoz(eq){
+  if(eq === 'TE') return 'Túnel estático';
+  return 'Congelador ' + String(eq).replace('C','');
+}
+
+function startSala(){
+  if(_salaTimer) clearInterval(_salaTimer);
+  try{ _vozActiva = localStorage.getItem('smf_voz') !== '0'; }catch(e){}
+  const b = document.getElementById('btn-voz');
+  if(b) b.textContent = _vozActiva ? '🔊 Voz: ON' : '🔇 Voz: OFF';
+  renderSala();
+  _salaTimer = setInterval(() => {
+    const t = document.getElementById('tab-cong-sala');
+    if(t && t.classList.contains('active')) renderSala();
+  }, 20000);
 }
 
 // ======== FILTRAR BACHADAS ========

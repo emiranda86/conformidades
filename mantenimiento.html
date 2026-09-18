@@ -161,6 +161,15 @@ body.sidebar-collapsed .sidebar:hover{transform:translateX(0);box-shadow:4px 0 2
 .table-wrap{overflow-x:auto;border-radius:12px;border:1px solid var(--border);}
 
 /* ═══ PANTALLA DE SALA (modo mural) ═══════════════════════════════ */
+.sl-panel{background:var(--surface);border:1px solid var(--border);border-radius:13px;padding:13px 15px;}
+.sl-panel-h{font-size:11px;color:var(--text2);letter-spacing:.09em;text-transform:uppercase;margin:0 0 10px;
+  padding-bottom:7px;border-bottom:1px solid var(--border);}
+.sl-body2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;}
+.sl-brow{display:grid;grid-template-columns:30px 1fr 40px;align-items:center;gap:6px;margin-bottom:5px;}
+.sl-beq{font-size:10.5px;color:var(--text2);text-align:right;}
+.sl-btrack{position:relative;height:16px;border-radius:3px;overflow:hidden;background:var(--bg);border:1px solid var(--border);}
+.sl-bpct{font-size:10.5px;font-weight:700;text-align:right;}
+@media(max-width:900px){.sl-body2{grid-template-columns:1fr;}}
 .sala-toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;
   margin-bottom:14px;flex-wrap:wrap;}
 .sala-screen{background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:16px;}
@@ -3401,7 +3410,10 @@ function renderSala(){
   const kgTurno = delDia.filter(b => b.turno === turno).reduce((s,b)=>s+(b.peso||0),0);
   const tTurno  = kgTurno / 1000;
 
-  const META_DIA   = 130.9;
+  // Meta = capacidad instalada del KPI de Eficiencia (escenario conservador)
+  const CAP_SALA = {C1:315,C2:315,C3:315,C4:308.7,C5:308.7,C6:308.7,C7:308.7,C8:308.7,C9:308.7,
+                    C10:540,C11:540,C12:540,C13:540,TE:495.48};
+  const META_DIA   = Object.values(CAP_SALA).reduce((s,v)=>s+v,0)*24/1000;
   const META_TURNO = META_DIA / 2;
 
   // Avance esperado según las horas ya corridas del turno
@@ -3494,6 +3506,27 @@ function renderSala(){
   if(pctTurno < 90 && hCorridas >= 1) alertas.push({c:'#ff9500',i:'📉',t:'Turno bajo meta',
     d:Math.round(pctTurno)+'% del avance esperado — faltan '+(espTurno-tTurno).toFixed(1)+' t'});
 
+  // Barras de producción por equipo (mismo criterio del dashboard)
+  const realEq = {}; ORDEN_EQ.forEach(e=>realEq[e]=0);
+  delDia.forEach(b=>{ if(realEq.hasOwnProperty(b.equipo)) realEq[b.equipo]+=(b.peso||0); });
+  const metaEq = {}; ORDEN_EQ.forEach(e=>metaEq[e]=(CAP_SALA[e]||0)*24/1000);
+  const maxMeta = Math.max(...ORDEN_EQ.map(e=>metaEq[e]));
+  const barras = ORDEN_EQ.map(eq=>{
+    const mT=metaEq[eq], rT=realEq[eq]/1000, p=mT>0?rT/mT*100:0;
+    const mW=mT/maxMeta*100, rW=Math.min(rT/maxMeta*100, mW);
+    const col=p>100?'var(--success)':p>=75?'var(--accent)':'var(--danger)';
+    const dentro=(rW/100*260)>46;
+    return `<div class="sl-brow"><span class="sl-beq">${eq}</span>
+      <div class="sl-btrack"><div style="position:absolute;left:0;top:0;height:100%;width:${mW.toFixed(1)}%;background:var(--border);"></div>
+      <div style="position:absolute;left:0;top:0;height:100%;width:${rW.toFixed(1)}%;background:${col};display:flex;align-items:center;overflow:hidden;">
+      ${dentro?`<span style="padding-left:6px;font-size:9.5px;font-weight:700;color:var(--bg);font-family:'DM Mono',monospace;">${rT.toFixed(1)}t</span>`:''}</div></div>
+      <span class="sl-bpct" style="color:${col};">${p.toFixed(0)}%</span></div>`;
+  }).join('');
+
+  const nBachTurno = delDia.filter(b=>b.turno===turno).length;
+  const pesoMedio  = delDia.length ? (tDia/delDia.length).toFixed(2) : '0.00';
+  const proy       = (fracTurno>0.05 ? (tTurno/fracTurno*2) : tDia).toFixed(1);
+
   const nCong  = bachs.filter(b=>b.estado==='pendiente').length;
   const nEv    = evs.filter(e=>e.estado==='abierto' && e.tipo!=='fin_proceso').length;
   const colDia = pctDia>=100?'var(--success)':pctDia>=75?'var(--accent)':'var(--danger)';
@@ -3528,8 +3561,8 @@ function renderSala(){
     </div>
 
     <div class="sl-body">
-      <div><p class="sl-lbl">Equipos</p><div class="sl-grid">${tarjetas.join('')}</div></div>
-      <div><p class="sl-lbl">Alertas</p>
+      <div class="sl-panel"><p class="sl-panel-h">Estado de equipos</p><div class="sl-grid">${tarjetas.join('')}</div></div>
+      <div class="sl-panel"><p class="sl-panel-h">Alertas</p>
         ${alertas.length ? alertas.map(a=>`
           <div class="sl-alert" style="background:${a.c}12;border-color:${a.c}44;">
             <div class="sl-alert-h"><span style="color:${a.c};">${a.i}</span>
@@ -3543,6 +3576,20 @@ function renderSala(){
           </div>
           <p style="margin:6px 0 0;font-size:10px;color:var(--text3);line-height:1.5;">Aviso ${AVISO_MIN} min antes del tiempo de descarga</p>
         </div>
+      </div>
+    </div>
+
+    <div class="sl-body2">
+      <div class="sl-panel"><p class="sl-panel-h">Producción por equipo · meta del día</p>${barras}</div>
+      <div class="sl-panel"><p class="sl-panel-h">Resumen del turno</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div><p class="sl-kpi-l">Bachadas turno</p><p class="sl-kpi-v" style="font-size:22px;">${nBachTurno}</p></div>
+          <div><p class="sl-kpi-l">Peso medio</p><p class="sl-kpi-v" style="font-size:22px;">${pesoMedio} t</p></div>
+          <div><p class="sl-kpi-l">Falta para meta día</p><p class="sl-kpi-v" style="font-size:22px;color:${colDia};">${Math.max(0,META_DIA-tDia).toFixed(1)} t</p></div>
+          <div><p class="sl-kpi-l">Proyección al cierre</p><p class="sl-kpi-v" style="font-size:22px;color:${colTur};">${proy} t</p></div>
+        </div>
+        <p style="margin:12px 0 0;font-size:10.5px;color:var(--text3);line-height:1.6;border-top:1px solid var(--border);padding-top:9px;">
+          Meta diaria ${META_DIA.toFixed(1)} t — capacidad instalada de los 14 equipos (escenario conservador), la misma base del KPI de Eficiencia.</p>
       </div>
     </div>`;
 }

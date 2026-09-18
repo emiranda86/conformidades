@@ -171,9 +171,10 @@ body.sidebar-collapsed .sidebar:hover{transform:translateX(0);box-shadow:4px 0 2
 .sl-tick{position:absolute;left:75%;top:3px;height:calc(100% - 6px);width:1.5px;background:rgba(255,255,255,.35);border-radius:1px;}
 .sl-dot{width:9px;height:9px;border-radius:2px;display:inline-block;flex-shrink:0;}
 .sl-drow{display:grid;grid-template-columns:28px 1fr 34px;align-items:center;gap:6px;margin-bottom:5px;}
-.sl-grow{flex:1;}
-.sl-left{display:flex;flex-direction:column;gap:12px;}
-.sl-right{display:flex;flex-direction:column;gap:12px;}
+.sl-grow{flex:0 0 auto;}
+.sl-left{display:flex;flex-direction:column;gap:12px;min-height:0;}
+.sl-right{display:flex;flex-direction:column;gap:12px;min-height:0;}
+.sl-right > .sl-grow{flex:1 1 auto;min-height:0;}
 .sl-brow{display:grid;grid-template-columns:28px 1fr 38px;align-items:center;gap:5px;margin-bottom:4px;}
 .sl-beq{font-size:10.5px;color:var(--text2);text-align:right;}
 .sl-btrack{position:relative;height:15px;border-radius:3px;overflow:hidden;background:var(--bg);border:1px solid var(--border);}
@@ -224,11 +225,28 @@ body.sidebar-collapsed .sidebar:hover{transform:translateX(0);box-shadow:4px 0 2
 body.kiosco .sidebar, body.kiosco .topbar, body.kiosco .tabs,
 body.kiosco .sala-toolbar, body.kiosco .page-header{display:none !important;}
 body.kiosco .main, body.kiosco .content{padding:0 !important;margin:0 !important;max-width:none !important;}
-body.kiosco .sala-screen{border:none;border-radius:0;min-height:100vh;padding:20px 24px;}
-body.kiosco .sl-clock{font-size:34px;}
-body.kiosco .sl-kpi-v{font-size:33px;}
-body.kiosco .sl-eq-n{font-size:16px;}
-body.kiosco .sl-title{font-size:23px;}
+body.kiosco .sala-screen{border:none;border-radius:0;height:100vh;overflow:hidden;padding:12px 16px;
+  display:flex;flex-direction:column;}
+body.kiosco .sl-top{padding-bottom:8px;margin-bottom:8px;flex:0 0 auto;}
+body.kiosco .sl-body{flex:0 0 auto;}
+body.kiosco .sl-body:last-child{flex:1 1 auto;min-height:0;}
+body.kiosco .sl-panel{padding:10px 12px;}
+body.kiosco .sl-panel-h{margin-bottom:8px;padding-bottom:5px;}
+body.kiosco .sl-left,body.kiosco .sl-right{gap:9px;}
+body.kiosco .sl-grid{gap:6px;}
+body.kiosco .sl-eq{padding:8px 9px;}
+body.kiosco .sl-card{padding:8px 9px;}
+body.kiosco .sl-bcols{gap:4px 14px;}
+body.kiosco .sl-btrack{height:16px;}
+body.kiosco .sl-drow{margin-bottom:4px;}
+body.kiosco .sl-alert{padding:8px 10px;margin-bottom:6px;}
+body.kiosco .sl-clock{font-size:26px;}
+body.kiosco .sl-eq-n{font-size:15px;}
+body.kiosco .sl-eq-s{font-size:11px;}
+body.kiosco .sl-eq-m{font-size:9.5px;}
+body.kiosco .sl-eq-t{font-size:10px;}
+body.kiosco .sl-kpi-v{font-size:22px !important;}
+body.kiosco .sl-title{font-size:18px;}
 .kiosco-exit{position:fixed;top:12px;right:14px;z-index:9999;font-size:11px;padding:6px 13px;
   border-radius:8px;border:1px solid var(--border2);background:var(--surface);color:var(--text2);
   cursor:pointer;opacity:.25;transition:opacity .2s;}

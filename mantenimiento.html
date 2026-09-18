@@ -245,7 +245,13 @@ body.kiosco .sl-left > .sl-grow{flex:1.45 1 0;}
 body.kiosco .sl-left > .sl-panel:last-child{flex:1 1 0;}
 body.kiosco .sl-left .sl-grid{flex:1;align-content:space-between;}
 body.kiosco .sl-left .sl-bcols{flex:1;align-content:space-between;}
-body.kiosco .sl-eq{display:flex;flex-direction:column;justify-content:center;}
+body.kiosco .sl-eq{display:flex;flex-direction:column;justify-content:center;
+  background:var(--bg);border:1px solid var(--border);}
+body.kiosco .sl-eq.w{border:2px solid #facc15;}
+body.kiosco .sl-eq.d{border:2px solid var(--danger);}
+body.kiosco .sl-left .sl-bcols > div{display:flex;flex-direction:column;justify-content:space-between;min-height:0;}
+body.kiosco .sl-left .sl-brow{flex:1;min-height:0;}
+body.kiosco .sl-left .sl-btrack{height:100%;min-height:16px;max-height:30px;}
 body.kiosco .sl-clock{font-size:26px;}
 body.kiosco .sl-eq-n{font-size:15px;}
 body.kiosco .sl-eq-s{font-size:11px;}

@@ -6226,8 +6226,43 @@ function renderTimeline() {
     const categoryPct = multiEquipo ? 0.6 : 0.7;
     const barPct = 0.85;
 
+    // Etiqueta con la duración dentro de cada barra — permite leer el
+    // Gantt en una captura, sin depender del tooltip.
+    const tlDurLabels = {
+      id: 'tl_dur_labels',
+      afterDatasetsDraw(chart){
+        const ctx = chart.ctx;
+        ctx.save();
+        chart.data.datasets.forEach((ds, di) => {
+          const meta = chart.getDatasetMeta(di);
+          if(meta.hidden) return;
+          meta.data.forEach((el, ii) => {
+            const v = ds.data[ii];
+            if(!Array.isArray(v)) return;
+            const dur = v[1] - v[0];
+            if(!dur || dur <= 0) return;
+            const { x, y, base, height } = el.getProps(['x','y','base','height'], true);
+            const w = Math.abs(x - base);
+            if(w < 30) return;                       // barra muy corta: se omite
+            const txt = hoursToStr(dur);
+            ctx.font = '700 ' + (height > 18 ? 11 : 9.5) + "px 'DM Mono', monospace";
+            if(ctx.measureText(txt).width + 12 > w) return;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.shadowColor = 'rgba(0,0,0,.75)';
+            ctx.shadowBlur = 3;
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillText(txt, (base + x) / 2, y);
+            ctx.shadowBlur = 0;
+          });
+        });
+        ctx.restore();
+      }
+    };
+
     charts[chartKey] = new Chart(canvas, {
       type: 'bar',
+      plugins: [tlDurLabels],
       data: { labels, datasets: [{
         label:'Eventos', data,
         backgroundColor: bgColors,

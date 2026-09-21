@@ -176,8 +176,8 @@ body.sidebar-collapsed .sidebar:hover{transform:translateX(0);box-shadow:4px 0 2
 .sl-kc{display:grid;grid-template-columns:1fr auto;align-items:center;gap:10px;}
 .sl-kc-l{min-width:0;}
 .sl-kc-w{font-family:'DM Mono',monospace;font-size:19px;font-weight:500;color:var(--text);margin:3px 0 0;line-height:1.1;}
-.sl-kc-p{font-family:'Syne',sans-serif;font-size:34px;font-weight:800;line-height:1;white-space:nowrap;}
-.sl-kc-p span{font-size:17px;margin-left:1px;}
+.sl-kc-p{font-family:'DM Mono',monospace;font-size:24px;font-weight:500;line-height:1;white-space:nowrap;letter-spacing:-.02em;}
+.sl-kc-p span{font-size:14px;margin-left:1px;opacity:.75;}
 .sl-left{display:flex;flex-direction:column;gap:12px;min-height:0;}
 .sl-right{display:flex;flex-direction:column;gap:12px;min-height:0;}
 .sl-right > .sl-grow{flex:1 1 auto;min-height:0;}
@@ -251,7 +251,7 @@ body.kiosco .sl-left > .sl-grow{flex:1.45 1 0;}
 body.kiosco .sl-left > .sl-panel:last-child{flex:.82 1 0;}
 body.kiosco .sl-left .sl-bcols{padding-bottom:6px;}
 body.kiosco .sl-ind .sl-card{padding:13px 13px;}
-body.kiosco .sl-kc-p{font-size:40px;}
+body.kiosco .sl-kc-p{font-size:28px;}
 body.kiosco .sl-kc-w{font-size:21px;}
 body.kiosco .sl-left .sl-grid{flex:1;align-content:space-between;}
 body.kiosco .sl-left .sl-bcols{flex:1;align-content:space-between;}
@@ -3450,6 +3450,12 @@ function salirKiosco(){
 document.addEventListener('keydown', e => {
   if(e.key === 'Escape' && document.body.classList.contains('kiosco')) salirKiosco();
 });
+document.addEventListener('fullscreenchange', () => {
+  if(!document.fullscreenElement && document.body.classList.contains('kiosco')) salirKiosco();
+});
+document.addEventListener('webkitfullscreenchange', () => {
+  if(!document.webkitFullscreenElement && document.body.classList.contains('kiosco')) salirKiosco();
+});
 
 // ── Render principal ────────────────────────────────────────────
 function renderSala(){
@@ -3589,7 +3595,7 @@ function renderSala(){
   });
 
   // Bachadas acumuladas del día con meta propia por grupo
-  const METAB = eq => eq==='TE' ? 2 : (parseInt(String(eq).replace('C',''))>=10 ? 6 : 7);
+  const METAB = eq => { if(eq==='TE') return 2; const n=parseInt(String(eq).replace('C',''))||0; return n<=3 ? 8 : n>=10 ? 6 : 7; };
   const puntos = ORDEN_EQ.map(eq=>{
     const v = delDia.filter(b=>b.equipo===eq).length, m = METAB(eq), r = m>0?v/m:0;
     const col = r>=1 ? 'var(--success)' : r>=0.7 ? 'var(--accent)' : '#ff9500';

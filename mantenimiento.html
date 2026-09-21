@@ -172,11 +172,17 @@ body.sidebar-collapsed .sidebar:hover{transform:translateX(0);box-shadow:4px 0 2
 .sl-dot{width:9px;height:9px;border-radius:2px;display:inline-block;flex-shrink:0;}
 .sl-drow{display:grid;grid-template-columns:28px 1fr 34px;align-items:center;gap:6px;margin-bottom:5px;}
 .sl-grow{flex:0 0 auto;}
+.sl-alert-c{padding:6px 9px !important;margin-bottom:5px !important;}
+.sl-alert-c .sl-alert-h{margin-bottom:1px;}
+.sl-alert-c .sl-alert-t{font-size:10.5px;}
+.sl-alert-c .sl-alert-d{font-size:9.5px;line-height:1.35;}
+.sl-segbar{display:flex;gap:2px;margin-top:7px;}
+.sl-segbar span{flex:1;height:7px;border-radius:2px;}
 .sl-ind{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
 .sl-kc{display:grid;grid-template-columns:1fr auto;align-items:center;gap:10px;}
 .sl-kc-l{min-width:0;}
 .sl-kc-w{font-family:'DM Mono',monospace;font-size:19px;font-weight:500;color:var(--text);margin:3px 0 0;line-height:1.1;}
-.sl-kc-p{font-family:'DM Mono',monospace;font-size:24px;font-weight:500;line-height:1;white-space:nowrap;letter-spacing:-.02em;}
+.sl-kc-p{font-family:'DM Mono',monospace;font-size:27px;font-weight:700;line-height:1;white-space:nowrap;letter-spacing:-.02em;}
 .sl-kc-p span{font-size:14px;margin-left:1px;opacity:.75;}
 .sl-left{display:flex;flex-direction:column;gap:12px;min-height:0;}
 .sl-right{display:flex;flex-direction:column;gap:12px;min-height:0;}
@@ -251,7 +257,7 @@ body.kiosco .sl-left > .sl-grow{flex:1.45 1 0;}
 body.kiosco .sl-left > .sl-panel:last-child{flex:.82 1 0;}
 body.kiosco .sl-left .sl-bcols{padding-bottom:6px;}
 body.kiosco .sl-ind .sl-card{padding:13px 13px;}
-body.kiosco .sl-kc-p{font-size:28px;}
+body.kiosco .sl-kc-p{font-size:33px;}
 body.kiosco .sl-kc-w{font-size:21px;}
 body.kiosco .sl-left .sl-grid{flex:1;align-content:space-between;}
 body.kiosco .sl-left .sl-bcols{flex:1;align-content:space-between;}
@@ -3585,11 +3591,12 @@ function renderSala(){
     const mT=metaEq[eq], rT=realEq[eq]/1000, p=mT>0?rT/mT*100:0;
     const mW=mT/maxMeta*100, rW=Math.min(rT/maxMeta*100, mW);
     const col=p>100?'var(--success)':p>=75?'var(--accent)':'var(--danger)';
-    const dentro=(rW/100*260)>46;
+    const dentro=(rW/100*300)>40;
     return `<div class="sl-brow"><span class="sl-beq">${eq}</span>
       <div class="sl-btrack"><div style="position:absolute;inset:0;background:var(--border);"></div>
       <div style="position:absolute;left:0;top:0;height:100%;width:${rW.toFixed(1)}%;background:${col};display:flex;align-items:center;overflow:hidden;">
       ${dentro?`<span style="padding-left:6px;font-size:9.5px;font-weight:700;color:${p>=75&&p<=100?'var(--bg)':'#fff'};font-family:'DM Mono',monospace;">${rT.toFixed(1)}t</span>`:''}</div>
+      ${!dentro?`<span style="position:absolute;left:calc(${rW.toFixed(1)}% + 5px);top:50%;transform:translateY(-50%);font-size:9.5px;font-weight:700;color:${col};font-family:'DM Mono',monospace;white-space:nowrap;">${rT.toFixed(1)}t</span>`:''}
       <div class="sl-tick"></div></div>
       <span class="sl-bpct" style="color:${col};">${p.toFixed(2)}%</span></div>`;
   });
@@ -3629,6 +3636,15 @@ function renderSala(){
   };
 
   const nCong  = bachs.filter(b=>b.estado==='pendiente').length;
+  // Barra segmentada: un tramo por equipo, coloreado según su estado actual
+  const segEq = ORDEN_EQ.map(eq=>{
+    if(bachs.some(b=>b.equipo===eq && b.estado==='pendiente')) return '<span style="background:var(--accent);"></span>';
+    const ev = evs.find(e=>e.equipo===eq && e.estado==='abierto' && e.tipo!=='fin_proceso');
+    if(ev) return `<span style="background:${ev.tipo==='no_programada'?'var(--danger)':ev.tipo==='sin_produccion'?'#a855f7':'#ff9500'};"></span>`;
+    return '<span style="background:var(--border);"></span>';
+  }).join('');
+  const pctCong = nCong/14*100;
+  const colCong = pctCong>=60?'var(--success)':pctCong>=35?'var(--accent)':'#ff9500';
   const nEv    = evs.filter(e=>e.estado==='abierto' && e.tipo!=='fin_proceso').length;
   const colDia = pctDia>=100?'var(--success)':pctDia>=75?'var(--accent)':'var(--danger)';
   const colTur = pctTurno>=100?'var(--success)':pctTurno>=90?'#facc15':'var(--danger)';
@@ -3647,10 +3663,15 @@ function renderSala(){
           ${kpiSplit('Producido hoy', tDia, META_DIA, pctDiaTot)}
           ${kpiSplit('Turno día', tTDia, META_TURNO, pctTDia, turno==='Día')}
           ${kpiSplit('Turno noche', tTNoche, META_TURNO, pctTNoche, turno==='Noche')}
-          <div class="sl-card sl-kc"><div class="sl-kc-l">
-            <p class="sl-kpi-l">En congelamiento</p>
-            <p class="sl-kc-w" style="color:var(--accent);">${nCong}<span style="font-size:13px;color:var(--text2);">/14</span></p>
-            <p class="sl-kpi-n">${nEv} en evento · ${14-nCong-nEv} sin actividad</p></div></div>
+          <div class="sl-card sl-kc">
+            <div class="sl-kc-l">
+              <p class="sl-kpi-l">En congelamiento</p>
+              <p class="sl-kc-w">${nCong} <span style="font-size:12px;color:var(--text2);">de 14 equipos</span></p>
+              <div class="sl-segbar">${segEq}</div>
+              <p class="sl-kpi-n">${nEv} en evento · ${14-nCong-nEv} sin actividad</p>
+            </div>
+            <div class="sl-kc-p" style="color:${colCong};">${pctCong.toFixed(0)}<span>%</span></div>
+          </div>
         </div>
       </div>
 
@@ -3680,20 +3701,20 @@ function renderSala(){
 
       <div class="sl-right">
         <div class="sl-panel"><p class="sl-panel-h">Alertas críticas</p>
-          ${alertas.length ? alertas.slice(0,3).map(a=>`
-            <div class="sl-alert" style="background:${a.c}12;border-color:${a.c}44;">
+          ${alertas.length ? alertas.slice(0,5).map(a=>`
+            <div class="sl-alert sl-alert-c" style="background:${a.c}12;border-color:${a.c}44;">
               <div class="sl-alert-h"><span style="color:${a.c};">${a.i}</span>
                 <span class="sl-alert-t" style="color:${a.c};">${a.t}</span></div>
               <p class="sl-alert-d">${a.d}</p></div>`).join('')
             : '<div class="sl-none">✅ Sin alertas activas</div>'}
-          ${alertas.length>3 ? `<p style="margin:7px 0 0;font-size:8.5px;color:var(--text3);text-align:center;">+${alertas.length-3} alertas menores</p>` : ''}
+          ${alertas.length>5 ? `<p style="margin:5px 0 0;font-size:8.5px;color:var(--text3);text-align:center;">+${alertas.length-5} alertas menores</p>` : ''}
         </div>
 
         <div class="sl-panel sl-grow" style="display:flex;flex-direction:column;">
           <p class="sl-panel-h" style="display:flex;justify-content:space-between;align-items:baseline;">
             <span>Bachadas acumuladas</span>
             <span style="font-size:8.5px;color:var(--text3);letter-spacing:0;text-transform:none;">avance / meta</span></p>
-          <div style="flex:1;">${puntos}</div>
+          <div style="flex:1;display:flex;flex-direction:column;justify-content:space-between;">${puntos}</div>
           <div style="border-top:1px solid var(--border);padding-top:7px;margin-top:8px;display:flex;justify-content:space-between;align-items:center;">
             <span style="font-size:9.5px;color:var(--text2);">🔊 Alarmas por voz</span>
             <span style="font-size:8.5px;padding:2px 7px;border-radius:10px;background:${_vozActiva?'#00e87a22':'#ff3b5c22'};color:${_vozActiva?'var(--success)':'var(--danger)'};">${_vozActiva?'ON':'OFF'}</span>

@@ -250,7 +250,11 @@ body.kiosco .sl-eq{padding:8px 9px;}
 body.kiosco .sl-card{padding:8px 9px;}
 body.kiosco .sl-bcols{gap:4px 14px;}
 body.kiosco .sl-btrack{height:16px;}
-body.kiosco .sl-drow{margin-bottom:4px;}
+body.kiosco .sl-drow{margin-bottom:0;min-height:0;}
+body.kiosco .sl-right > .sl-panel:first-child{flex:0 0 auto;}
+body.kiosco .sl-right > .sl-grow{flex:1 1 0;min-height:0;overflow:hidden;}
+body.kiosco .sl-right > .sl-grow > div:nth-child(2){min-height:0;gap:2px;}
+body.kiosco .sl-dot{width:clamp(7px,1.15vh,10px);height:clamp(7px,1.15vh,10px);}
 body.kiosco .sl-alert{padding:8px 10px;margin-bottom:6px;}
 body.kiosco .sl-left > .sl-panel{display:flex;flex-direction:column;min-height:0;}
 body.kiosco .sl-left > .sl-grow{flex:1.45 1 0;}
@@ -3701,13 +3705,13 @@ function renderSala(){
 
       <div class="sl-right">
         <div class="sl-panel"><p class="sl-panel-h">Alertas críticas</p>
-          ${alertas.length ? alertas.slice(0,5).map(a=>`
+          ${alertas.length ? alertas.slice(0,4).map(a=>`
             <div class="sl-alert sl-alert-c" style="background:${a.c}12;border-color:${a.c}44;">
               <div class="sl-alert-h"><span style="color:${a.c};">${a.i}</span>
                 <span class="sl-alert-t" style="color:${a.c};">${a.t}</span></div>
               <p class="sl-alert-d">${a.d}</p></div>`).join('')
             : '<div class="sl-none">✅ Sin alertas activas</div>'}
-          ${alertas.length>5 ? `<p style="margin:5px 0 0;font-size:8.5px;color:var(--text3);text-align:center;">+${alertas.length-5} alertas menores</p>` : ''}
+          ${alertas.length>4 ? `<p style="margin:4px 0 0;font-size:8.5px;color:var(--text3);text-align:center;">+${alertas.length-4} alertas menores</p>` : ''}
         </div>
 
         <div class="sl-panel sl-grow" style="display:flex;flex-direction:column;">

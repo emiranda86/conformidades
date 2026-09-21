@@ -172,6 +172,12 @@ body.sidebar-collapsed .sidebar:hover{transform:translateX(0);box-shadow:4px 0 2
 .sl-dot{width:9px;height:9px;border-radius:2px;display:inline-block;flex-shrink:0;}
 .sl-drow{display:grid;grid-template-columns:28px 1fr 34px;align-items:center;gap:6px;margin-bottom:5px;}
 .sl-grow{flex:0 0 auto;}
+.sl-ind{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+.sl-kc{display:grid;grid-template-columns:1fr auto;align-items:center;gap:10px;}
+.sl-kc-l{min-width:0;}
+.sl-kc-w{font-family:'DM Mono',monospace;font-size:19px;font-weight:500;color:var(--text);margin:3px 0 0;line-height:1.1;}
+.sl-kc-p{font-family:'Syne',sans-serif;font-size:34px;font-weight:800;line-height:1;white-space:nowrap;}
+.sl-kc-p span{font-size:17px;margin-left:1px;}
 .sl-left{display:flex;flex-direction:column;gap:12px;min-height:0;}
 .sl-right{display:flex;flex-direction:column;gap:12px;min-height:0;}
 .sl-right > .sl-grow{flex:1 1 auto;min-height:0;}
@@ -242,7 +248,11 @@ body.kiosco .sl-drow{margin-bottom:4px;}
 body.kiosco .sl-alert{padding:8px 10px;margin-bottom:6px;}
 body.kiosco .sl-left > .sl-panel{display:flex;flex-direction:column;min-height:0;}
 body.kiosco .sl-left > .sl-grow{flex:1.45 1 0;}
-body.kiosco .sl-left > .sl-panel:last-child{flex:1 1 0;}
+body.kiosco .sl-left > .sl-panel:last-child{flex:.82 1 0;}
+body.kiosco .sl-left .sl-bcols{padding-bottom:6px;}
+body.kiosco .sl-ind .sl-card{padding:13px 13px;}
+body.kiosco .sl-kc-p{font-size:40px;}
+body.kiosco .sl-kc-w{font-size:21px;}
 body.kiosco .sl-left .sl-grid{flex:1;align-content:space-between;}
 body.kiosco .sl-left .sl-bcols{flex:1;align-content:space-between;}
 body.kiosco .sl-eq{display:flex;flex-direction:column;justify-content:center;
@@ -3593,6 +3603,25 @@ function renderSala(){
   const pesoMedio  = delDia.length ? (tDia/delDia.length).toFixed(2) : '0.00';
   const proy       = (fracTurno>0.05 ? (tTurno/fracTurno*2) : tDia).toFixed(1);
 
+  // Producción por turno — cada turno compite contra su propia meta (50% del día)
+  const tTDia    = delDia.filter(b=>b.turno==='Día').reduce((s,b)=>s+(b.peso||0),0)/1000;
+  const tTNoche  = delDia.filter(b=>b.turno==='Noche').reduce((s,b)=>s+(b.peso||0),0)/1000;
+  const pctTDia   = META_TURNO>0 ? tTDia/META_TURNO*100 : 0;
+  const pctTNoche = META_TURNO>0 ? tTNoche/META_TURNO*100 : 0;
+  const pctDiaTot = META_DIA>0 ? tDia/META_DIA*100 : 0;
+  const kpiSplit = (lbl, t, meta, pct, activo) => {
+    const col = pct>=100?'var(--success)':pct>=75?'var(--accent)':'var(--danger)';
+    return `<div class="sl-card sl-kc" ${activo?'style="box-shadow:inset 0 0 0 1px '+col+';"':''}>
+      <div class="sl-kc-l">
+        <p class="sl-kpi-l">${lbl}${activo?' · en curso':''}</p>
+        <p class="sl-kc-w">${t.toFixed(2)} t</p>
+        <div class="sl-bar"><div style="width:${Math.min(100,pct)}%;background:${col};"></div></div>
+        <p class="sl-kpi-n">meta ${meta.toFixed(2)} t</p>
+      </div>
+      <div class="sl-kc-p" style="color:${col};">${pct.toFixed(1)}<span>%</span></div>
+    </div>`;
+  };
+
   const nCong  = bachs.filter(b=>b.estado==='pendiente').length;
   const nEv    = evs.filter(e=>e.estado==='abierto' && e.tipo!=='fin_proceso').length;
   const colDia = pctDia>=100?'var(--success)':pctDia>=75?'var(--accent)':'var(--danger)';
@@ -3608,21 +3637,14 @@ function renderSala(){
 
     <div class="sl-body" style="margin-bottom:10px;">
       <div class="sl-panel"><p class="sl-panel-h">Indicadores del día</p>
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">
-          <div class="sl-card"><p class="sl-kpi-l">Producido hoy</p>
-            <p class="sl-kpi-v" style="font-size:20px;color:${colDia};">${tDia.toFixed(2)} t</p>
-            <div class="sl-bar"><div style="width:${Math.min(100,pctDia)}%;background:${colDia};"></div></div>
-            <p class="sl-kpi-n">${pctDia.toFixed(2)}% de ${META_DIA.toFixed(2)} t</p></div>
-          <div class="sl-card"><p class="sl-kpi-l">Turno ${turno}</p>
-            <p class="sl-kpi-v" style="font-size:20px;color:${colTur};">${tTurno.toFixed(2)} t</p>
-            <div class="sl-bar"><div style="width:${Math.min(100,pctTurno)}%;background:${colTur};"></div></div>
-            <p class="sl-kpi-n" style="color:${colTur};">${pctTurno.toFixed(2)}% del avance esperado</p></div>
-          <div class="sl-card"><p class="sl-kpi-l">En congelamiento</p>
-            <p class="sl-kpi-v" style="font-size:20px;color:var(--accent);">${nCong}<span style="font-size:12px;color:var(--text2);">/14</span></p>
-            <p class="sl-kpi-n" style="margin-top:11px;">${nEv} en evento · ${14-nCong-nEv} sin actividad</p></div>
-          <div class="sl-card"><p class="sl-kpi-l">Bachadas hoy</p>
-            <p class="sl-kpi-v" style="font-size:20px;">${delDia.length}</p>
-            <p class="sl-kpi-n" style="margin-top:11px;">Ritmo ${(delDia.length/Math.max(1,hCorridas)).toFixed(1)}/h</p></div>
+        <div class="sl-ind">
+          ${kpiSplit('Producido hoy', tDia, META_DIA, pctDiaTot)}
+          ${kpiSplit('Turno día', tTDia, META_TURNO, pctTDia, turno==='Día')}
+          ${kpiSplit('Turno noche', tTNoche, META_TURNO, pctTNoche, turno==='Noche')}
+          <div class="sl-card sl-kc"><div class="sl-kc-l">
+            <p class="sl-kpi-l">En congelamiento</p>
+            <p class="sl-kc-w" style="color:var(--accent);">${nCong}<span style="font-size:13px;color:var(--text2);">/14</span></p>
+            <p class="sl-kpi-n">${nEv} en evento · ${14-nCong-nEv} sin actividad</p></div></div>
         </div>
       </div>
 

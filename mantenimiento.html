@@ -192,6 +192,15 @@ body.sidebar-collapsed .sidebar:hover{transform:translateX(0);box-shadow:4px 0 2
 .sl-btrack{position:relative;height:15px;border-radius:3px;overflow:hidden;background:var(--bg);border:1px solid var(--border);}
 .sl-bpct{font-size:10.5px;font-weight:700;text-align:right;}
 @media(max-width:900px){.sl-bcols{grid-template-columns:1fr;}}
+.mus-cfg{display:none;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:12px;}
+.mus-cfg.open{display:block;}
+.mus-row{display:grid;grid-template-columns:110px 1fr;align-items:center;gap:10px;margin-bottom:8px;}
+.mus-row label{font-size:11.5px;color:var(--text2);}
+.mus-row input{background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:7px 10px;border-radius:8px;font-size:12px;outline:none;min-width:0;}
+#yt-wrap{position:fixed;left:10px;bottom:10px;width:200px;height:113px;z-index:9000;border-radius:8px;overflow:hidden;
+  border:1px solid var(--border2);opacity:.35;transition:opacity .2s;display:none;}
+#yt-wrap:hover{opacity:1;}
+#yt-wrap.on{display:block;}
 .sala-toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;
   margin-bottom:14px;flex-wrap:wrap;}
 .sala-screen{background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:16px;}
@@ -1646,8 +1655,19 @@ tr.clickable-row:hover td { background: var(--surface2); }
               </select>
               <button class="btn-sm" onclick="hablarSala('Prueba de sonido. Congelador uno está próximo a llegar a su tiempo de descarga.')" title="Escuchar una prueba">▶ Probar</button>
               <button class="btn-sm" id="btn-voz" onclick="toggleVozSala()" title="Activar o silenciar las alarmas por voz">🔊 Voz: ON</button>
+              <button class="btn-sm" id="btn-musica" onclick="toggleMusica()" title="Música de fondo">🎵 Música: OFF</button>
+              <button class="btn-sm" onclick="document.getElementById('mus-cfg').classList.toggle('open')" title="Configurar listas">⚙</button>
               <button class="btn-sm btn-accent" onclick="entrarKiosco()">⛶ Pantalla completa</button>
             </div>
+          </div>
+          <div id="mus-cfg" class="mus-cfg">
+            <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px;">🎵 Listas de YouTube</div>
+            <div style="font-size:11px;color:var(--text3);margin-bottom:10px;">Pega el enlace de cada lista de reproducción. La mezcla respeta los porcentajes indicados.</div>
+            <div class="mus-row"><label>Cumbia · 80%</label><input id="mus-l0" placeholder="https://www.youtube.com/playlist?list=..."></div>
+            <div class="mus-row"><label>Salsa · 10%</label><input id="mus-l1" placeholder="https://www.youtube.com/playlist?list=..."></div>
+            <div class="mus-row"><label>Reguetón · 10%</label><input id="mus-l2" placeholder="https://www.youtube.com/playlist?list=..."></div>
+            <div class="mus-row"><label>Volumen</label><input type="range" id="mus-vol" min="10" max="100" value="60" oninput="volMusica(this.value)"></div>
+            <button class="btn-sm btn-accent" onclick="guardarMusica()" style="margin-top:6px;">Guardar</button>
           </div>
           <div id="sala-screen" class="sala-screen"></div>
         </div>
@@ -3403,6 +3423,107 @@ function cambiarVoz(nombre){
   hablarSala('Voz de anuncios configurada correctamente.');
 }
 
+
+// ════════════════════════════════════════════════════════════════
+// MÚSICA DE FONDO (YouTube IFrame API) con atenuado para los avisos
+// Mezcla 80% cumbia · 10% salsa · 10% reguetón. Al hablar el sistema
+// el volumen baja; al terminar el último aviso vuelve gradualmente.
+// ════════════════════════════════════════════════════════════════
+const MUS_PESOS = [80, 10, 10];
+let _yt = null, _ytListo = false, _musOn = false, _musVol = 60, _fadeT = null;
+const _lenLista = {};
+
+function listaId(url){
+  const m = String(url||'').match(/[?&]list=([A-Za-z0-9_-]+)/);
+  return m ? m[1] : (/^[A-Za-z0-9_-]{12,}$/.test(url||'') ? url : null);
+}
+function listasMusica(){
+  try{ return JSON.parse(localStorage.getItem('smf_mus_listas')||'[]'); }catch(e){ return []; }
+}
+function guardarMusica(){
+  const l = [0,1,2].map(i => (document.getElementById('mus-l'+i).value||'').trim());
+  localStorage.setItem('smf_mus_listas', JSON.stringify(l));
+  document.getElementById('mus-cfg').classList.remove('open');
+  if(_musOn) siguienteTema();
+}
+function cargarCfgMusica(){
+  const l = listasMusica();
+  [0,1,2].forEach(i => { const el=document.getElementById('mus-l'+i); if(el) el.value = l[i]||''; });
+  _musVol = parseInt(localStorage.getItem('smf_mus_vol')||'60');
+  const v = document.getElementById('mus-vol'); if(v) v.value = _musVol;
+}
+function volMusica(v){
+  _musVol = parseInt(v); localStorage.setItem('smf_mus_vol', _musVol);
+  if(_yt && _ytListo && !_hablando) _yt.setVolume(_musVol);
+}
+
+// Elegir género según los pesos y una posición al azar de su lista
+function elegirLista(){
+  const l = listasMusica().map(listaId);
+  const disp = [0,1,2].filter(i => l[i]);
+  if(!disp.length) return null;
+  const tot = disp.reduce((s,i)=>s+MUS_PESOS[i],0);
+  let r = Math.random()*tot;
+  for(const i of disp){ r -= MUS_PESOS[i]; if(r <= 0) return l[i]; }
+  return l[disp[0]];
+}
+function siguienteTema(){
+  if(!_yt || !_ytListo) return;
+  const id = elegirLista();
+  if(!id){ alert('Configura al menos una lista de YouTube con el botón ⚙'); return; }
+  const n = _lenLista[id] || 25;
+  _yt.loadPlaylist({ listType:'playlist', list:id, index:Math.floor(Math.random()*n) });
+  _yt.setVolume(_hablando ? 8 : _musVol);
+}
+
+function cargarYT(){
+  if(window.YT && window.YT.Player){ crearYT(); return; }
+  const s = document.createElement('script'); s.src = 'https://www.youtube.com/iframe_api';
+  document.head.appendChild(s);
+  window.onYouTubeIframeAPIReady = crearYT;
+}
+function crearYT(){
+  if(_yt) return;
+  const w = document.createElement('div'); w.id='yt-wrap'; w.innerHTML='<div id="yt-player"></div>';
+  document.body.appendChild(w);
+  _yt = new YT.Player('yt-player', {
+    width:200, height:113, playerVars:{ autoplay:1, controls:1, rel:0 },
+    events:{
+      onReady: () => { _ytListo = true; if(_musOn){ w.classList.add('on'); siguienteTema(); } },
+      onStateChange: ev => {
+        // Guardar el largo de la lista para elegir posiciones válidas
+        try{ const pl=_yt.getPlaylist(), id=_yt.getPlaylistId&&_yt.getPlaylistId(); if(pl&&id) _lenLista[id]=pl.length; }catch(e){}
+        // Al terminar cada tema, el próximo se sortea respetando la mezcla
+        if(ev.data === YT.PlayerState.ENDED && _musOn) siguienteTema();
+      },
+      onError: () => { if(_musOn) setTimeout(siguienteTema, 1500); }
+    }
+  });
+}
+
+function toggleMusica(){
+  _musOn = !_musOn;
+  localStorage.setItem('smf_mus_on', _musOn?'1':'0');
+  const b = document.getElementById('btn-musica'); if(b) b.textContent = _musOn ? '🎵 Música: ON' : '🎵 Música: OFF';
+  const w = document.getElementById('yt-wrap');
+  if(_musOn){
+    if(!_yt) cargarYT(); else { if(w) w.classList.add('on'); siguienteTema(); }
+  } else if(_yt && _ytListo){ _yt.pauseVideo(); if(w) w.classList.remove('on'); }
+}
+
+// Atenuado suave del volumen
+function fadeMusica(destino, ms){
+  if(!_yt || !_ytListo || !_musOn) return;
+  clearInterval(_fadeT);
+  let v = _yt.getVolume(); const pasos = 12, d = (destino - v)/pasos; let k = 0;
+  _fadeT = setInterval(() => {
+    k++; v += d; try{ _yt.setVolume(Math.round(k>=pasos?destino:v)); }catch(e){}
+    if(k >= pasos) clearInterval(_fadeT);
+  }, ms/pasos);
+}
+function duckMusica(){ fadeMusica(8, 700); }
+function unduckMusica(){ fadeMusica(_musVol, 2200); }
+
 // ── Cola de anuncios: timbre antes de CADA mensaje ─────────────
 // Si se acumulan varios avisos, cada uno suena con su propio
 // timbre y espera a que termine el anterior.
@@ -3416,11 +3537,12 @@ function hablarSala(texto){
 }
 
 function procesarCola(){
-  if(!_colaVoz.length){ _hablando = false; return; }
+  if(!_colaVoz.length){ _hablando = false; unduckMusica(); return; }
   if(!_vozActiva){ _colaVoz.length = 0; _hablando = false; return; }
+  if(!_hablando) duckMusica();
   _hablando = true;
   const texto = _colaVoz.shift();
-  timbreSala();                       // timbre propio de este mensaje
+  timbreSala();                       // timbre propio de este mensaje (la música ya está atenuada)
   setTimeout(() => {
     try{
       if(!_vozElegida) _vozElegida = mejorVoz();
@@ -3747,6 +3869,8 @@ function nomVoz(eq){
 
 function startSala(){
   if(_salaTimer) clearInterval(_salaTimer);
+  cargarCfgMusica();
+  if(localStorage.getItem('smf_mus_on')==='1' && !_musOn) toggleMusica();
   try{ _vozActiva = localStorage.getItem('smf_voz') !== '0'; }catch(e){}
   const b = document.getElementById('btn-voz');
   if(b) b.textContent = _vozActiva ? '🔊 Voz: ON' : '🔇 Voz: OFF';

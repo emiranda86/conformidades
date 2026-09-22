@@ -3473,7 +3473,7 @@ function siguienteTema(){
   if(!id){ alert('Configura al menos una lista de YouTube con el botón ⚙'); return; }
   const n = _lenLista[id] || 25;
   _yt.loadPlaylist({ listType:'playlist', list:id, index:Math.floor(Math.random()*n) });
-  _yt.setVolume(_hablando ? 8 : _musVol);
+  try{ _yt.setVolume(_hablando ? 2 : _musVol); }catch(e){}
 }
 
 function cargarYT(){
@@ -3494,6 +3494,7 @@ function crearYT(){
         // Guardar el largo de la lista para elegir posiciones válidas
         try{ const pl=_yt.getPlaylist(), id=_yt.getPlaylistId&&_yt.getPlaylistId(); if(pl&&id) _lenLista[id]=pl.length; }catch(e){}
         // Al terminar cada tema, el próximo se sortea respetando la mezcla
+        if(ev.data === YT.PlayerState.PLAYING && _hablando){ try{ _yt.setVolume(2); }catch(e){} }
         if(ev.data === YT.PlayerState.ENDED && _musOn) siguienteTema();
       },
       onError: () => { if(_musOn) setTimeout(siguienteTema, 1500); }
@@ -3515,13 +3516,14 @@ function toggleMusica(){
 function fadeMusica(destino, ms){
   if(!_yt || !_ytListo || !_musOn) return;
   clearInterval(_fadeT);
-  let v = _yt.getVolume(); const pasos = 12, d = (destino - v)/pasos; let k = 0;
+  let v; try{ v = _yt.getVolume(); }catch(e){ return; }
+  if(typeof v !== 'number') v = _musVol; const pasos = 12, d = (destino - v)/pasos; let k = 0;
   _fadeT = setInterval(() => {
     k++; v += d; try{ _yt.setVolume(Math.round(k>=pasos?destino:v)); }catch(e){}
     if(k >= pasos) clearInterval(_fadeT);
   }, ms/pasos);
 }
-function duckMusica(){ fadeMusica(8, 700); }
+function duckMusica(){ fadeMusica(2, 300); }
 function unduckMusica(){ fadeMusica(_musVol, 2200); }
 
 // ── Cola de anuncios: timbre antes de CADA mensaje ─────────────
@@ -3537,26 +3539,38 @@ function hablarSala(texto){
 }
 
 function procesarCola(){
-  if(!_colaVoz.length){ _hablando = false; unduckMusica(); return; }
+  if(!_colaVoz.length){ _hablando = false; try{ unduckMusica(); }catch(e){} return; }
   if(!_vozActiva){ _colaVoz.length = 0; _hablando = false; return; }
-  if(!_hablando) duckMusica();
+  const primero = !_hablando;
   _hablando = true;
   const texto = _colaVoz.shift();
-  timbreSala();                       // timbre propio de este mensaje (la música ya está atenuada)
+  // Primero se baja la música al mínimo; recién entonces suena el timbre
+  if(primero){ try{ duckMusica(); }catch(e){} }
   setTimeout(() => {
-    try{
-      if(!_vozElegida) _vozElegida = mejorVoz();
-      const u = new SpeechSynthesisUtterance(texto);
-      u.lang   = (_vozElegida && _vozElegida.lang) || 'es-PE';
-      if(_vozElegida) u.voice = _vozElegida;
-      u.rate = 0.88; u.pitch = 1.02; u.volume = 1;
-      // Al terminar, pausa breve y sigue con el próximo aviso
-      u.onend   = () => setTimeout(procesarCola, 600);
-      u.onerror = () => setTimeout(procesarCola, 600);
-      speechSynthesis.speak(u);
-    }catch(e){ setTimeout(procesarCola, 600); }
-  }, 1150);
+    timbreSala();
+    setTimeout(() => {
+      let hecho = false;
+      const sigue = () => { if(hecho) return; hecho = true; clearTimeout(wd); setTimeout(procesarCola, 600); };
+      // Vigilante: si el navegador no avisa el fin de la voz, la cola no se traba
+      const wd = setTimeout(sigue, texto.length * 95 + 6000);
+      try{
+        if(!_vozElegida) _vozElegida = mejorVoz();
+        const u = new SpeechSynthesisUtterance(texto);
+        u.lang = (_vozElegida && _vozElegida.lang) || 'es-PE';
+        if(_vozElegida) u.voice = _vozElegida;
+        u.rate = 0.88; u.pitch = 1.02; u.volume = 1;
+        u.onend = sigue; u.onerror = sigue;
+        if(speechSynthesis.paused) speechSynthesis.resume();
+        speechSynthesis.speak(u);
+      }catch(err){ sigue(); }
+    }, 1150);
+  }, primero ? 380 : 0);
 }
+
+// Chrome detiene la síntesis de voz larga si no se "despierta" cada tanto
+setInterval(() => {
+  try{ if(_hablando && speechSynthesis.speaking){ speechSynthesis.pause(); speechSynthesis.resume(); } }catch(e){}
+}, 10000);
 
 function toggleVozSala(){
   _vozActiva = !_vozActiva;
@@ -3643,8 +3657,25 @@ function renderSala(){
     const ev   = evs.filter(e => e.equipo===eq && e.estado==='abierto' && e.tipo!=='fin_proceso').sort((a,b)=>_k(b.fechaIni,b.inicio).localeCompare(_k(a.fechaIni,a.inicio)))[0];
     const lim  = getLimitesEGC(eq) || {min:3,max:3};
 
-    if(bach){
-      const th  = tiempoTranscurridoH(bach.fecha, bach.inicio);
+    // Si hay bachada y evento abiertos, manda el que empezó más recientemente
+    const thB = bach ? tiempoTranscurridoH(bach.fecha, bach.inicio) : 1e9;
+    const thE = ev   ? tiempoTranscurridoH(ev.fechaIni, ev.inicio)  : 1e9;
+    const usarBach = !!bach && thB <= thE;
+
+    // Bachada abierta que triplica el tiempo máximo: casi seguro quedó sin cerrar
+    if(usarBach && thB > lim.max*3){
+      alertas.push({c:'#facc15',i:'⚠',t:eq+' · bachada sin cerrar',
+        d:'Bach #'+(bach.bach||'?')+' abierta desde '+(bach.fecha||'')+' '+(bach.inicio||'')+' — corregir en En Proceso'});
+      return `<div class="sl-eq w">
+        <div class="sl-eq-h"><span class="sl-eq-n">${eq}</span>
+          <span class="sl-eq-t" style="background:#facc1522;color:#facc15;">revisar</span></div>
+        <div class="sl-eq-b"><div style="width:100%;background:#facc15;"></div></div>
+        <p class="sl-eq-s" style="color:#facc15;">⚠ Registro sin cerrar</p>
+        <p class="sl-eq-m">Bach #${bach.bach||'?'} · ${bach.inicio||''}</p></div>`;
+    }
+
+    if(usarBach){
+      const th  = thB;
       const pct = Math.min(100, th/lim.min*100);
       const minFalta = Math.round((lim.min - th) * 60);
       const excedido = th > lim.max;

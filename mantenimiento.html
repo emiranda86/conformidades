@@ -2468,6 +2468,13 @@ function calcTimeDiffHours(d1,t1,d2,t2){
   return diff;
 }
 
+// Fecha YYYY-MM-DD en hora LOCAL. toISOString() usa UTC y en Perú
+// (UTC-5) devuelve el día siguiente a partir de las 19:00.
+function fechaLocal(d){
+  const p = x => String(x).padStart(2,'0');
+  return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate());
+}
+
 function hoursToStr(h){
   if(isNaN(h)||h<0)return '--';
   if(h>240)return Math.floor(h/24)+'d '+Math.floor(h%24)+'h '+Math.round((h%1)*60)+'m';
@@ -2856,7 +2863,7 @@ async function saveBachada(){
         // Si no cruce, mismo día calendario que el inicio
         const finRealDate = new Date(inicioRealDate);
         if(finPos < inicioPos) finRealDate.setDate(finRealDate.getDate() + 1);
-        fechaCalFin = finRealDate.toISOString().split('T')[0];
+        fechaCalFin = fechaLocal(finRealDate);
       } catch(e) { console.warn('No se pudo calcular fechaCalFin:', e); }
       abrirPostBachada(eq, bach, producto, fin, fecha, turno, tecnico, fechaCalFin);
     } else {
@@ -3480,7 +3487,8 @@ function renderSala(){
   const h = ahora.getHours();
   const dOp = new Date(ahora);
   if(h < 8) dOp.setDate(dOp.getDate() - 1);
-  const fechaOp = dOp.toISOString().slice(0,10);
+  const _p = x => String(x).padStart(2,'0');
+  const fechaOp = `${dOp.getFullYear()}-${_p(dOp.getMonth()+1)}-${_p(dOp.getDate())}`;
   const turno   = (h >= 8 && h < 20) ? 'Día' : 'Noche';
 
   // Producción del día operativo
@@ -3508,8 +3516,9 @@ function renderSala(){
   const EV_OP = ['carga_descarga','descongelamiento'];
   const alertas = [];
   const tarjetas = ORDEN_EQ.map(eq => {
-    const bach = bachs.find(b => b.equipo===eq && b.estado==='pendiente');
-    const ev   = evs.find(e => e.equipo===eq && e.estado==='abierto' && e.tipo!=='fin_proceso');
+    const _k = (f,h) => (f||'')+' '+(h||'');
+    const bach = bachs.filter(b => b.equipo===eq && b.estado==='pendiente').sort((a,b)=>_k(b.fecha,b.inicio).localeCompare(_k(a.fecha,a.inicio)))[0];
+    const ev   = evs.filter(e => e.equipo===eq && e.estado==='abierto' && e.tipo!=='fin_proceso').sort((a,b)=>_k(b.fechaIni,b.inicio).localeCompare(_k(a.fechaIni,a.inicio)))[0];
     const lim  = getLimitesEGC(eq) || {min:3,max:3};
 
     if(bach){
@@ -3550,7 +3559,7 @@ function renderSala(){
                 : ev.tipo==='sin_produccion' ? '#a855f7'
                 : ev.tipo==='programada' ? 'var(--success)' : '#ff9500';
       // C/D que se alarga
-      if(ev.tipo==='carga_descarga' && th>0.5 && !_yaAnunciado.has('cd-'+ev.id)){
+      if(ev.tipo==='carga_descarga' && th>0.5 && th<6 && !_yaAnunciado.has('cd-'+ev.id)){
         _yaAnunciado.add('cd-'+ev.id);
         hablarSala(`${nomVoz(eq)} lleva ${Math.round(th*60)} minutos en carga y descarga. El tiempo objetivo es de treinta minutos.`);
       }
@@ -3581,10 +3590,10 @@ function renderSala(){
   const claveHora = fechaOp+'-'+turno+'-'+h;
   if(pctTurno < 90 && hCorridas >= 1 && !_yaAnunciado.has('meta-'+claveHora)){
     _yaAnunciado.add('meta-'+claveHora);
-    hablarSala(`El turno lleva ${Math.round(pctTurno)} por ciento del avance esperado. Faltan ${(espTurno-tTurno).toFixed(1)} toneladas.`);
+    hablarSala(`El turno ${turno==='Día'?'día':'noche'} lleva ${(tTurno/META_TURNO*100).toFixed(1).replace('.',' coma ')} por ciento de su meta. Va por debajo del ritmo esperado, faltan ${(espTurno-tTurno).toFixed(1)} toneladas para ponerse al día.`);
   }
   if(pctTurno < 90 && hCorridas >= 1) alertas.push({c:'#ff9500',i:'📉',t:'Turno bajo meta',
-    d:Math.round(pctTurno)+'% del avance esperado — faltan '+(espTurno-tTurno).toFixed(1)+' t'});
+    d:(tTurno/META_TURNO*100).toFixed(1)+'% de su meta — bajo el ritmo, faltan '+(espTurno-tTurno).toFixed(1)+' t'});
 
   // Barras de producción por equipo (mismo criterio del dashboard)
   const realEq = {}; ORDEN_EQ.forEach(e=>realEq[e]=0);
@@ -3639,7 +3648,9 @@ function renderSala(){
     </div>`;
   };
 
-  const nCong  = bachs.filter(b=>b.estado==='pendiente').length;
+  const _eqB = new Set(bachs.filter(b=>b.estado==='pendiente').map(b=>b.equipo));
+  const _eqE = new Set(evs.filter(e=>e.estado==='abierto'&&e.tipo!=='fin_proceso').map(e=>e.equipo));
+  const nCong  = ORDEN_EQ.filter(q=>_eqB.has(q)).length;
   // Barra segmentada: un tramo por equipo, coloreado según su estado actual
   const segEq = ORDEN_EQ.map(eq=>{
     if(bachs.some(b=>b.equipo===eq && b.estado==='pendiente')) return '<span style="background:var(--accent);"></span>';
@@ -3649,7 +3660,7 @@ function renderSala(){
   }).join('');
   const pctCong = nCong/14*100;
   const colCong = pctCong>=60?'var(--success)':pctCong>=35?'var(--accent)':'#ff9500';
-  const nEv    = evs.filter(e=>e.estado==='abierto' && e.tipo!=='fin_proceso').length;
+  const nEv    = ORDEN_EQ.filter(q=>!_eqB.has(q)&&_eqE.has(q)).length;
   const colDia = pctDia>=100?'var(--success)':pctDia>=75?'var(--accent)':'var(--danger)';
   const colTur = pctTurno>=100?'var(--success)':pctTurno>=90?'#facc15':'var(--danger)';
 
@@ -4789,8 +4800,8 @@ function initTendenciaFechas() {
     const hoy = new Date();
     const hace14 = new Date();
     hace14.setDate(hoy.getDate() - 13); // 14 días incluyendo hoy
-    toEl.value = hoy.toISOString().split('T')[0];
-    fromEl.value = hace14.toISOString().split('T')[0];
+    toEl.value = fechaLocal(hoy);
+    fromEl.value = fechaLocal(hace14);
   }
 }
 
@@ -4802,8 +4813,8 @@ function resetTendenciaFechas() {
   const hoy = new Date();
   const hace14 = new Date();
   hace14.setDate(hoy.getDate() - 13);
-  toEl.value = hoy.toISOString().split('T')[0];
-  fromEl.value = hace14.toISOString().split('T')[0];
+  toEl.value = fechaLocal(hoy);
+  fromEl.value = fechaLocal(hace14);
   renderTendenciaProduccion();
 }
 
@@ -5969,7 +5980,7 @@ function renderTimeline() {
     const opDate = new Date(OP_DAY + 'T00:00:00');
     const opPrev = new Date(opDate); opPrev.setDate(opDate.getDate() - 1);
     const opNext = new Date(opDate); opNext.setDate(opDate.getDate() + 1);
-    const fmt = d => d.toISOString().split('T')[0];
+    const fmt = d => fechaLocal(d);
     const D_PREV = fmt(opPrev);
     const D_NEXT = fmt(opNext);
     const FECHAS_CANDIDATAS = [D_PREV, OP_DAY, D_NEXT];

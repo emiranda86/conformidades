@@ -924,6 +924,29 @@ tr.clickable-row:hover td { background: var(--surface2); }
   grid-template-columns: 1fr 1fr 1fr;
   gap: 12px;
 }
+/* ===== Producción mensual · histórico ===== */
+.pm-yr-wrap{display:flex;align-items:center;gap:7px;}
+.pm-yr-label{font-size:10.5px;font-weight:600;letter-spacing:.7px;text-transform:uppercase;color:var(--text3);}
+.pm-yr-sel{background:var(--surface2);border:1px solid var(--border2);color:var(--text);border-radius:7px;
+  padding:5px 10px;font-size:12.5px;font-weight:600;cursor:pointer;outline:none;font-family:inherit;}
+.pm-yr-sel:focus{border-color:var(--accent);}
+.pm-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-top:14px;}
+.pm-sc{background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:10px 12px;
+  border-left:3px solid var(--accent);}
+.pm-sc.g{border-left-color:var(--success);}
+.pm-sc.w{border-left-color:var(--warn);}
+.pm-sc.p{border-left-color:#a855f7;}
+.pm-sc-l{font-size:9.5px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;color:var(--text3);margin-bottom:4px;}
+.pm-sc-v{font-size:18px;font-weight:800;font-family:'DM Mono',monospace;color:var(--text);letter-spacing:-.5px;}
+.pm-sc-v small{font-size:10.5px;color:var(--text2);font-weight:500;margin-left:2px;}
+.pm-sc-s{font-size:10px;color:var(--text2);margin-top:2px;}
+.pm-sc-s.up{color:var(--success);}
+.pm-sc-s.dn{color:var(--danger);}
+.pm-vacio{display:flex;align-items:center;justify-content:center;height:100%;color:var(--text3);font-size:12.5px;}
+@media(max-width:768px){
+  .pm-strip{grid-template-columns:repeat(2,1fr);}
+  #card-prod-mensual .pbi-card-head{flex-wrap:wrap;gap:8px;}
+}
 .dash-kpis-card { padding: 14px; }
 .dash-kpi-grid {
   display: grid;
@@ -996,6 +1019,7 @@ tr.clickable-row:hover td { background: var(--surface2); }
 @media (max-width: 1100px) {
   .dash-zona-superior, .dash-zona-inferior { grid-template-columns: 1fr; }
   .dash-zona-inferior > .pbi-card[style*="span 2"] { grid-column: span 1 !important; }
+  .dash-zona-inferior > .pbi-card[style*="span 3"] { grid-column: span 1 !important; }
 }
 
 @keyframes pulsoAlarma {
@@ -1411,6 +1435,20 @@ tr.clickable-row:hover td { background: var(--surface2); }
                   <button class="dash-tend-reset" onclick="resetTendenciaFechas()" title="Volver a últimas 2 semanas">↺</button>
                 </div>
                 <div style="position:relative;height:340px;"><canvas id="chart-prod-dia"></canvas></div>
+              </div>
+
+              <!-- Producción mensual · histórico (ancho completo, filtro de año propio) -->
+              <div class="pbi-card" id="card-prod-mensual" style="grid-column:span 3;">
+                <div class="pbi-card-head">
+                  <div class="pbi-card-title">📆 Producción mensual · histórico</div>
+                  <div class="dash-legend-inline" id="pm-leyenda"></div>
+                  <div class="pm-yr-wrap">
+                    <span class="pm-yr-label">Año</span>
+                    <select class="pm-yr-sel" id="pm-anio" onchange="renderProdMensual()"></select>
+                  </div>
+                </div>
+                <div style="position:relative;height:320px;"><canvas id="chart-prod-mensual"></canvas></div>
+                <div class="pm-strip" id="pm-strip"></div>
               </div>
             </div>
 
@@ -4692,6 +4730,10 @@ function renderDashboard(){
   // independiente del filtro global del dashboard. Ver renderTendenciaProduccion().
   renderTendenciaProduccion();
 
+  // Producción mensual · histórico: filtro de AÑO propio, también independiente
+  // del rango global. Ver renderProdMensual().
+  try{ renderProdMensual(); }catch(e){ console.warn('renderProdMensual:', e); }
+
   // ===== NUEVO: Comparativo Bachadas vs Tiempo (barras apiladas Opción B) =====
   const equiposCD = ['C1','C2','C3','C4','C5','C6','C7','C8','C9','C10','C11','C12','C13','TE'];
   const bachPorEq = equiposCD.map(eq => bachs.filter(b=>b.equipo===eq).length);
@@ -5144,6 +5186,182 @@ function renderTendenciaProduccion() {
   const prodDiariaTon = fechasOrd.map(f => parseFloat((fechasMap[f] / 1000).toFixed(1)));
 
   renderLineConMeta('chart-prod-dia', fechasOrd.map(f => f.slice(5)), prodDiariaTon, 'Producción (t)', '#00c8ff', 120);
+}
+
+// ============================================================
+// PRODUCCIÓN MENSUAL · HISTÓRICO
+// ------------------------------------------------------------
+// Gráfica estrictamente mensual con filtro de AÑO propio. No depende del
+// rango de fechas general del dashboard. El selector se llena únicamente
+// con los años que existen en las bachadas registradas; si el año anterior
+// no tiene datos, la barra de comparación no se dibuja.
+// ============================================================
+const PM_MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+const PM_META_DIA = 120;                       // t/día (misma meta del dashboard)
+const pmDiasMes = (anio, m) => new Date(anio, m + 1, 0).getDate();   // respeta bisiestos
+
+function renderProdMensual(){
+  const sel    = document.getElementById('pm-anio');
+  const canvas = document.getElementById('chart-prod-mensual');
+  const strip  = document.getElementById('pm-strip');
+  const leyEl  = document.getElementById('pm-leyenda');
+  if(!sel || !canvas) return;
+
+  const bachsAll = DB.get('bachadas', []);
+
+  // --- Años con registros reales (solo esos aparecen en el selector) ---
+  const aniosSet = new Set();
+  bachsAll.forEach(b => {
+    const f = b.fecha || '';
+    if(/^\d{4}-\d{2}-\d{2}$/.test(f)) aniosSet.add(f.slice(0,4));
+  });
+  const anios = [...aniosSet].sort((a,b) => b.localeCompare(a));   // más reciente primero
+
+  if(!anios.length){
+    sel.innerHTML = '';
+    sel.style.display = 'none';
+    if(leyEl) leyEl.innerHTML = '';
+    if(charts['chart-prod-mensual']){ charts['chart-prod-mensual'].destroy(); delete charts['chart-prod-mensual']; }
+    canvas.parentElement.innerHTML = '<div class="pm-vacio">Sin bachadas registradas todavía.</div>';
+    if(strip) strip.innerHTML = '';
+    return;
+  }
+  sel.style.display = '';
+
+  // Repoblar solo si cambió la lista, para no perder la selección del usuario
+  const firmaActual = anios.join(',');
+  if(sel.dataset.firma !== firmaActual){
+    const previo = sel.value;
+    sel.innerHTML = anios.map(a => '<option value="'+a+'">'+a+'</option>').join('');
+    sel.dataset.firma = firmaActual;
+    sel.value = anios.includes(previo) ? previo : anios[0];
+  }
+  const anio = parseInt(sel.value || anios[0], 10);
+  const prev = anio - 1;
+  const hayPrev = aniosSet.has(String(prev));
+
+  // --- Sumar peso por mes (kg → t) ---
+  const acum = (yr) => {
+    const out = Array(12).fill(null);
+    bachsAll.forEach(b => {
+      const f = b.fecha || '';
+      if(f.slice(0,4) !== String(yr)) return;
+      const m = parseInt(f.slice(5,7), 10) - 1;
+      if(m < 0 || m > 11) return;
+      out[m] = (out[m] || 0) + (b.peso || 0) / 1000;
+    });
+    return out.map(v => v === null ? null : parseFloat(v.toFixed(1)));
+  };
+  const act = acum(anio);
+  const ant = hayPrev ? acum(prev) : Array(12).fill(null);
+  const META = PM_MESES.map((_, m) => pmDiasMes(anio, m) * PM_META_DIA);
+
+  // --- Leyenda (la de comparación solo si hay año anterior) ---
+  if(leyEl){
+    leyEl.innerHTML =
+      '<span><span class="dash-leg-line" style="background:#00c8ff;"></span>'+anio+'</span>' +
+      (hayPrev ? '<span><span class="dash-leg-line" style="background:#2a4a6e;"></span>'+prev+'</span>' : '') +
+      '<span><span class="dash-leg-line" style="background:#ff3b5c;border-top:1px dashed #ff3b5c;"></span>Meta mensual</span>';
+  }
+
+  // --- Datasets ---
+  const datasets = [
+    {label:String(anio), data:act, backgroundColor:'#00c8ff',
+     borderRadius:{topLeft:5,topRight:5}, order:2,
+     barPercentage: hayPrev ? .82 : .62, categoryPercentage: hayPrev ? .76 : .9}
+  ];
+  if(hayPrev){
+    datasets.push({label:String(prev), data:ant, backgroundColor:'#2a4a6e',
+      borderRadius:{topLeft:5,topRight:5}, order:3, barPercentage:.82, categoryPercentage:.76});
+  }
+  datasets.push({type:'line', label:'Meta', data:META, borderColor:'#ff3b5c', borderWidth:1.6,
+    borderDash:[6,4], pointRadius:0, fill:false, tension:0, order:1});
+
+  if(charts['chart-prod-mensual']) charts['chart-prod-mensual'].destroy();
+  charts['chart-prod-mensual'] = new Chart(canvas, {
+    type:'bar',
+    data:{labels:PM_MESES, datasets},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      interaction:{mode:'index', intersect:false},
+      layout:{padding:{top:20}},
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          backgroundColor:'#0d1c2e', borderColor:'#2a4a6e', borderWidth:1,
+          titleColor:'#e8f4ff', bodyColor:'#8aaac8', padding:10, cornerRadius:7,
+          titleFont:{size:12,weight:'700'}, bodyFont:{size:11.5},
+          callbacks:{
+            label:(ct)=>{
+              if(ct.parsed.y === null || ct.parsed.y === undefined) return ct.dataset.label+': sin datos';
+              const t = ct.parsed.y.toLocaleString('es-PE',{maximumFractionDigits:0});
+              if(ct.dataset.type === 'line') return 'Meta: '+t+' t';
+              const pct = (ct.parsed.y / META[ct.dataIndex] * 100).toFixed(0);
+              return ct.dataset.label+': '+t+' t  ('+pct+'% de meta)';
+            }
+          }
+        }
+      },
+      scales:{
+        x:{grid:{display:false}, border:{color:'#1e3352'},
+           ticks:{color:'#8aaac8', font:{size:11, weight:'600'}}},
+        y:{beginAtZero:true, grid:{color:'rgba(30,51,82,.55)'}, border:{display:false},
+           ticks:{color:'#4a6a8a', font:{size:10}, callback:v => v >= 1000 ? (v/1000)+'k' : v},
+           title:{display:true, text:'toneladas', color:'#4a6a8a', font:{size:10, weight:'600'}}}
+      }
+    },
+    plugins:[{
+      // Etiqueta de valor sobre cada barra del año seleccionado
+      id:'pmTopLabel',
+      afterDatasetsDraw(c){
+        const meta0 = c.getDatasetMeta(0);
+        if(!meta0 || meta0.hidden) return;
+        const ds = c.data.datasets[0], x = c.ctx;
+        x.save();
+        x.font = '600 10px Inter, sans-serif';
+        x.textAlign = 'center'; x.textBaseline = 'bottom';
+        meta0.data.forEach((bar, i) => {
+          const v = ds.data[i];
+          if(v === null || v === undefined || v === 0) return;
+          x.fillStyle = v >= META[i] ? '#00e87a' : '#8aaac8';
+          x.fillText(v >= 1000 ? (v/1000).toFixed(2).replace('.',',')+'k' : Math.round(v), bar.x, bar.y - 5);
+        });
+        x.restore();
+      }
+    }]
+  });
+
+  // --- Tira resumen ---
+  if(strip){
+    const con = act.filter(v => v !== null && v > 0);
+    const tot = con.reduce((s,v) => s+v, 0);
+    // Comparativo justo: solo los meses que tienen dato en el año seleccionado
+    const totAnt = ant.reduce((s,v,i) => (act[i] !== null && v !== null) ? s+v : s, 0);
+    // Meta prorrateada: el mes en curso solo cuenta los días transcurridos
+    const HOY = new Date(), yAct = HOY.getFullYear(), mAct = HOY.getMonth();
+    const metaAcum = act.reduce((s,v,i) => {
+      if(v === null) return s;
+      if(anio === yAct && i === mAct) return s + PM_META_DIA * HOY.getDate();
+      return s + META[i];
+    }, 0);
+    const f = n => n.toLocaleString('es-PE',{maximumFractionDigits:0});
+
+    let sub = '<div class="pm-sc-s">sin comparativo</div>';
+    if(totAnt > 0){
+      const d = (tot - totAnt) / totAnt * 100;
+      sub = '<div class="pm-sc-s '+(d>=0?'up':'dn')+'">'+(d>=0?'▲ +':'▼ ')+d.toFixed(1)+'% vs '+prev+' (mismos meses)</div>';
+    }
+    let best = '—', bestS = '';
+    if(con.length){
+      const iBest = act.indexOf(Math.max(...con));
+      best = PM_MESES[iBest]; bestS = f(act[iBest])+' t';
+    }
+    strip.innerHTML =
+      '<div class="pm-sc"><div class="pm-sc-l">Total '+anio+'</div><div class="pm-sc-v">'+f(tot)+'<small>t</small></div>'+sub+'</div>'+
+      '<div class="pm-sc g"><div class="pm-sc-l">Mejor mes</div><div class="pm-sc-v">'+best+'</div><div class="pm-sc-s">'+bestS+'</div></div>'+
+      '<div class="pm-sc w"><div class="pm-sc-l">Promedio mensual</div><div class="pm-sc-v">'+f(con.length?tot/con.length:0)+'<small>t</small></div><div class="pm-sc-s">meses con producción</div></div>'+
+      '<div class="pm-sc p"><div class="pm-sc-l">Cumplim. meta</div><div class="pm-sc-v">'+(metaAcum?tot/metaAcum*100:0).toFixed(1)+'<small>%</small></div><div class="pm-sc-s">'+PM_META_DIA+' t/día · mes en curso prorrateado</div></div>';
+  }
 }
 
 function renderLineConMeta(id,labels,data,label,color,meta){
